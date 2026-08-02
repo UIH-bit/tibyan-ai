@@ -43,7 +43,6 @@ HTML_TEMPLATE = '''
         #chat-box { width: 100%; text-align: left; display: none; flex-direction: column; gap: 24px; }
         .msg-container { width: 100%; margin-bottom: 20px; display: flex; flex-direction: column; gap: 12px; }
         
-        /* Clean Chat Bubbles (No 'You:' prefix) */
         .msg { font-size: 16px; line-height: 1.7; white-space: pre-wrap; width: 100%; }
         .user-msg { background: #f0f4f9; color: #1f1f1f; padding: 14px 20px; border-radius: 20px 20px 4px 20px; align-self: flex-end; max-width: 85%; margin-left: auto; font-weight: 400; box-shadow: 0 1px 3px rgba(0,0,0,0.02); }
         .bot-msg { color: #202124; padding: 4px 0; align-self: flex-start; width: 100%; }
@@ -347,7 +346,6 @@ HTML_TEMPLATE = '''
             if (homeWelcome) homeWelcome.style.display = 'none';
             chatBox.style.display = 'flex';
 
-            // Clean User Message Bubble (No 'You:' prefix)
             chatBox.innerHTML += `
                 <div class="msg-container">
                     <div class="msg user-msg">${message}</div>
@@ -429,11 +427,13 @@ def chat():
     }
     
     system_prompt = (
-        "You are Tibyan AI, a deeply knowledgeable, empathetic, and expert Islamic scholar assistant. "
-        "Your goal is to fully understand the user's intent, context, and core question with high intelligence. "
-        "Provide structured, comprehensive, and authentic answers strictly derived from the Holy Quran, authentic Hadiths "
-        "(Sahih al-Bukhari, Sahih Muslim, etc.), and recognized mainstream Fiqh schools. "
-        "Always cite relevant Quranic verses or Hadith references where appropriate. Maintain a respectful, wise, and scholarly tone."
+        "You are Tibyan AI, an elite, highly knowledgeable, and authentic Islamic scholar assistant. "
+        "Your responses must be structured, deeply detailed, scholarly, and completely grounded in authentic Islamic sources. "
+        "Strictly follow these rules for every answer:\n"
+        "1. Always quote relevant Quranic verses with Surah name and Ayat number (in Arabic and translation if needed).\n"
+        "2. Provide authentic Hadiths with proper references (Sahih al-Bukhari, Sahih Muslim, Sunan Abu Dawud, etc.).\n"
+        "3. Explain the rulings according to recognized mainstream Fiqh schools (Hanafi, Shafi'i, Maliki, Hanbali) if there is a difference of opinion.\n"
+        "4. Maintain an empathetic, respectful, wise, and dignified scholarly tone. Avoid vague or unsupported opinions."
     )
 
     data = {
