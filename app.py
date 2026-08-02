@@ -21,7 +21,7 @@ HTML_TEMPLATE = '''
         .logo-text { font-size: 20px; font-weight: 600; color: #1f1f1f; display: flex; align-items: center; gap: 8px; }
         .logo-text i { color: #1a73e8; }
         
-        .content-area { flex: 1; overflow-y: auto; padding: 24px; display: flex; flex-direction: column; align-items: center; padding-bottom: 120px; }
+        .content-area { flex: 1; overflow-y: auto; padding: 24px; display: flex; flex-direction: column; align-items: center; padding-bottom: 140px; }
         
         .view { width: 100%; max-width: 800px; display: none; flex-direction: column; }
         .view.active { display: flex; }
@@ -57,16 +57,18 @@ HTML_TEMPLATE = '''
         .profile-box { background: #f8f9fa; border: 1px solid #dadce0; padding: 30px; border-radius: 16px; text-align: center; width: 100%; max-width: 450px; margin: auto; }
         .profile-avatar { font-size: 60px; color: #1a73e8; margin-bottom: 15px; }
 
-        /* Gemini Style Bottom Input Panel */
+        /* Gemini Style Auto-Growing Input Panel & Perfectly Round Button */
         .bottom-panel { position: fixed; bottom: 65px; left: 0; width: 100%; background: transparent; padding: 12px 20px; display: flex; justify-content: center; z-index: 100; pointer-events: none; }
-        .input-box { pointer-events: auto; display: flex; align-items: center; background-color: #f0f4f9; border: 1px solid transparent; border-radius: 32px; padding: 8px 16px; width: 100%; max-width: 750px; transition: 0.2s; box-shadow: 0 2px 10px rgba(0,0,0,0.06); }
+        .input-box { pointer-events: auto; display: flex; align-items: flex-end; background-color: #f0f4f9; border: 1px solid transparent; border-radius: 28px; padding: 10px 16px; width: 100%; max-width: 750px; transition: 0.2s; box-shadow: 0 2px 10px rgba(0,0,0,0.06); gap: 8px; }
         .input-box:focus-within { background: #ffffff; border-color: #d3e3fd; box-shadow: 0 4px 14px rgba(26,115,232,0.1); }
-        .input-box input { flex: 1; background: transparent; border: none; outline: none; color: #1f1f1f; font-size: 16px; padding: 8px 12px; }
-        .input-box input::placeholder { color: #757575; }
         
-        .tool-btn { background: transparent; border: none; color: #444746; font-size: 18px; cursor: pointer; padding: 8px; border-radius: 50%; transition: 0.2s; display: flex; align-items: center; justify-content: center; width: 40px; height: 40px; }
+        .input-box textarea { flex: 1; background: transparent; border: none; outline: none; color: #1f1f1f; font-size: 16px; resize: none; max-height: 150px; min-height: 24px; line-height: 1.5; padding-top: 2px; }
+        .input-box textarea::placeholder { color: #757575; }
+        
+        .tool-btn { background: transparent; border: none; color: #444746; font-size: 18px; cursor: pointer; padding: 6px; border-radius: 50%; transition: 0.2s; display: flex; align-items: center; justify-content: center; width: 38px; height: 38px; flex-shrink: 0; }
         .tool-btn:hover { background: #e2e8f0; color: #1f1f1f; }
-        .send-btn { background: #1a73e8; border: none; color: #ffffff; font-size: 16px; cursor: pointer; width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; transition: 0.2s; margin-left: 6px; }
+        
+        .send-btn { background: #1a73e8; border: none; color: #ffffff; font-size: 15px; cursor: pointer; width: 38px; height: 38px; border-radius: 50% !important; display: flex; align-items: center; justify-content: center; transition: 0.2s; flex-shrink: 0; }
         .send-btn:hover { background: #1557b0; }
 
         nav { position: fixed; bottom: 0; left: 0; width: 100%; display: flex; justify-content: space-around; background-color: #ffffff; padding: 8px 0; border-top: 1px solid #f0f0f0; z-index: 101; height: 60px; }
@@ -147,11 +149,11 @@ HTML_TEMPLATE = '''
         </div>
     </div>
 
-    <!-- Gemini Style Input Bar -->
+    <!-- Gemini Style Auto-Growing Input Bar -->
     <div class="bottom-panel" id="input-container-wrapper">
         <div class="input-box">
             <button class="tool-btn" title="Voice Input" onclick="toggleVoiceInput()"><i class="fa-solid fa-microphone" id="mic-icon"></i></button>
-            <input type="text" id="user-input" placeholder="Ask anything about Quran, Hadith, Fiqh..." onkeypress="handleKey(event)">
+            <textarea id="user-input" placeholder="Ask anything about Quran, Hadith, Fiqh..." rows="1" oninput="autoResize(this)" onkeydown="handleKey(event)"></textarea>
             <button class="send-btn" onclick="sendMessage()"><i class="fa-solid fa-arrow-up"></i></button>
         </div>
     </div>
@@ -164,11 +166,18 @@ HTML_TEMPLATE = '''
     </nav>
 
     <script>
-        let savedItems = [];
+        let chatHistory = JSON.parse(localStorage.getItem('tibyan_chat_history')) || [];
+        let savedItems = JSON.parse(localStorage.getItem('tibyan_saved_items')) || [];
         let recognition = null;
         let isListening = false;
 
-        // Initialize Speech Recognition if supported
+        // Load existing history on start
+        window.addEventListener('DOMContentLoaded', () => {
+            renderChatHistory();
+            updateSavedUI();
+        });
+
+        // Initialize Speech Recognition
         if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
             const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
             recognition = new SpeechRecognition();
@@ -178,23 +187,20 @@ HTML_TEMPLATE = '''
 
             recognition.onresult = function(event) {
                 const speechToText = event.results[0][0].transcript;
-                document.getElementById('user-input').value = speechToText;
+                const input = document.getElementById('user-input');
+                input.value = speechToText;
+                autoResize(input);
                 stopListeningVisual();
                 sendMessage();
             };
 
-            recognition.onerror = function(event) {
-                stopListeningVisual();
-            };
-
-            recognition.onend = function() {
-                stopListeningVisual();
-            };
+            recognition.onerror = () => stopListeningVisual();
+            recognition.onend = () => stopListeningVisual();
         }
 
         function toggleVoiceInput() {
             if (!recognition) {
-                alert('Voice input is not supported on your current browser/device.');
+                alert('Voice input is not supported on your browser.');
                 return;
             }
             if (isListening) {
@@ -220,6 +226,11 @@ HTML_TEMPLATE = '''
             micIcon.classList.remove('fa-beat');
         }
 
+        function autoResize(textarea) {
+            textarea.style.height = 'auto';
+            textarea.style.height = textarea.scrollHeight + 'px';
+        }
+
         function switchTab(tabName, element) {
             document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
             document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
@@ -232,12 +243,17 @@ HTML_TEMPLATE = '''
 
         function sendSuggestion(text) {
             switchTab('home', document.querySelector('.nav-item'));
-            document.getElementById('user-input').value = text;
+            const input = document.getElementById('user-input');
+            input.value = text;
+            autoResize(input);
             sendMessage();
         }
 
         function handleKey(e) {
-            if (e.key === 'Enter') sendMessage();
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+            }
         }
 
         function toggleLike(btn) {
@@ -266,8 +282,11 @@ HTML_TEMPLATE = '''
             btn.classList.add('active-action');
             btn.innerHTML = '<i class="fa-solid fa-bookmark"></i> Saved';
             
-            savedItems.push(text);
-            updateSavedUI();
+            if (!savedItems.includes(text)) {
+                savedItems.push(text);
+                localStorage.setItem('tibyan_saved_items', JSON.stringify(savedItems));
+                updateSavedUI();
+            }
         }
 
         function updateSavedUI() {
@@ -287,6 +306,36 @@ HTML_TEMPLATE = '''
             });
         }
 
+        function renderChatHistory() {
+            const homeWelcome = document.getElementById('home-welcome');
+            const chatBox = document.getElementById('chat-box');
+            
+            if (chatHistory.length > 0) {
+                homeWelcome.style.display = 'none';
+                chatBox.style.display = 'flex';
+                chatBox.innerHTML = '';
+
+                chatHistory.forEach(chat => {
+                    const tempDiv = document.createElement('div');
+                    tempDiv.textContent = chat.bot;
+                    const safeText = tempDiv.innerHTML;
+
+                    chatBox.innerHTML += `
+                        <div class="msg-container">
+                            <div class="msg user-msg">You: ${chat.user}</div>
+                            <div class="msg bot-msg">${chat.bot}</div>
+                            <div class="action-bar">
+                                <button class="action-btn like-btn" onclick="toggleLike(this)"><i class="fa-regular fa-thumbs-up"></i> Like</button>
+                                <button class="action-btn dislike-btn" onclick="toggleDislike(this)"><i class="fa-regular fa-thumbs-down"></i> Dislike</button>
+                                <button class="action-btn" data-content="${safeText.replace(/"/g, '&quot;')}" onclick="copyText(this)"><i class="fa-regular fa-copy"></i> Copy</button>
+                                <button class="action-btn" data-content="${safeText.replace(/"/g, '&quot;')}" onclick="saveAnswer(this)"><i class="fa-regular fa-bookmark"></i> Save</button>
+                            </div>
+                        </div>
+                    `;
+                });
+            }
+        }
+
         async function sendMessage() {
             const input = document.getElementById('user-input');
             const message = input.value.trim();
@@ -300,6 +349,7 @@ HTML_TEMPLATE = '''
 
             chatBox.innerHTML += `<div class="msg-container"><div class="msg user-msg">You: ${message}</div></div>`;
             input.value = '';
+            input.style.height = '24px'; // Reset textarea height
             window.scrollTo(0, document.body.scrollHeight);
 
             try {
@@ -313,6 +363,10 @@ HTML_TEMPLATE = '''
                 const tempDiv = document.createElement('div');
                 tempDiv.textContent = data.response;
                 const safeText = tempDiv.innerHTML;
+
+                // Save to history array & localStorage
+                chatHistory.push({ user: message, bot: data.response });
+                localStorage.setItem('tibyan_chat_history', JSON.stringify(chatHistory));
 
                 chatBox.innerHTML += `
                     <div class="msg-container">
@@ -353,7 +407,6 @@ def chat():
         "Content-Type": "application/json"
     }
     
-    # Advanced System Prompt for deep contextual and scholarly understanding
     system_prompt = (
         "You are Tibyan AI, a deeply knowledgeable, empathetic, and expert Islamic scholar assistant. "
         "Your goal is to fully understand the user's intent, context, and core question with high intelligence. "
