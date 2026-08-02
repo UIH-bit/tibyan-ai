@@ -41,7 +41,6 @@ HTML_TEMPLATE = '''
         .user-msg { color: #1f1f1f; font-weight: 600; background: #f8f9fa; padding: 14px 18px; border-radius: 16px; margin-bottom: 12px; border-left: 4px solid #1a73e8; }
         .bot-msg { color: #202124; margin-bottom: 12px; padding: 4px 0; }
         
-        /* Action buttons bar like Gemini */
         .action-bar { display: flex; gap: 15px; align-items: center; margin-top: 5px; }
         .action-btn { background: transparent; border: none; color: #5f6368; font-size: 14px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; padding: 6px 10px; border-radius: 8px; transition: 0.2s; }
         .action-btn:hover { background: #f1f3f4; color: #202124; }
@@ -57,7 +56,6 @@ HTML_TEMPLATE = '''
         .profile-box { background: #f8f9fa; border: 1px solid #dadce0; padding: 30px; border-radius: 16px; text-align: center; width: 100%; }
         .profile-avatar { font-size: 60px; color: #1a73e8; margin-bottom: 15px; }
 
-        /* Bottom Fixed Controls */
         .bottom-panel { position: fixed; bottom: 60px; left: 0; width: 100%; background: #ffffff; padding: 12px 20px; display: flex; justify-content: center; z-index: 100; }
         .input-box { display: flex; align-items: center; background-color: #f1f3f4; border: 1px solid transparent; border-radius: 28px; padding: 12px 20px; width: 100%; max-width: 750px; transition: 0.2s; box-shadow: 0 1px 6px rgba(32,33,36,.1); }
         .input-box:focus-within { background: #ffffff; border-color: #dadce0; box-shadow: 0 1px 6px rgba(32,33,36,.15); }
@@ -177,15 +175,17 @@ HTML_TEMPLATE = '''
             if (likeBtn) likeBtn.classList.remove('active-action');
         }
 
-        function copyText(text, btn) {
+        function copyText(btn) {
+            const text = btn.getAttribute('data-content');
             navigator.clipboard.writeText(text);
             const originalHTML = btn.innerHTML;
             btn.innerHTML = '<i class="fa-solid fa-check"></i> Copied';
             setTimeout(() => { btn.innerHTML = originalHTML; }, 2000);
         }
 
-        function saveAnswer(btn, text) {
+        function saveAnswer(btn) {
             if (btn.classList.contains('active-action')) return;
+            const text = btn.getAttribute('data-content');
             btn.classList.add('active-action');
             btn.innerHTML = '<i class="fa-solid fa-bookmark"></i> Saved';
             
@@ -233,16 +233,19 @@ HTML_TEMPLATE = '''
                 });
                 const data = await response.json();
                 
-                const encodedText = JSON.stringify(data.response);
-                
+                // Create a temporary element to safely escape text attributes
+                const tempDiv = document.createElement('div');
+                tempDiv.textContent = data.response;
+                const safeText = tempDiv.innerHTML;
+
                 chatBox.innerHTML += `
                     <div class="msg-container">
                         <div class="msg bot-msg">${data.response}</div>
                         <div class="action-bar">
-                            <button class="action-btn like-btn" onclick="toggleLike(this)"><i class="fa-regular fa-thumbs-up"></i></button>
-                            <button class="action-btn dislike-btn" onclick="toggleDislike(this)"><i class="fa-regular fa-thumbs-down"></i></button>
-                            <button class="action-btn" onclick="copyText(${encodedText}, this)"><i class="fa-regular fa-copy"></i> Copy</button>
-                            <button class="action-btn save-btn-item" onclick="saveAnswer(this, ${encodedText})"><i class="fa-regular fa-bookmark"></i> Save</button>
+                            <button class="action-btn like-btn" onclick="toggleLike(this)"><i class="fa-regular fa-thumbs-up"></i> Like</button>
+                            <button class="action-btn dislike-btn" onclick="toggleDislike(this)"><i class="fa-regular fa-thumbs-down"></i> Dislike</button>
+                            <button class="action-btn" data-content="${safeText.replace(/"/g, '&quot;')}" onclick="copyText(this)"><i class="fa-regular fa-copy"></i> Copy</button>
+                            <button class="action-btn" data-content="${safeText.replace(/"/g, '&quot;')}" onclick="saveAnswer(this)"><i class="fa-regular fa-bookmark"></i> Save</button>
                         </div>
                     </div>
                 `;
