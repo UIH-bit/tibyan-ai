@@ -15,15 +15,14 @@ HTML_TEMPLATE = '''
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
         body { background-color: #031e11; color: #ffffff; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
-        header { display: flex; align-items: center; padding: 15px 20px; gap: 15px; background-color: #031e11; border-bottom: 1px solid #0d301e; }
+        header { display: flex; align-items: center; padding: 12px 20px; gap: 15px; background-color: #031e11; border-bottom: 1px solid #0d301e; flex-shrink: 0; }
         .logo-text { font-size: 18px; font-weight: bold; color: #d4af37; }
-        .content-area { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; align-items: center; }
         
-        /* Views */
+        .content-area { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; align-items: center; padding-bottom: 80px; }
+        
         .view { width: 100%; max-width: 600px; display: none; flex-direction: column; }
         .view.active { display: flex; }
 
-        /* Home / Chat View */
         .home-center { text-align: center; margin: auto 0; width: 100%; }
         .greeting { font-size: 32px; color: #d4af37; margin-bottom: 8px; font-family: serif; }
         .sub-greeting { font-size: 14px; color: #a0b0a8; margin-bottom: 25px; }
@@ -31,36 +30,31 @@ HTML_TEMPLATE = '''
         .chip { background: transparent; border: 1px solid #1a422d; color: #a0b0a8; padding: 10px 16px; border-radius: 12px; font-size: 13px; cursor: pointer; transition: 0.2s; }
         .chip:hover { border-color: #d4af37; color: #ffffff; }
         
-        #chat-box { width: 100%; text-align: left; display: none; flex-direction: column; gap: 20px; padding-bottom: 20px; }
-        
-        /* Clean text style without borders/boxes */
+        #chat-box { width: 100%; text-align: left; display: none; flex-direction: column; gap: 20px; }
         .msg { font-size: 14px; line-height: 1.6; white-space: pre-wrap; width: 100%; }
-        .user-msg { color: #d4af37; font-weight: 500; border-left: 3px solid #d4af37; padding-left: 10px; }
-        .bot-msg { color: #e0e0e0; }
+        .user-msg { color: #d4af37; font-weight: 500; border-left: 3px solid #d4af37; padding-left: 10px; margin-bottom: 10px; }
+        .bot-msg { color: #e0e0e0; margin-bottom: 20px; }
 
-        /* Library View */
         .lib-card { background: #072e1b; border: 1px solid #1a422d; padding: 15px; border-radius: 12px; margin-bottom: 12px; cursor: pointer; transition: 0.2s; width: 100%; }
         .lib-card:hover { border-color: #d4af37; }
         .lib-card h3 { color: #d4af37; font-size: 16px; margin-bottom: 5px; }
         .lib-card p { color: #a0b0a8; font-size: 13px; }
 
-        /* Profile & Saved Views */
         .section-title { font-size: 20px; color: #d4af37; margin-bottom: 15px; font-family: serif; width: 100%; }
         .profile-box { background: #072e1b; border: 1px solid #1a422d; padding: 20px; border-radius: 12px; text-align: center; width: 100%; }
         .profile-avatar { font-size: 50px; color: #d4af37; margin-bottom: 10px; }
 
-        /* Input Box */
-        .input-container { padding: 10px 15px; background: #031e11; border-top: 1px solid #0d301e; display: flex; justify-content: center; }
+        /* Bottom Fixed Controls */
+        .bottom-panel { position: fixed; bottom: 50px; left: 0; width: 100%; background: #031e11; padding: 8px 15px; display: flex; justify-content: center; z-index: 100; border-top: 1px solid #0d301e; }
         .input-box { display: flex; align-items: center; background-color: #0d301e; border: 1px solid #1a422d; border-radius: 25px; padding: 8px 16px; width: 100%; max-width: 600px; }
         .input-box input { flex: 1; background: transparent; border: none; outline: none; color: #fff; font-size: 14px; }
         .input-box input::placeholder { color: #6b8275; }
         .send-btn { background: transparent; border: none; color: #d4af37; font-size: 18px; cursor: pointer; margin-left: 10px; }
 
-        /* Bottom Nav */
-        nav { display: flex; justify-content: space-around; background-color: #031e11; padding: 12px 0; border-top: 1px solid #0d301e; }
-        .nav-item { display: flex; flex-direction: column; align-items: center; color: #5a7566; font-size: 11px; text-decoration: none; gap: 4px; cursor: pointer; }
+        nav { position: fixed; bottom: 0; left: 0; width: 100%; display: flex; justify-content: space-around; background-color: #031e11; padding: 10px 0; border-top: 1px solid #0d301e; z-index: 101; height: 50px; }
+        .nav-item { display: flex; flex-direction: column; align-items: center; color: #5a7566; font-size: 11px; text-decoration: none; gap: 2px; cursor: pointer; }
         .nav-item.active { color: #d4af37; }
-        .nav-item i { font-size: 18px; }
+        .nav-item i { font-size: 16px; }
     </style>
 </head>
 <body>
@@ -69,7 +63,6 @@ HTML_TEMPLATE = '''
     </header>
 
     <div class="content-area">
-        <!-- CHAT / HOME VIEW -->
         <div id="view-home" class="view active">
             <div id="home-welcome" class="home-center">
                 <div class="greeting">السلام عليكم</div>
@@ -83,7 +76,6 @@ HTML_TEMPLATE = '''
             <div id="chat-box"></div>
         </div>
 
-        <!-- LIBRARY VIEW -->
         <div id="view-library" class="view">
             <div class="section-title">Islamic Library</div>
             <div class="lib-card" onclick="sendSuggestion('Explain the 5 Pillars of Islam')">
@@ -92,23 +84,21 @@ HTML_TEMPLATE = '''
             </div>
             <div class="lib-card" onclick="sendSuggestion('Summarize Surah Al-Baqarah main themes')">
                 <h3><i class="fa-solid fa-quran"></i> Quranic Studies & Surahs</h3>
-                <p>Explore verses, context of revelation (Asbab al-Nuzul), and tafseer.</p>
+                <p>Explore verses, context of revelation, and tafseer.</p>
             </div>
             <div class="lib-card" onclick="sendSuggestion('Give me 3 authentic Hadiths on good character')">
                 <h3><i class="fa-solid fa-scroll"></i> Hadith Collections</h3>
-                <p>Sahih Bukhari, Sahih Muslim, Riyad as-Salihin authentic sayings.</p>
+                <p>Sahih Bukhari, Sahih Muslim authentic sayings.</p>
             </div>
         </div>
 
-        <!-- SAVED VIEW -->
         <div id="view-saved" class="view">
             <div class="section-title">Saved Answers</div>
-            <div id="saved-list" style="color: #a0b0a8; font-size: 14px; text-align: center; margin-top: 40px;">
+            <div style="color: #a0b0a8; font-size: 14px; text-align: center; margin-top: 40px;">
                 No saved answers yet.
             </div>
         </div>
 
-        <!-- PROFILE VIEW -->
         <div id="view-profile" class="view">
             <div class="section-title">User Profile</div>
             <div class="profile-box">
@@ -122,7 +112,7 @@ HTML_TEMPLATE = '''
         </div>
     </div>
 
-    <div class="input-container" id="input-container-wrapper">
+    <div class="bottom-panel" id="input-container-wrapper">
         <div class="input-box">
             <input type="text" id="user-input" placeholder="Ask anything about Quran, Hadith, Fiqh..." onkeypress="handleKey(event)">
             <button class="send-btn" onclick="sendMessage()"><i class="fa-solid fa-paper-plane"></i></button>
@@ -170,7 +160,7 @@ HTML_TEMPLATE = '''
 
             chatBox.innerHTML += `<div class="msg user-msg">You: ${message}</div>`;
             input.value = '';
-            chatBox.scrollTop = chatBox.scrollHeight;
+            window.scrollTo(0, document.body.scrollHeight);
 
             try {
                 const response = await fetch('/chat', {
@@ -180,7 +170,7 @@ HTML_TEMPLATE = '''
                 });
                 const data = await response.json();
                 chatBox.innerHTML += `<div class="msg bot-msg">${data.response}</div>`;
-                chatBox.scrollTop = chatBox.scrollHeight;
+                window.scrollTo(0, document.body.scrollHeight);
             } catch (err) {
                 chatBox.innerHTML += `<div class="msg bot-msg">Error: Unable to fetch response.</div>`;
             }
