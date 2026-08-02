@@ -12,7 +12,6 @@ HTML_TEMPLATE = '''
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Tibyan AI</title>
     
-    <!-- PWA Manifest & Mobile App Meta Tags -->
     <link rel="manifest" href="/manifest.json">
     <meta name="theme-color" content="#1a73e8">
     <meta name="mobile-web-app-capable" content="yes">
@@ -25,7 +24,7 @@ HTML_TEMPLATE = '''
         body { background-color: #ffffff; color: #1f1f1f; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
         
         header { display: flex; align-items: center; justify-content: space-between; padding: 14px 24px; background-color: #ffffff; border-bottom: 1px solid #f0f0f0; flex-shrink: 0; }
-        .logo-text { font-size: 20px; font-weight: 600; color: #1f1f1f; display: flex; align-items: center; gap: 8px; }
+        .logo-text { font-size: 20px; font-weight: 600; color: #1f1f1f; display: flex; align-items: center; gap: 8px; cursor: pointer; }
         .logo-text i { color: #1a73e8; }
         
         .content-area { flex: 1; overflow-y: auto; padding: 24px; display: flex; flex-direction: column; align-items: center; padding-bottom: 140px; }
@@ -85,8 +84,8 @@ HTML_TEMPLATE = '''
 </head>
 <body>
     <header>
-        <div class="logo-text"><i class="fa-solid fa-sparkles"></i> Tibyan AI</div>
-        <div style="font-size: 14px; color: #5f6368; font-weight: 500;"><i class="fa-solid fa-shield-halved" style="color: #1a73e8;"></i> Verified Knowledge</div>
+        <div class="logo-text" onclick="startNewChat()"><i class="fa-solid fa-sparkles"></i> Tibyan AI</div>
+        <button onclick="startNewChat()" style="background: #f0f4f9; border: 1px solid #dadce0; color: #1a73e8; padding: 6px 12px; border-radius: 16px; font-size: 13px; cursor: pointer; font-weight: 500;"><i class="fa-solid fa-plus"></i> New Chat</button>
     </header>
 
     <div class="content-area">
@@ -101,6 +100,18 @@ HTML_TEMPLATE = '''
                 </div>
             </div>
             <div id="chat-box"></div>
+        </div>
+
+        <div id="view-history" class="view">
+            <div class="section-title">
+                Chat History
+                <button onclick="clearHistory()" style="background: transparent; border: none; color: #ea4335; font-size: 13px; cursor: pointer;"><i class="fa-solid fa-trash"></i> Clear All</button>
+            </div>
+            <div id="history-container" style="display: flex; flex-direction: column; gap: 15px; width: 100%;">
+                <div style="color: #5f6368; font-size: 15px; text-align: center; margin-top: 40px;">
+                    No past chats found.
+                </div>
+            </div>
         </div>
 
         <div id="view-library" class="view">
@@ -144,21 +155,8 @@ HTML_TEMPLATE = '''
                 </div>
             </div>
         </div>
-
-        <div id="view-profile" class="view">
-            <div class="section-title">User Profile</div>
-            <div class="profile-box">
-                <div class="profile-avatar"><i class="fa-solid fa-circle-user"></i></div>
-                <h3 style="color: #202124; font-size: 20px; margin-bottom: 6px;">Islamic Seeker</h3>
-                <p style="color: #5f6368; font-size: 14px; margin-bottom: 20px;">Connected to Tibyan AI Advanced Engine</p>
-                <div style="background: #e8f0fe; color: #1967d2; padding: 12px; border-radius: 8px; font-size: 14px; font-weight: 500;">
-                    Status: Active & Contextualized
-                </div>
-            </div>
-        </div>
     </div>
 
-    <!-- Gemini Style Input Bar -->
     <div class="bottom-panel" id="input-container-wrapper">
         <div class="input-box">
             <button class="tool-btn" title="Voice Input" onclick="toggleVoiceInput()"><i class="fa-solid fa-microphone" id="mic-icon"></i></button>
@@ -169,20 +167,21 @@ HTML_TEMPLATE = '''
 
     <nav>
         <a class="nav-item active" onclick="switchTab('home', this)"><i class="fa-solid fa-house"></i>Chat</a>
+        <a class="nav-item" onclick="switchTab('history', this)"><i class="fa-solid fa-clock-rotate-left"></i>History</a>
         <a class="nav-item" onclick="switchTab('library', this)"><i class="fa-solid fa-book-open"></i>Library</a>
         <a class="nav-item" onclick="switchTab('saved', this)"><i class="fa-solid fa-bookmark"></i>Saved</a>
-        <a class="nav-item" onclick="switchTab('profile', this)"><i class="fa-solid fa-user"></i>Profile</a>
     </nav>
 
     <script>
-        let chatHistory = JSON.parse(localStorage.getItem('tibyan_chat_history')) || [];
+        let currentSessionChats = [];
+        let allPastSessions = JSON.parse(localStorage.getItem('tibyan_past_sessions')) || [];
         let savedItems = JSON.parse(localStorage.getItem('tibyan_saved_items')) || [];
         let recognition = null;
         let isListening = false;
 
         window.addEventListener('DOMContentLoaded', () => {
-            renderChatHistory();
             updateSavedUI();
+            updateHistoryUI();
         });
 
         if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
@@ -200,7 +199,6 @@ HTML_TEMPLATE = '''
                 stopListeningVisual();
                 sendMessage();
             };
-
             recognition.onerror = () => stopListeningVisual();
             recognition.onend = () => stopListeningVisual();
         }
@@ -246,6 +244,24 @@ HTML_TEMPLATE = '''
             element.classList.add('active');
 
             document.getElementById('input-container-wrapper').style.display = (tabName === 'home') ? 'flex' : 'none';
+        }
+
+        function startNewChat() {
+            if (currentSessionChats.length > 0) {
+                allPastSessions.unshift({
+                    date: new Date().toLocaleDateString() + ' ' + new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                    chats: [...currentSessionChats]
+                });
+                localStorage.setItem('tibyan_past_sessions', JSON.stringify(allPastSessions));
+                currentSessionChats = [];
+                updateHistoryUI();
+            }
+            
+            document.getElementById('home-welcome').style.display = 'block';
+            const chatBox = document.getElementById('chat-box');
+            chatBox.style.display = 'none';
+            chatBox.innerHTML = '';
+            switchTab('home', document.querySelector('.nav-item'));
         }
 
         function sendSuggestion(text) {
@@ -298,10 +314,18 @@ HTML_TEMPLATE = '''
         }
 
         function clearSaved() {
-            if (confirm("Are you sure you want to clear all saved answers?")) {
+            if (confirm("Clear all saved answers?")) {
                 savedItems = [];
                 localStorage.removeItem('tibyan_saved_items');
                 updateSavedUI();
+            }
+        }
+
+        function clearHistory() {
+            if (confirm("Clear all chat history?")) {
+                allPastSessions = [];
+                localStorage.removeItem('tibyan_past_sessions');
+                updateHistoryUI();
             }
         }
 
@@ -322,38 +346,23 @@ HTML_TEMPLATE = '''
             });
         }
 
-        function renderChatHistory() {
-            const homeWelcome = document.getElementById('home-welcome');
-            const chatBox = document.getElementById('chat-box');
-            
-            if (chatHistory.length > 0) {
-                homeWelcome.style.display = 'none';
-                chatBox.style.display = 'flex';
-                chatBox.innerHTML = '';
-
-                chatHistory.forEach(chat => {
-                    const tempDiv = document.createElement('div');
-                    tempDiv.textContent = chat.bot;
-                    const safeText = tempDiv.innerHTML;
-
-                    const isAlreadySaved = savedItems.includes(chat.bot);
-                    const saveBtnClass = isAlreadySaved ? 'action-btn active-action' : 'action-btn';
-                    const saveBtnHtml = isAlreadySaved ? '<i class="fa-solid fa-bookmark"></i> Saved' : '<i class="fa-regular fa-bookmark"></i> Save';
-
-                    chatBox.innerHTML += `
-                        <div class="msg-container">
-                            <div class="msg user-msg">You: ${chat.user}</div>
-                            <div class="msg bot-msg">${chat.bot}</div>
-                            <div class="action-bar">
-                                <button class="action-btn like-btn" onclick="toggleLike(this)"><i class="fa-regular fa-thumbs-up"></i> Like</button>
-                                <button class="action-btn dislike-btn" onclick="toggleDislike(this)"><i class="fa-regular fa-thumbs-down"></i> Dislike</button>
-                                <button class="action-btn" data-content="${safeText.replace(/"/g, '&quot;')}" onclick="copyText(this)"><i class="fa-regular fa-copy"></i> Copy</button>
-                                <button class="${saveBtnClass}" data-content="${safeText.replace(/"/g, '&quot;')}" onclick="saveAnswer(this)">${saveBtnHtml}</button>
-                            </div>
-                        </div>
-                    `;
-                });
+        function updateHistoryUI() {
+            const container = document.getElementById('history-container');
+            if (allPastSessions.length === 0) {
+                container.innerHTML = '<div style="color: #5f6368; font-size: 15px; text-align: center; margin-top: 40px;">No past chats found. Click "New Chat" to save current chat.</div>';
+                return;
             }
+            container.innerHTML = '';
+            allPastSessions.forEach((session, sIndex) => {
+                let sessionHtml = `<div style="background: #f8f9fa; border: 1px solid #dadce0; padding: 15px; border-radius: 16px; margin-bottom: 10px;">
+                    <div style="color: #1a73e8; font-weight: 500; margin-bottom: 10px; font-size: 13px;"><i class="fa-solid fa-clock"></i> Session: ${session.date}</div>`;
+                
+                session.chats.forEach(chat => {
+                    sessionHtml += `<div style="margin-bottom: 8px; font-size: 14px;"><strong>Q:</strong> ${chat.user}<br><span style="color: #5f6368;"><strong>A:</strong> ${chat.bot.substring(0, 90)}...</span></div>`;
+                });
+                sessionHtml += `</div>`;
+                container.innerHTML += sessionHtml;
+            });
         }
 
         async function sendMessage() {
@@ -384,8 +393,7 @@ HTML_TEMPLATE = '''
                 tempDiv.textContent = data.response;
                 const safeText = tempDiv.innerHTML;
 
-                chatHistory.push({ user: message, bot: data.response });
-                localStorage.setItem('tibyan_chat_history', JSON.stringify(chatHistory));
+                currentSessionChats.push({ user: message, bot: data.response });
 
                 chatBox.innerHTML += `
                     <div class="msg-container">
@@ -412,7 +420,6 @@ HTML_TEMPLATE = '''
 def home():
     return render_template_string(HTML_TEMPLATE)
 
-# Manifest Route with SVG Icon Support (No Pillow needed)
 @app.route('/manifest.json')
 def manifest():
     return jsonify({
