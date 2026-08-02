@@ -18,7 +18,7 @@ HTML_TEMPLATE = '''
         header { display: flex; align-items: center; padding: 12px 20px; gap: 15px; background-color: #031e11; border-bottom: 1px solid #0d301e; flex-shrink: 0; }
         .logo-text { font-size: 18px; font-weight: bold; color: #d4af37; }
         
-        .content-area { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; align-items: center; padding-bottom: 80px; }
+        .content-area { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; align-items: center; padding-bottom: 90px; }
         
         .view { width: 100%; max-width: 600px; display: none; flex-direction: column; }
         .view.active { display: flex; }
@@ -31,9 +31,13 @@ HTML_TEMPLATE = '''
         .chip:hover { border-color: #d4af37; color: #ffffff; }
         
         #chat-box { width: 100%; text-align: left; display: none; flex-direction: column; gap: 20px; }
+        .msg-container { width: 100%; margin-bottom: 20px; position: relative; }
         .msg { font-size: 14px; line-height: 1.6; white-space: pre-wrap; width: 100%; }
         .user-msg { color: #d4af37; font-weight: 500; border-left: 3px solid #d4af37; padding-left: 10px; margin-bottom: 10px; }
-        .bot-msg { color: #e0e0e0; margin-bottom: 20px; }
+        .bot-msg { color: #e0e0e0; margin-bottom: 8px; }
+        
+        .save-btn { background: transparent; border: none; color: #5a7566; font-size: 13px; cursor: pointer; display: inline-flex; align-items: center; gap: 5px; transition: 0.2s; }
+        .save-btn:hover, .save-btn.saved { color: #d4af37; }
 
         .lib-card { background: #072e1b; border: 1px solid #1a422d; padding: 15px; border-radius: 12px; margin-bottom: 12px; cursor: pointer; transition: 0.2s; width: 100%; }
         .lib-card:hover { border-color: #d4af37; }
@@ -94,8 +98,10 @@ HTML_TEMPLATE = '''
 
         <div id="view-saved" class="view">
             <div class="section-title">Saved Answers</div>
-            <div style="color: #a0b0a8; font-size: 14px; text-align: center; margin-top: 40px;">
-                No saved answers yet.
+            <div id="saved-container" style="display: flex; flex-direction: column; gap: 15px; width: 100%;">
+                <div id="no-saved" style="color: #a0b0a8; font-size: 14px; text-align: center; margin-top: 40px;">
+                    No saved answers yet. Click "Save Answer" under any response.
+                </div>
             </div>
         </div>
 
@@ -127,6 +133,8 @@ HTML_TEMPLATE = '''
     </nav>
 
     <script>
+        let savedItems = [];
+
         function switchTab(tabName, element) {
             document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
             document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
@@ -147,6 +155,32 @@ HTML_TEMPLATE = '''
             if (e.key === 'Enter') sendMessage();
         }
 
+        function saveAnswer(btn, text) {
+            if (btn.classList.contains('saved')) return;
+            btn.classList.add('saved');
+            btn.innerHTML = '<i class="fa-solid fa-bookmark"></i> Saved';
+            
+            savedItems.push(text);
+            updateSavedUI();
+        }
+
+        function updateSavedUI() {
+            const container = document.getElementById('saved-container');
+            if (savedItems.length === 0) {
+                container.innerHTML = '<div style="color: #a0b0a8; font-size: 14px; text-align: center; margin-top: 40px;">No saved answers yet.</div>';
+                return;
+            }
+            container.innerHTML = '';
+            savedItems.forEach((item, index) => {
+                container.innerHTML += `
+                    <div style="background: #072e1b; border: 1px solid #1a422d; padding: 15px; border-radius: 12px; font-size: 14px; line-height: 1.5; color: #e0e0e0;">
+                        <div style="color: #d4af37; font-weight: bold; margin-bottom: 8px;">Saved Answer #${index + 1}</div>
+                        ${item}
+                    </div>
+                `;
+            });
+        }
+
         async function sendMessage() {
             const input = document.getElementById('user-input');
             const message = input.value.trim();
@@ -158,7 +192,7 @@ HTML_TEMPLATE = '''
             if (homeWelcome) homeWelcome.style.display = 'none';
             chatBox.style.display = 'flex';
 
-            chatBox.innerHTML += `<div class="msg user-msg">You: ${message}</div>`;
+            chatBox.innerHTML += `<div class="msg-container"><div class="msg user-msg">You: ${message}</div></div>`;
             input.value = '';
             window.scrollTo(0, document.body.scrollHeight);
 
@@ -169,10 +203,19 @@ HTML_TEMPLATE = '''
                     body: JSON.stringify({ message: message })
                 });
                 const data = await response.json();
-                chatBox.innerHTML += `<div class="msg bot-msg">${data.response}</div>`;
+                
+                const uniqueId = 'msg_' + Date.now();
+                chatBox.innerHTML += `
+                    <div class="msg-container">
+                        <div class="msg bot-msg" id="${uniqueId}">${data.response}</div>
+                        <button class="save-btn" onclick="saveAnswer(this, \`${data.response.replace(/`/g, '\\`')}\`)">
+                            <i class="fa-regular fa-bookmark"></i> Save Answer
+                        </button>
+                    </div>
+                `;
                 window.scrollTo(0, document.body.scrollHeight);
             } catch (err) {
-                chatBox.innerHTML += `<div class="msg bot-msg">Error: Unable to fetch response.</div>`;
+                chatBox.innerHTML += `<div class="msg-container"><div class="msg bot-msg">Error: Unable to fetch response.</div></div>`;
             }
         }
     </script>
