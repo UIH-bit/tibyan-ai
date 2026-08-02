@@ -64,7 +64,6 @@ HTML_TEMPLATE = '''
         .profile-box { background: #f8f9fa; border: 1px solid #dadce0; padding: 30px; border-radius: 16px; text-align: center; width: 100%; max-width: 450px; margin: auto; }
         .profile-avatar { font-size: 60px; color: #1a73e8; margin-bottom: 15px; }
 
-        /* Gemini Style Auto-Growing Input Panel & Round Button */
         .bottom-panel { position: fixed; bottom: 65px; left: 0; width: 100%; background: transparent; padding: 12px 20px; display: flex; justify-content: center; z-index: 100; pointer-events: none; }
         .input-box { pointer-events: auto; display: flex; align-items: flex-end; background-color: #f0f4f9; border: 1px solid transparent; border-radius: 28px; padding: 10px 16px; width: 100%; max-width: 750px; transition: 0.2s; box-shadow: 0 2px 10px rgba(0,0,0,0.06); gap: 8px; }
         .input-box:focus-within { background: #ffffff; border-color: #d3e3fd; box-shadow: 0 4px 14px rgba(26,115,232,0.1); }
@@ -413,7 +412,7 @@ HTML_TEMPLATE = '''
 def home():
     return render_template_string(HTML_TEMPLATE)
 
-# Manifest Route for PWABuilder App Conversion
+# Manifest Route with SVG Icon Support (No Pillow needed)
 @app.route('/manifest.json')
 def manifest():
     return jsonify({
@@ -427,7 +426,8 @@ def manifest():
             {
                 "src": "https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/svgs/solid/sparkles.svg",
                 "sizes": "512x512",
-                "type": "image/svg+xml"
+                "type": "image/svg+xml",
+                "purpose": "any maskable"
             }
         ]
     })
