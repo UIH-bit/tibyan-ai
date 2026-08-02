@@ -20,7 +20,7 @@ HTML_TEMPLATE = '''
         .content-area { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; align-items: center; }
         
         /* Views */
-        .view { width: 100%; max-width: 500px; display: none; flex-direction: column; }
+        .view { width: 100%; max-width: 600px; display: none; flex-direction: column; }
         .view.active { display: flex; }
 
         /* Home / Chat View */
@@ -31,25 +31,27 @@ HTML_TEMPLATE = '''
         .chip { background: transparent; border: 1px solid #1a422d; color: #a0b0a8; padding: 10px 16px; border-radius: 12px; font-size: 13px; cursor: pointer; transition: 0.2s; }
         .chip:hover { border-color: #d4af37; color: #ffffff; }
         
-        #chat-box { width: 100%; text-align: left; display: none; margin-bottom: 20px; flex: 1; }
-        .msg { padding: 12px 16px; border-radius: 12px; margin-bottom: 12px; font-size: 14px; line-height: 1.5; white-space: pre-wrap; }
-        .user-msg { background: #1a422d; color: #fff; align-self: flex-end; margin-left: 15%; }
-        .bot-msg { background: #072e1b; border: 1px solid #d4af37; color: #e0e0e0; align-self: flex-start; margin-right: 15%; }
+        #chat-box { width: 100%; text-align: left; display: none; flex-direction: column; gap: 20px; padding-bottom: 20px; }
+        
+        /* Clean text style without borders/boxes */
+        .msg { font-size: 14px; line-height: 1.6; white-space: pre-wrap; width: 100%; }
+        .user-msg { color: #d4af37; font-weight: 500; border-left: 3px solid #d4af37; padding-left: 10px; }
+        .bot-msg { color: #e0e0e0; }
 
         /* Library View */
-        .lib-card { background: #072e1b; border: 1px solid #1a422d; padding: 15px; border-radius: 12px; margin-bottom: 12px; cursor: pointer; transition: 0.2s; }
+        .lib-card { background: #072e1b; border: 1px solid #1a422d; padding: 15px; border-radius: 12px; margin-bottom: 12px; cursor: pointer; transition: 0.2s; width: 100%; }
         .lib-card:hover { border-color: #d4af37; }
         .lib-card h3 { color: #d4af37; font-size: 16px; margin-bottom: 5px; }
         .lib-card p { color: #a0b0a8; font-size: 13px; }
 
         /* Profile & Saved Views */
-        .section-title { font-size: 20px; color: #d4af37; margin-bottom: 15px; font-family: serif; }
+        .section-title { font-size: 20px; color: #d4af37; margin-bottom: 15px; font-family: serif; width: 100%; }
         .profile-box { background: #072e1b; border: 1px solid #1a422d; padding: 20px; border-radius: 12px; text-align: center; width: 100%; }
         .profile-avatar { font-size: 50px; color: #d4af37; margin-bottom: 10px; }
 
         /* Input Box */
         .input-container { padding: 10px 15px; background: #031e11; border-top: 1px solid #0d301e; display: flex; justify-content: center; }
-        .input-box { display: flex; align-items: center; background-color: #0d301e; border: 1px solid #1a422d; border-radius: 25px; padding: 8px 16px; width: 100%; max-width: 500px; }
+        .input-box { display: flex; align-items: center; background-color: #0d301e; border: 1px solid #1a422d; border-radius: 25px; padding: 8px 16px; width: 100%; max-width: 600px; }
         .input-box input { flex: 1; background: transparent; border: none; outline: none; color: #fff; font-size: 14px; }
         .input-box input::placeholder { color: #6b8275; }
         .send-btn { background: transparent; border: none; color: #d4af37; font-size: 18px; cursor: pointer; margin-left: 10px; }
@@ -102,7 +104,7 @@ HTML_TEMPLATE = '''
         <div id="view-saved" class="view">
             <div class="section-title">Saved Answers</div>
             <div id="saved-list" style="color: #a0b0a8; font-size: 14px; text-align: center; margin-top: 40px;">
-                No saved answers yet. Click bookmark on any answer to save it here.
+                No saved answers yet.
             </div>
         </div>
 
@@ -142,7 +144,6 @@ HTML_TEMPLATE = '''
             document.getElementById('view-' + tabName).classList.add('active');
             element.classList.add('active');
 
-            // Hide input bar if not in home chat view
             document.getElementById('input-container-wrapper').style.display = (tabName === 'home') ? 'flex' : 'none';
         }
 
@@ -164,11 +165,10 @@ HTML_TEMPLATE = '''
             const homeWelcome = document.getElementById('home-welcome');
             const chatBox = document.getElementById('chat-box');
             
-            homeWelcome.style.display = 'none';
+            if (homeWelcome) homeWelcome.style.display = 'none';
             chatBox.style.display = 'flex';
-            chatBox.style.flexDirection = 'column';
 
-            chatBox.innerHTML += `<div class="msg user-msg">${message}</div>`;
+            chatBox.innerHTML += `<div class="msg user-msg">You: ${message}</div>`;
             input.value = '';
             chatBox.scrollTop = chatBox.scrollHeight;
 
@@ -221,7 +221,7 @@ def chat():
             bot_response = res_json['choices'][0]['message']['content']
             return jsonify({"response": bot_response})
         else:
-            error_msg = res_json.get('error', {}).get('message', 'Invalid API Key or quota exceeded')
+            error_msg = res_json.get('error', {}).get('message', 'Invalid API Key')
             return jsonify({"response": f"API Error: {error_msg}"})
     except Exception as e:
         return jsonify({"response": f"Connection Error: {str(e)}"})
