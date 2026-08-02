@@ -23,12 +23,33 @@ HTML_TEMPLATE = '''
         
         body { background-color: #ffffff; color: #1f1f1f; display: flex; height: 100vh; overflow: hidden; }
         
+        /* Auth Screen (Overlay full screen before login) */
+        #auth-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100vh; background: #ffffff; z-index: 9999; display: flex; align-items: center; justify-content: center; padding: 20px; }
+        .auth-card { width: 100%; max-width: 400px; background: #ffffff; border: 1px solid #e0e0e0; padding: 30px; border-radius: 20px; box-shadow: 0 4px 20px rgba(0,0,0,0.05); display: flex; flex-direction: column; gap: 16px; text-align: center; }
+        .auth-card h2 { font-size: 24px; color: #1a73e8; display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 5px; }
+        .auth-card p { font-size: 14px; color: #5f6368; margin-bottom: 10px; }
+        
+        .social-btn { display: flex; align-items: center; justify-content: center; gap: 10px; background: #ffffff; border: 1px solid #dadce0; padding: 12px; border-radius: 12px; font-size: 15px; font-weight: 500; cursor: pointer; color: #3c4043; transition: 0.2s; width: 100%; }
+        .social-btn:hover { background: #f1f3f4; }
+        
+        .divider { display: flex; align-items: center; text-align: center; color: #80868b; font-size: 13px; margin: 5px 0; }
+        .divider::before, .divider::after { content: ''; flex: 1; border-bottom: 1px solid #dadce0; }
+        .divider::before { margin-right: .5em; }
+        .divider::after { margin-left: .5em; }
+
+        .auth-input { width: 100%; padding: 12px 16px; border: 1px solid #dadce0; border-radius: 12px; font-size: 14px; outline: none; transition: 0.2s; }
+        .auth-input:focus { border-color: #1a73e8; box-shadow: 0 0 0 2px rgba(26,115,232,0.1); }
+        
+        .auth-btn { background: #1a73e8; color: white; border: none; padding: 12px; border-radius: 12px; font-size: 15px; font-weight: 500; cursor: pointer; transition: 0.2s; width: 100%; }
+        .auth-btn:hover { background: #1557b0; }
+        .toggle-auth { font-size: 13px; color: #1a73e8; cursor: pointer; margin-top: 5px; }
+
         /* Sidebar / Left Drawer */
         .sidebar { width: 280px; background-color: #f9fbfd; border-right: 1px solid #e0e0e0; display: flex; flex-direction: column; height: 100vh; position: fixed; top: 0; left: -280px; transition: 0.3s ease; z-index: 1000; }
         .sidebar.open { left: 0; }
         
-        .sidebar-header { padding: 16px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #f0f0f0; }
-        .new-chat-btn { display: flex; align-items: center; gap: 8px; background: #ffffff; border: 1px solid #dadce0; color: #1a73e8; padding: 8px 14px; border-radius: 16px; font-size: 14px; cursor: pointer; font-weight: 500; width: 100%; justify-content: center; transition: 0.2s; }
+        .sidebar-header { padding: 16px; border-bottom: 1px solid #f0f0f0; }
+        .new-chat-btn { display: flex; align-items: center; gap: 8px; background: #ffffff; border: 1px solid #dadce0; color: #1a73e8; padding: 10px 14px; border-radius: 16px; font-size: 14px; cursor: pointer; font-weight: 500; width: 100%; justify-content: center; transition: 0.2s; }
         .new-chat-btn:hover { background: #f1f3f4; }
 
         .sidebar-menu { flex: 1; overflow-y: auto; padding: 12px; display: flex; flex-direction: column; gap: 4px; }
@@ -36,18 +57,18 @@ HTML_TEMPLATE = '''
         .menu-item:hover { background: #f1f3f4; color: #202124; }
         .menu-item i { width: 20px; color: #5f6368; }
 
-        .sidebar-footer { padding: 12px; border-top: 1px solid #f0f0f0; }
+        .sidebar-footer { padding: 12px; border-top: 1px solid #f0f0f0; font-size: 13px; color: #5f6368; display: flex; justify-content: space-between; align-items: center; }
 
         /* Main Wrapper */
-        .main-wrapper { flex: 1; display: flex; flex-direction: column; height: 100vh; margin-left: 0; transition: 0.3s ease; width: 100%; }
+        .main-wrapper { flex: 1; display: flex; flex-direction: column; height: 100vh; width: 100%; }
         
-        header { display: flex; align-items: center; justify-content: space-between; padding: 14px 20px; background-color: #ffffff; border-bottom: 1px solid #f0f0f0; flex-shrink: 0; }
+        header { display: flex; align-items: center; justify-content: space-between; padding: 14px 20px; background-color: #ffffff; border-bottom: 1px solid #f0f0f0; flex-shrink: 0; position: sticky; top: 0; z-index: 99; }
         .menu-toggle { background: transparent; border: none; font-size: 20px; cursor: pointer; color: #444746; padding: 6px; border-radius: 50%; }
         .menu-toggle:hover { background: #f1f3f4; }
         .logo-text { font-size: 18px; font-weight: 600; color: #1f1f1f; display: flex; align-items: center; gap: 8px; }
         .logo-text i { color: #1a73e8; }
         
-        .content-area { flex: 1; overflow-y: auto; padding: 24px; display: flex; flex-direction: column; align-items: center; padding-bottom: 110px; }
+        .content-area { flex: 1; overflow-y: auto; padding: 24px; display: flex; flex-direction: column; align-items: center; padding-bottom: 120px; }
         
         .view { width: 100%; max-width: 800px; display: none; flex-direction: column; }
         .view.active { display: flex; }
@@ -80,22 +101,42 @@ HTML_TEMPLATE = '''
 
         .section-title { font-size: 22px; color: #1f1f1f; margin-bottom: 15px; font-weight: 500; width: 100%; display: flex; justify-content: space-between; align-items: center; }
         
-        .bottom-panel { position: fixed; bottom: 15px; left: 0; width: 100%; background: transparent; padding: 0 20px; display: flex; justify-content: center; z-index: 10; }
+        .bottom-panel { position: fixed; bottom: 0; left: 0; width: 100%; background: #ffffff; padding: 12px 20px; display: flex; justify-content: center; z-index: 98; border-top: 1px solid #f0f0f0; }
         .input-box { display: flex; align-items: flex-end; background-color: #f0f4f9; border: 1px solid transparent; border-radius: 28px; padding: 10px 16px; width: 100%; max-width: 750px; transition: 0.2s; box-shadow: 0 2px 10px rgba(0,0,0,0.06); gap: 8px; }
         .input-box:focus-within { background: #ffffff; border-color: #d3e3fd; box-shadow: 0 4px 14px rgba(26,115,232,0.1); }
         .input-box textarea { flex: 1; background: transparent; border: none; outline: none; color: #1f1f1f; font-size: 15px; resize: none; max-height: 120px; min-height: 24px; line-height: 1.5; padding-top: 2px; }
         
-        .tool-btn { background: transparent; border: none; color: #444746; font-size: 18px; cursor: pointer; padding: 6px; border-radius: 50%; width: 38px; height: 38px; display: flex; align-items: center; justify-content: center; }
-        .tool-btn:hover { background: #e2e8f0; }
         .send-btn { background: #1a73e8; border: none; color: #ffffff; font-size: 14px; cursor: pointer; width: 38px; height: 38px; border-radius: 50%; display: flex; align-items: center; justify-content: center; transition: 0.2s; flex-shrink: 0; }
         .send-btn:hover { background: #1557b0; }
 
-        /* Overlay for mobile drawer */
         .overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.3); display: none; z-index: 999; }
         .overlay.active { display: block; }
     </style>
 </head>
 <body>
+
+    <!-- Mandatory Login / Signup Overlay Screen -->
+    <div id="auth-screen">
+        <div class="auth-card">
+            <h2><i class="fa-solid fa-sparkles"></i> Tibyan AI</h2>
+            <p id="auth-subtitle">Please sign in or create an account to continue</p>
+            
+            <button class="social-btn" onclick="handleGoogleLogin()">
+                <i class="fa-brands fa-google" style="color: #ea4335;"></i> Continue with Google
+            </button>
+            
+            <div class="divider">or</div>
+            
+            <div id="signup-fields" style="display: flex; flex-direction: column; gap: 12px;">
+                <input type="text" id="auth-username" class="auth-input" placeholder="Username">
+                <input type="email" id="auth-email" class="auth-input" placeholder="Email Address">
+                <input type="password" id="auth-password" class="auth-input" placeholder="Password">
+                <button class="auth-btn" onclick="submitAuth()">Sign Up</button>
+            </div>
+            
+            <div class="toggle-auth" id="toggle-auth-btn" onclick="toggleAuthMode()">Already have an account? Login</div>
+        </div>
+    </div>
 
     <!-- Left Drawer / Sidebar -->
     <div class="overlay" id="overlay" onclick="toggleSidebar()"></div>
@@ -116,7 +157,8 @@ HTML_TEMPLATE = '''
             <div class="menu-item" onclick="switchView('about')"><i class="fa-solid fa-circle-info"></i> About</div>
         </div>
         <div class="sidebar-footer">
-            <div class="menu-item" onclick="switchView('auth')" style="background: #f0f4f9; color: #1a73e8; font-weight: 500;"><i class="fa-solid fa-user"></i> Login / Signup</div>
+            <span id="user-display-name">User</span>
+            <span onclick="logout()" style="color: #ea4335; cursor: pointer;"><i class="fa-solid fa-right-from-bracket"></i> Logout</span>
         </div>
     </div>
 
@@ -194,7 +236,7 @@ HTML_TEMPLATE = '''
             <!-- DOWNLOADS VIEW -->
             <div id="view-downloads" class="view">
                 <div class="section-title">Downloads</div>
-                <p style="color: #5f6368; font-size: 14px; line-height: 1.5;">You can download offline scholarly articles or exported chat histories here. No offline items downloaded yet.</p>
+                <p style="color: #5f6368; font-size: 14px; line-height: 1.5;">You can download offline scholarly articles or exported chat histories here.</p>
             </div>
 
             <!-- COLLECTION VIEW -->
@@ -211,43 +253,26 @@ HTML_TEMPLATE = '''
                         <span>Dark Theme Mode</span>
                         <input type="checkbox" onchange="alert('Dark mode toggle coming soon!')">
                     </label>
-                    <label style="display: flex; justify-content: space-between; align-items: center; padding: 12px; background: #f8f9fa; border-radius: 10px;">
-                        <span>Scholarly Detailed Responses</span>
-                        <input type="checkbox" checked disabled>
-                    </label>
                 </div>
             </div>
 
             <!-- HELP VIEW -->
             <div id="view-help" class="view">
                 <div class="section-title">Help & Support</div>
-                <p style="color: #5f6368; font-size: 14px; line-height: 1.6;">Tibyan AI is designed to assist you with authentic Islamic knowledge. If you face any issues, make sure your internet connection is active and your API key is correctly configured.</p>
+                <p style="color: #5f6368; font-size: 14px; line-height: 1.6;">Tibyan AI is designed to assist you with authentic Islamic knowledge. Ensure your internet connection is active.</p>
             </div>
 
             <!-- ABOUT VIEW -->
             <div id="view-about" class="view">
                 <div class="section-title">About Tibyan AI</div>
-                <p style="color: #5f6368; font-size: 14px; line-height: 1.6;"><strong>Tibyan AI v2.0</strong><br>An intelligent Islamic scholarly assistant built to provide grounded, authentic information from the Quran, Hadith, and Fiqh.</p>
+                <p style="color: #5f6368; font-size: 14px; line-height: 1.6;"><strong>Tibyan AI v2.1</strong><br>An intelligent Islamic scholarly assistant built to provide grounded information from Quran, Hadith, and Fiqh.</p>
             </div>
-
-            <!-- LOGIN / SIGNUP VIEW -->
-            <div id="view-auth" class="view">
-                <div class="section-title">Login / Signup</div>
-                <div style="background: #f8f9fa; border: 1px solid #dadce0; padding: 24px; border-radius: 16px; display: flex; flex-direction: column; gap: 15px; max-width: 400px; margin: 0 auto; width: 100%;">
-                    <h3 style="font-size: 18px; color: #1a73e8; margin-bottom: 5px;">Welcome to Tibyan</h3>
-                    <input type="email" placeholder="Email Address" style="padding: 12px; border: 1px solid #dadce0; border-radius: 10px; font-size: 14px; outline: none;">
-                    <input type="password" placeholder="Password" style="padding: 12px; border: 1px solid #dadce0; border-radius: 10px; font-size: 14px; outline: none;">
-                    <button onclick="alert('Authentication feature connected to local state!')" style="background: #1a73e8; color: white; border: none; padding: 12px; border-radius: 10px; font-size: 15px; cursor: pointer; font-weight: 500;">Continue</button>
-                </div>
-            </div>
-
         </div>
     </div>
 
-    <!-- Bottom Input Bar (Only visible on Home) -->
+    <!-- Bottom Input Bar -->
     <div class="bottom-panel" id="input-container-wrapper">
         <div class="input-box">
-            <button class="tool-btn" title="Voice Input" onclick="toggleVoiceInput()"><i class="fa-solid fa-microphone" id="mic-icon"></i></button>
             <textarea id="user-input" placeholder="Ask anything about Quran, Hadith, Fiqh..." rows="1" oninput="autoResize(this)" onkeydown="handleKey(event)"></textarea>
             <button class="send-btn" onclick="sendMessage()"><i class="fa-solid fa-arrow-up"></i></button>
         </div>
@@ -257,11 +282,69 @@ HTML_TEMPLATE = '''
         let currentSessionChats = [];
         let allPastSessions = JSON.parse(localStorage.getItem('tibyan_past_sessions')) || [];
         let savedItems = JSON.parse(localStorage.getItem('tibyan_saved_items')) || [];
+        let isLoginMode = false;
 
         window.addEventListener('DOMContentLoaded', () => {
+            checkAuthStatus();
             updateSavedUI();
             updateHistoryUI();
         });
+
+        function checkAuthStatus() {
+            const user = localStorage.getItem('tibyan_logged_user');
+            if (user) {
+                document.getElementById('auth-screen').style.display = 'none';
+                document.getElementById('user-display-name').innerText = user;
+            } else {
+                document.getElementById('auth-screen').style.display = 'flex';
+            }
+        }
+
+        function toggleAuthMode() {
+            isLoginMode = !isLoginMode;
+            const sub = document.getElementById('auth-subtitle');
+            const toggleBtn = document.getElementById('toggle-auth-btn');
+            const usernameField = document.getElementById('auth-username');
+            const submitBtn = document.querySelector('.auth-btn');
+
+            if (isLoginMode) {
+                sub.innerText = "Login to your account";
+                usernameField.style.display = 'none';
+                submitBtn.innerText = "Login";
+                toggleBtn.innerText = "Don't have an account? Sign Up";
+            } else {
+                sub.innerText = "Create an account to continue";
+                usernameField.style.display = 'block';
+                submitBtn.innerText = "Sign Up";
+                toggleBtn.innerText = "Already have an account? Login";
+            }
+        }
+
+        function handleGoogleLogin() {
+            // Simulated Google Auth entry
+            localStorage.setItem('tibyan_logged_user', 'Google User');
+            checkAuthStatus();
+        }
+
+        function submitAuth() {
+            const email = document.getElementById('auth-email').value.trim();
+            const password = document.getElementById('auth-password').value.trim();
+            const username = document.getElementById('auth-username').value.trim();
+
+            if (!email || !password || (!isLoginMode && !username)) {
+                alert('Please fill in all required fields.');
+                return;
+            }
+
+            const displayName = isLoginMode ? email.split('@')[0] : username;
+            localStorage.setItem('tibyan_logged_user', displayName);
+            checkAuthStatus();
+        }
+
+        function logout() {
+            localStorage.removeItem('tibyan_logged_user');
+            checkAuthStatus();
+        }
 
         function toggleSidebar() {
             document.getElementById('sidebar').classList.toggle('open');
@@ -271,7 +354,6 @@ HTML_TEMPLATE = '''
         function switchView(viewName) {
             document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
             document.getElementById('view-' + viewName).classList.add('active');
-            document.getElementById('input-container-wrapper').style.display = (viewName === 'home') ? 'flex' : 'none';
             toggleSidebar();
         }
 
