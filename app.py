@@ -17,13 +17,13 @@ HTML_TEMPLATE = '''
         
         body { background-color: #ffffff; color: #1f1f1f; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
         
-        header { display: flex; align-items: center; padding: 16px 24px; gap: 15px; background-color: #ffffff; border-bottom: 1px solid #f0f0f0; flex-shrink: 0; }
+        header { display: flex; align-items: center; justify-content: space-between; padding: 14px 24px; background-color: #ffffff; border-bottom: 1px solid #f0f0f0; flex-shrink: 0; }
         .logo-text { font-size: 20px; font-weight: 600; color: #1f1f1f; display: flex; align-items: center; gap: 8px; }
         .logo-text i { color: #1a73e8; }
         
-        .content-area { flex: 1; overflow-y: auto; padding: 24px; display: flex; flex-direction: column; align-items: center; padding-bottom: 100px; }
+        .content-area { flex: 1; overflow-y: auto; padding: 24px; display: flex; flex-direction: column; align-items: center; padding-bottom: 120px; }
         
-        .view { width: 100%; max-width: 750px; display: none; flex-direction: column; }
+        .view { width: 100%; max-width: 800px; display: none; flex-direction: column; }
         .view.active { display: flex; }
 
         .home-center { text-align: center; margin: auto 0; width: 100%; }
@@ -31,7 +31,7 @@ HTML_TEMPLATE = '''
         .sub-greeting { font-size: 16px; color: #5f6368; margin-bottom: 30px; }
         
         .suggestions { display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; margin-bottom: 20px; }
-        .chip { background: #f8f9fa; border: 1px solid #dadce0; color: #3c4043; padding: 12px 18px; border-radius: 16px; font-size: 15px; cursor: pointer; transition: 0.2s; font-weight: 400; }
+        .chip { background: #f8f9fa; border: 1px solid #dadce0; color: #3c4043; padding: 10px 16px; border-radius: 16px; font-size: 14px; cursor: pointer; transition: 0.2s; font-weight: 400; }
         .chip:hover { background: #f1f3f4; border-color: #bdc1c6; }
         
         #chat-box { width: 100%; text-align: left; display: none; flex-direction: column; gap: 24px; }
@@ -46,25 +46,31 @@ HTML_TEMPLATE = '''
         .action-btn:hover { background: #f1f3f4; color: #202124; }
         .action-btn.active-action { color: #1a73e8; font-weight: 500; }
 
-        .lib-card { background: #f8f9fa; border: 1px solid #dadce0; padding: 20px; border-radius: 16px; margin-bottom: 16px; cursor: pointer; transition: 0.2s; width: 100%; }
-        .lib-card:hover { background: #f1f3f4; border-color: #bdc1c6; }
-        .lib-card h3 { color: #1a73e8; font-size: 18px; margin-bottom: 6px; font-weight: 500; }
-        .lib-card p { color: #5f6368; font-size: 15px; }
+        .lib-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 16px; width: 100%; margin-top: 10px; }
+        .lib-card { background: #f8f9fa; border: 1px solid #dadce0; padding: 20px; border-radius: 16px; cursor: pointer; transition: 0.2s; display: flex; flex-direction: column; gap: 8px; }
+        .lib-card:hover { background: #f1f3f4; border-color: #bdc1c6; box-shadow: 0 2px 6px rgba(0,0,0,0.05); }
+        .lib-card h3 { color: #1a73e8; font-size: 17px; font-weight: 500; display: flex; align-items: center; gap: 8px; }
+        .lib-card p { color: #5f6368; font-size: 14px; line-height: 1.4; }
 
-        .section-title { font-size: 24px; color: #1f1f1f; margin-bottom: 20px; font-weight: 500; width: 100%; }
+        .section-title { font-size: 24px; color: #1f1f1f; margin-bottom: 15px; font-weight: 500; width: 100%; }
         
-        .profile-box { background: #f8f9fa; border: 1px solid #dadce0; padding: 30px; border-radius: 16px; text-align: center; width: 100%; }
+        .profile-box { background: #f8f9fa; border: 1px solid #dadce0; padding: 30px; border-radius: 16px; text-align: center; width: 100%; max-width: 450px; margin: auto; }
         .profile-avatar { font-size: 60px; color: #1a73e8; margin-bottom: 15px; }
 
-        .bottom-panel { position: fixed; bottom: 60px; left: 0; width: 100%; background: #ffffff; padding: 12px 20px; display: flex; justify-content: center; z-index: 100; }
-        .input-box { display: flex; align-items: center; background-color: #f1f3f4; border: 1px solid transparent; border-radius: 28px; padding: 12px 20px; width: 100%; max-width: 750px; transition: 0.2s; box-shadow: 0 1px 6px rgba(32,33,36,.1); }
-        .input-box:focus-within { background: #ffffff; border-color: #dadce0; box-shadow: 0 1px 6px rgba(32,33,36,.15); }
-        .input-box input { flex: 1; background: transparent; border: none; outline: none; color: #202124; font-size: 16px; }
-        .input-box input::placeholder { color: #70757a; }
-        .send-btn { background: transparent; border: none; color: #1a73e8; font-size: 20px; cursor: pointer; margin-left: 12px; }
+        /* Gemini Style Bottom Input Panel */
+        .bottom-panel { position: fixed; bottom: 65px; left: 0; width: 100%; background: transparent; padding: 12px 20px; display: flex; justify-content: center; z-index: 100; pointer-events: none; }
+        .input-box { pointer-events: auto; display: flex; align-items: center; background-color: #f0f4f9; border: 1px solid transparent; border-radius: 32px; padding: 8px 16px; width: 100%; max-width: 750px; transition: 0.2s; box-shadow: 0 2px 10px rgba(0,0,0,0.06); }
+        .input-box:focus-within { background: #ffffff; border-color: #d3e3fd; box-shadow: 0 4px 14px rgba(26,115,232,0.1); }
+        .input-box input { flex: 1; background: transparent; border: none; outline: none; color: #1f1f1f; font-size: 16px; padding: 8px 12px; }
+        .input-box input::placeholder { color: #757575; }
+        
+        .tool-btn { background: transparent; border: none; color: #444746; font-size: 18px; cursor: pointer; padding: 8px; border-radius: 50%; transition: 0.2s; display: flex; align-items: center; justify-content: center; width: 40px; height: 40px; }
+        .tool-btn:hover { background: #e2e8f0; color: #1f1f1f; }
+        .send-btn { background: #1a73e8; border: none; color: #ffffff; font-size: 16px; cursor: pointer; width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; transition: 0.2s; margin-left: 6px; }
+        .send-btn:hover { background: #1557b0; }
 
-        nav { position: fixed; bottom: 0; left: 0; width: 100%; display: flex; justify-content: space-around; background-color: #ffffff; padding: 10px 0; border-top: 1px solid #f0f0f0; z-index: 101; height: 60px; }
-        .nav-item { display: flex; flex-direction: column; align-items: center; color: #5f6368; font-size: 12px; text-decoration: none; gap: 4px; cursor: pointer; }
+        nav { position: fixed; bottom: 0; left: 0; width: 100%; display: flex; justify-content: space-around; background-color: #ffffff; padding: 8px 0; border-top: 1px solid #f0f0f0; z-index: 101; height: 60px; }
+        .nav-item { display: flex; flex-direction: column; align-items: center; color: #5f6368; font-size: 12px; text-decoration: none; gap: 3px; cursor: pointer; }
         .nav-item.active { color: #1a73e8; font-weight: 500; }
         .nav-item i { font-size: 18px; }
     </style>
@@ -72,35 +78,50 @@ HTML_TEMPLATE = '''
 <body>
     <header>
         <div class="logo-text"><i class="fa-solid fa-sparkles"></i> Tibyan AI</div>
+        <div style="font-size: 14px; color: #5f6368; font-weight: 500;"><i class="fa-solid fa-shield-halved" style="color: #1a73e8;"></i> Verified Knowledge</div>
     </header>
 
     <div class="content-area">
         <div id="view-home" class="view active">
             <div id="home-welcome" class="home-center">
                 <div class="greeting">السلام عليكم</div>
-                <div class="sub-greeting">Authentic Islamic Knowledge, Powered by AI</div>
+                <div class="sub-greeting">Authentic Islamic Knowledge, Powered by Advanced Context AI</div>
                 <div class="suggestions">
-                    <div class="chip" onclick="sendSuggestion('What breaks the fast?')">What breaks the fast?</div>
-                    <div class="chip" onclick="sendSuggestion('Virtues of Ayat al-Kursi')">Virtues of Ayat al-Kursi</div>
-                    <div class="chip" onclick="sendSuggestion('How to perform Tahajjud?')">How to perform Tahajjud?</div>
+                    <div class="chip" onclick="sendSuggestion('What breaks the fast in detail?')">What breaks the fast?</div>
+                    <div class="chip" onclick="sendSuggestion('Explain the deep virtues of Ayat al-Kursi')">Virtues of Ayat al-Kursi</div>
+                    <div class="chip" onclick="sendSuggestion('Step by step guide to Tahajjud prayer')">How to perform Tahajjud?</div>
                 </div>
             </div>
             <div id="chat-box"></div>
         </div>
 
         <div id="view-library" class="view">
-            <div class="section-title">Islamic Library</div>
-            <div class="lib-card" onclick="sendSuggestion('Explain the 5 Pillars of Islam')">
-                <h3><i class="fa-solid fa-book"></i> The 5 Pillars of Islam</h3>
-                <p>Learn about Shahada, Salah, Zakat, Sawm, and Hajj with proofs.</p>
-            </div>
-            <div class="lib-card" onclick="sendSuggestion('Summarize Surah Al-Baqarah main themes')">
-                <h3><i class="fa-solid fa-quran"></i> Quranic Studies & Surahs</h3>
-                <p>Explore verses, context of revelation, and tafseer.</p>
-            </div>
-            <div class="lib-card" onclick="sendSuggestion('Give me 3 authentic Hadiths on good character')">
-                <h3><i class="fa-solid fa-scroll"></i> Hadith Collections</h3>
-                <p>Sahih Bukhari, Sahih Muslim authentic sayings.</p>
+            <div class="section-title">Expanded Islamic Library</div>
+            <div class="lib-grid">
+                <div class="lib-card" onclick="sendSuggestion('Explain the 5 Pillars of Islam with comprehensive proofs')">
+                    <h3><i class="fa-solid fa-book"></i> Pillars of Islam</h3>
+                    <p>Detailed study of Shahada, Salah, Zakat, Sawm, and Hajj.</p>
+                </div>
+                <div class="lib-card" onclick="sendSuggestion('Share 5 essential Daily Duas with Arabic text and meanings')">
+                    <h3><i class="fa-solid fa-hands-praying"></i> Daily Duas</h3>
+                    <p>Essential supplications for morning, evening, and protection.</p>
+                </div>
+                <div class="lib-card" onclick="sendSuggestion('Explain 3 authentic Hadiths from 40 Hadith Nawawi')">
+                    <h3><i class="fa-solid fa-scroll"></i> 40 Hadith Nawawi</h3>
+                    <p>Core sayings of Prophet Muhammad (PBUH) on Islamic morals.</p>
+                </div>
+                <div class="lib-card" onclick="sendSuggestion('Explain the meaning and beauty of 5 Names of Allah (Asma-ul-Husna)')">
+                    <h3><i class="fa-solid fa-star-and-crescent"></i> Asma-ul-Husna</h3>
+                    <p>Discover the profound meanings of the Beautiful Names of Allah.</p>
+                </div>
+                <div class="lib-card" onclick="sendSuggestion('Summarize Surah Al-Baqarah core themes and lessons')">
+                    <h3><i class="fa-solid fa-quran"></i> Quranic Surahs</h3>
+                    <p>Explore context, themes, and deep tafseer insights.</p>
+                </div>
+                <div class="lib-card" onclick="sendSuggestion('What are the main rules of Islamic Fiqh regarding Taharah (Purification)?')">
+                    <h3><i class="fa-solid fa-scale-balanced"></i> Islamic Fiqh</h3>
+                    <p>Practical rulings on daily worship, Wudu, and Ghusl.</p>
+                </div>
             </div>
         </div>
 
@@ -118,18 +139,20 @@ HTML_TEMPLATE = '''
             <div class="profile-box">
                 <div class="profile-avatar"><i class="fa-solid fa-circle-user"></i></div>
                 <h3 style="color: #202124; font-size: 20px; margin-bottom: 6px;">Islamic Seeker</h3>
-                <p style="color: #5f6368; font-size: 14px; margin-bottom: 20px;">Connected to Tibyan AI Engine</p>
+                <p style="color: #5f6368; font-size: 14px; margin-bottom: 20px;">Connected to Tibyan AI Advanced Engine</p>
                 <div style="background: #e8f0fe; color: #1967d2; padding: 12px; border-radius: 8px; font-size: 14px; font-weight: 500;">
-                    Status: Active & Verified
+                    Status: Active & Contextualized
                 </div>
             </div>
         </div>
     </div>
 
+    <!-- Gemini Style Input Bar -->
     <div class="bottom-panel" id="input-container-wrapper">
         <div class="input-box">
+            <button class="tool-btn" title="Voice Input" onclick="toggleVoiceInput()"><i class="fa-solid fa-microphone" id="mic-icon"></i></button>
             <input type="text" id="user-input" placeholder="Ask anything about Quran, Hadith, Fiqh..." onkeypress="handleKey(event)">
-            <button class="send-btn" onclick="sendMessage()"><i class="fa-solid fa-paper-plane"></i></button>
+            <button class="send-btn" onclick="sendMessage()"><i class="fa-solid fa-arrow-up"></i></button>
         </div>
     </div>
 
@@ -142,6 +165,60 @@ HTML_TEMPLATE = '''
 
     <script>
         let savedItems = [];
+        let recognition = null;
+        let isListening = false;
+
+        // Initialize Speech Recognition if supported
+        if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            recognition = new SpeechRecognition();
+            recognition.continuous = false;
+            recognition.interimResults = false;
+            recognition.lang = 'en-US';
+
+            recognition.onresult = function(event) {
+                const speechToText = event.results[0][0].transcript;
+                document.getElementById('user-input').value = speechToText;
+                stopListeningVisual();
+                sendMessage();
+            };
+
+            recognition.onerror = function(event) {
+                stopListeningVisual();
+            };
+
+            recognition.onend = function() {
+                stopListeningVisual();
+            };
+        }
+
+        function toggleVoiceInput() {
+            if (!recognition) {
+                alert('Voice input is not supported on your current browser/device.');
+                return;
+            }
+            if (isListening) {
+                recognition.stop();
+                stopListeningVisual();
+            } else {
+                recognition.start();
+                startListeningVisual();
+            }
+        }
+
+        function startListeningVisual() {
+            isListening = true;
+            const micIcon = document.getElementById('mic-icon');
+            micIcon.style.color = '#ea4335';
+            micIcon.classList.add('fa-beat');
+        }
+
+        function stopListeningVisual() {
+            isListening = false;
+            const micIcon = document.getElementById('mic-icon');
+            micIcon.style.color = '#444746';
+            micIcon.classList.remove('fa-beat');
+        }
 
         function switchTab(tabName, element) {
             document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
@@ -233,7 +310,6 @@ HTML_TEMPLATE = '''
                 });
                 const data = await response.json();
                 
-                // Create a temporary element to safely escape text attributes
                 const tempDiv = document.createElement('div');
                 tempDiv.textContent = data.response;
                 const safeText = tempDiv.innerHTML;
@@ -276,10 +352,20 @@ def chat():
         "Authorization": f"Bearer {api_key}",
         "Content-Type": "application/json"
     }
+    
+    # Advanced System Prompt for deep contextual and scholarly understanding
+    system_prompt = (
+        "You are Tibyan AI, a deeply knowledgeable, empathetic, and expert Islamic scholar assistant. "
+        "Your goal is to fully understand the user's intent, context, and core question with high intelligence. "
+        "Provide structured, comprehensive, and authentic answers strictly derived from the Holy Quran, authentic Hadiths "
+        "(Sahih al-Bukhari, Sahih Muslim, etc.), and recognized mainstream Fiqh schools. "
+        "Always cite relevant Quranic verses or Hadith references where appropriate. Maintain a respectful, wise, and scholarly tone."
+    )
+
     data = {
         "model": "llama-3.3-70b-versatile",
         "messages": [
-            {"role": "system", "content": "You are Tibyan AI, an expert and authentic Islamic scholar assistant. Provide well-structured answers based strictly on Quran, authentic Hadiths (Bukhari, Muslim, etc.), and recognized Fiqh, along with clear references."},
+            {"role": "system", "content": system_prompt},
             {"role": "user", "content": user_msg}
         ]
     }
