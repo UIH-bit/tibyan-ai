@@ -11,6 +11,13 @@ HTML_TEMPLATE = '''
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Tibyan AI</title>
+    
+    <!-- PWA Manifest & Mobile App Meta Tags -->
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#1a73e8">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
@@ -57,7 +64,7 @@ HTML_TEMPLATE = '''
         .profile-box { background: #f8f9fa; border: 1px solid #dadce0; padding: 30px; border-radius: 16px; text-align: center; width: 100%; max-width: 450px; margin: auto; }
         .profile-avatar { font-size: 60px; color: #1a73e8; margin-bottom: 15px; }
 
-        /* Gemini Style Auto-Growing Input Panel & Perfectly Round Button */
+        /* Gemini Style Auto-Growing Input Panel & Round Button */
         .bottom-panel { position: fixed; bottom: 65px; left: 0; width: 100%; background: transparent; padding: 12px 20px; display: flex; justify-content: center; z-index: 100; pointer-events: none; }
         .input-box { pointer-events: auto; display: flex; align-items: flex-end; background-color: #f0f4f9; border: 1px solid transparent; border-radius: 28px; padding: 10px 16px; width: 100%; max-width: 750px; transition: 0.2s; box-shadow: 0 2px 10px rgba(0,0,0,0.06); gap: 8px; }
         .input-box:focus-within { background: #ffffff; border-color: #d3e3fd; box-shadow: 0 4px 14px rgba(26,115,232,0.1); }
@@ -152,7 +159,7 @@ HTML_TEMPLATE = '''
         </div>
     </div>
 
-    <!-- Gemini Style Auto-Growing Input Bar -->
+    <!-- Gemini Style Input Bar -->
     <div class="bottom-panel" id="input-container-wrapper">
         <div class="input-box">
             <button class="tool-btn" title="Voice Input" onclick="toggleVoiceInput()"><i class="fa-solid fa-microphone" id="mic-icon"></i></button>
@@ -308,7 +315,7 @@ HTML_TEMPLATE = '''
             container.innerHTML = '';
             savedItems.forEach((item, index) => {
                 container.innerHTML += `
-                    <div style="background: #f8f9fa; border: 1px solid #dadce0; padding: 20px; border-radius: 16px; font-size: 15px; line-height: 1.6; color: #202124; position: relative;">
+                    <div style="background: #f8f9fa; border: 1px solid #dadce0; padding: 20px; border-radius: 16px; font-size: 15px; line-height: 1.6; color: #202124;">
                         <div style="color: #1a73e8; font-weight: 500; margin-bottom: 8px;">Saved Answer #${index + 1}</div>
                         ${item}
                     </div>
@@ -330,7 +337,6 @@ HTML_TEMPLATE = '''
                     tempDiv.textContent = chat.bot;
                     const safeText = tempDiv.innerHTML;
 
-                    // Check if this answer is already saved to keep bookmark status accurate
                     const isAlreadySaved = savedItems.includes(chat.bot);
                     const saveBtnClass = isAlreadySaved ? 'action-btn active-action' : 'action-btn';
                     const saveBtnHtml = isAlreadySaved ? '<i class="fa-solid fa-bookmark"></i> Saved' : '<i class="fa-regular fa-bookmark"></i> Save';
@@ -406,6 +412,25 @@ HTML_TEMPLATE = '''
 @app.route('/')
 def home():
     return render_template_string(HTML_TEMPLATE)
+
+# Manifest Route for PWABuilder App Conversion
+@app.route('/manifest.json')
+def manifest():
+    return jsonify({
+        "name": "Tibyan AI",
+        "short_name": "Tibyan",
+        "start_url": "/",
+        "display": "standalone",
+        "background_color": "#ffffff",
+        "theme_color": "#1a73e8",
+        "icons": [
+            {
+                "src": "https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/svgs/solid/sparkles.svg",
+                "sizes": "512x512",
+                "type": "image/svg+xml"
+            }
+        ]
+    })
 
 @app.route('/chat', methods=['POST'])
 def chat():
