@@ -15,7 +15,6 @@ HTML_TEMPLATE = '''
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
         
-        /* Gemini style clean white theme */
         body { background-color: #ffffff; color: #1f1f1f; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
         
         header { display: flex; align-items: center; padding: 16px 24px; gap: 15px; background-color: #ffffff; border-bottom: 1px solid #f0f0f0; flex-shrink: 0; }
@@ -36,15 +35,17 @@ HTML_TEMPLATE = '''
         .chip:hover { background: #f1f3f4; border-color: #bdc1c6; }
         
         #chat-box { width: 100%; text-align: left; display: none; flex-direction: column; gap: 24px; }
-        .msg-container { width: 100%; margin-bottom: 10px; }
+        .msg-container { width: 100%; margin-bottom: 15px; border-bottom: 1px solid #f1f3f4; padding-bottom: 15px; }
         
-        /* Larger fonts and clean spacing like Gemini */
         .msg { font-size: 16px; line-height: 1.7; white-space: pre-wrap; width: 100%; }
         .user-msg { color: #1f1f1f; font-weight: 600; background: #f8f9fa; padding: 14px 18px; border-radius: 16px; margin-bottom: 12px; border-left: 4px solid #1a73e8; }
-        .bot-msg { color: #202124; margin-bottom: 10px; padding: 4px 0; }
+        .bot-msg { color: #202124; margin-bottom: 12px; padding: 4px 0; }
         
-        .save-btn { background: transparent; border: none; color: #5f6368; font-size: 14px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; transition: 0.2s; padding: 4px 0; }
-        .save-btn:hover, .save-btn.saved { color: #1a73e8; font-weight: 500; }
+        /* Action buttons bar like Gemini */
+        .action-bar { display: flex; gap: 15px; align-items: center; margin-top: 5px; }
+        .action-btn { background: transparent; border: none; color: #5f6368; font-size: 14px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; padding: 6px 10px; border-radius: 8px; transition: 0.2s; }
+        .action-btn:hover { background: #f1f3f4; color: #202124; }
+        .action-btn.active-action { color: #1a73e8; font-weight: 500; }
 
         .lib-card { background: #f8f9fa; border: 1px solid #dadce0; padding: 20px; border-radius: 16px; margin-bottom: 16px; cursor: pointer; transition: 0.2s; width: 100%; }
         .lib-card:hover { background: #f1f3f4; border-color: #bdc1c6; }
@@ -109,7 +110,7 @@ HTML_TEMPLATE = '''
             <div class="section-title">Saved Answers</div>
             <div id="saved-container" style="display: flex; flex-direction: column; gap: 15px; width: 100%;">
                 <div style="color: #5f6368; font-size: 15px; text-align: center; margin-top: 40px;">
-                    No saved answers yet. Click "Save Answer" under any response.
+                    No saved answers yet. Click "Save" under any response.
                 </div>
             </div>
         </div>
@@ -164,9 +165,28 @@ HTML_TEMPLATE = '''
             if (e.key === 'Enter') sendMessage();
         }
 
+        function toggleLike(btn) {
+            btn.classList.toggle('active-action');
+            const dislikeBtn = btn.parentElement.querySelector('.dislike-btn');
+            if (dislikeBtn) dislikeBtn.classList.remove('active-action');
+        }
+
+        function toggleDislike(btn) {
+            btn.classList.toggle('active-action');
+            const likeBtn = btn.parentElement.querySelector('.like-btn');
+            if (likeBtn) likeBtn.classList.remove('active-action');
+        }
+
+        function copyText(text, btn) {
+            navigator.clipboard.writeText(text);
+            const originalHTML = btn.innerHTML;
+            btn.innerHTML = '<i class="fa-solid fa-check"></i> Copied';
+            setTimeout(() => { btn.innerHTML = originalHTML; }, 2000);
+        }
+
         function saveAnswer(btn, text) {
-            if (btn.classList.contains('saved')) return;
-            btn.classList.add('saved');
+            if (btn.classList.contains('active-action')) return;
+            btn.classList.add('active-action');
             btn.innerHTML = '<i class="fa-solid fa-bookmark"></i> Saved';
             
             savedItems.push(text);
@@ -213,13 +233,17 @@ HTML_TEMPLATE = '''
                 });
                 const data = await response.json();
                 
-                const uniqueId = 'msg_' + Date.now();
+                const encodedText = JSON.stringify(data.response);
+                
                 chatBox.innerHTML += `
                     <div class="msg-container">
-                        <div class="msg bot-msg" id="${uniqueId}">${data.response}</div>
-                        <button class="save-btn" onclick="saveAnswer(this, \`${data.response.replace(/`/g, '\\`')}\`)">
-                            <i class="fa-regular fa-bookmark"></i> Save Answer
-                        </button>
+                        <div class="msg bot-msg">${data.response}</div>
+                        <div class="action-bar">
+                            <button class="action-btn like-btn" onclick="toggleLike(this)"><i class="fa-regular fa-thumbs-up"></i></button>
+                            <button class="action-btn dislike-btn" onclick="toggleDislike(this)"><i class="fa-regular fa-thumbs-down"></i></button>
+                            <button class="action-btn" onclick="copyText(${encodedText}, this)"><i class="fa-regular fa-copy"></i> Copy</button>
+                            <button class="action-btn save-btn-item" onclick="saveAnswer(this, ${encodedText})"><i class="fa-regular fa-bookmark"></i> Save</button>
+                        </div>
                     </div>
                 `;
                 window.scrollTo(0, document.body.scrollHeight);
