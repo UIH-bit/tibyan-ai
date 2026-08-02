@@ -52,7 +52,7 @@ HTML_TEMPLATE = '''
         .lib-card h3 { color: #1a73e8; font-size: 17px; font-weight: 500; display: flex; align-items: center; gap: 8px; }
         .lib-card p { color: #5f6368; font-size: 14px; line-height: 1.4; }
 
-        .section-title { font-size: 24px; color: #1f1f1f; margin-bottom: 15px; font-weight: 500; width: 100%; }
+        .section-title { font-size: 24px; color: #1f1f1f; margin-bottom: 15px; font-weight: 500; width: 100%; display: flex; justify-content: space-between; align-items: center; }
         
         .profile-box { background: #f8f9fa; border: 1px solid #dadce0; padding: 30px; border-radius: 16px; text-align: center; width: 100%; max-width: 450px; margin: auto; }
         .profile-avatar { font-size: 60px; color: #1a73e8; margin-bottom: 15px; }
@@ -128,7 +128,10 @@ HTML_TEMPLATE = '''
         </div>
 
         <div id="view-saved" class="view">
-            <div class="section-title">Saved Answers</div>
+            <div class="section-title">
+                Saved Answers
+                <button onclick="clearSaved()" style="background: transparent; border: none; color: #ea4335; font-size: 13px; cursor: pointer;"><i class="fa-solid fa-trash"></i> Clear All</button>
+            </div>
             <div id="saved-container" style="display: flex; flex-direction: column; gap: 15px; width: 100%;">
                 <div style="color: #5f6368; font-size: 15px; text-align: center; margin-top: 40px;">
                     No saved answers yet. Click "Save" under any response.
@@ -171,13 +174,11 @@ HTML_TEMPLATE = '''
         let recognition = null;
         let isListening = false;
 
-        // Load existing history on start
         window.addEventListener('DOMContentLoaded', () => {
             renderChatHistory();
             updateSavedUI();
         });
 
-        // Initialize Speech Recognition
         if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
             const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
             recognition = new SpeechRecognition();
@@ -277,8 +278,9 @@ HTML_TEMPLATE = '''
         }
 
         function saveAnswer(btn) {
-            if (btn.classList.contains('active-action')) return;
             const text = btn.getAttribute('data-content');
+            if (btn.classList.contains('active-action')) return;
+            
             btn.classList.add('active-action');
             btn.innerHTML = '<i class="fa-solid fa-bookmark"></i> Saved';
             
@@ -289,16 +291,24 @@ HTML_TEMPLATE = '''
             }
         }
 
+        function clearSaved() {
+            if (confirm("Are you sure you want to clear all saved answers?")) {
+                savedItems = [];
+                localStorage.removeItem('tibyan_saved_items');
+                updateSavedUI();
+            }
+        }
+
         function updateSavedUI() {
             const container = document.getElementById('saved-container');
             if (savedItems.length === 0) {
-                container.innerHTML = '<div style="color: #5f6368; font-size: 15px; text-align: center; margin-top: 40px;">No saved answers yet.</div>';
+                container.innerHTML = '<div style="color: #5f6368; font-size: 15px; text-align: center; margin-top: 40px;">No saved answers yet. Click "Save" under any response.</div>';
                 return;
             }
             container.innerHTML = '';
             savedItems.forEach((item, index) => {
                 container.innerHTML += `
-                    <div style="background: #f8f9fa; border: 1px solid #dadce0; padding: 20px; border-radius: 16px; font-size: 15px; line-height: 1.6; color: #202124;">
+                    <div style="background: #f8f9fa; border: 1px solid #dadce0; padding: 20px; border-radius: 16px; font-size: 15px; line-height: 1.6; color: #202124; position: relative;">
                         <div style="color: #1a73e8; font-weight: 500; margin-bottom: 8px;">Saved Answer #${index + 1}</div>
                         ${item}
                     </div>
@@ -320,6 +330,11 @@ HTML_TEMPLATE = '''
                     tempDiv.textContent = chat.bot;
                     const safeText = tempDiv.innerHTML;
 
+                    // Check if this answer is already saved to keep bookmark status accurate
+                    const isAlreadySaved = savedItems.includes(chat.bot);
+                    const saveBtnClass = isAlreadySaved ? 'action-btn active-action' : 'action-btn';
+                    const saveBtnHtml = isAlreadySaved ? '<i class="fa-solid fa-bookmark"></i> Saved' : '<i class="fa-regular fa-bookmark"></i> Save';
+
                     chatBox.innerHTML += `
                         <div class="msg-container">
                             <div class="msg user-msg">You: ${chat.user}</div>
@@ -328,7 +343,7 @@ HTML_TEMPLATE = '''
                                 <button class="action-btn like-btn" onclick="toggleLike(this)"><i class="fa-regular fa-thumbs-up"></i> Like</button>
                                 <button class="action-btn dislike-btn" onclick="toggleDislike(this)"><i class="fa-regular fa-thumbs-down"></i> Dislike</button>
                                 <button class="action-btn" data-content="${safeText.replace(/"/g, '&quot;')}" onclick="copyText(this)"><i class="fa-regular fa-copy"></i> Copy</button>
-                                <button class="action-btn" data-content="${safeText.replace(/"/g, '&quot;')}" onclick="saveAnswer(this)"><i class="fa-regular fa-bookmark"></i> Save</button>
+                                <button class="${saveBtnClass}" data-content="${safeText.replace(/"/g, '&quot;')}" onclick="saveAnswer(this)">${saveBtnHtml}</button>
                             </div>
                         </div>
                     `;
@@ -349,7 +364,7 @@ HTML_TEMPLATE = '''
 
             chatBox.innerHTML += `<div class="msg-container"><div class="msg user-msg">You: ${message}</div></div>`;
             input.value = '';
-            input.style.height = '24px'; // Reset textarea height
+            input.style.height = '24px';
             window.scrollTo(0, document.body.scrollHeight);
 
             try {
@@ -364,7 +379,6 @@ HTML_TEMPLATE = '''
                 tempDiv.textContent = data.response;
                 const safeText = tempDiv.innerHTML;
 
-                // Save to history array & localStorage
                 chatHistory.push({ user: message, bot: data.response });
                 localStorage.setItem('tibyan_chat_history', JSON.stringify(chatHistory));
 
