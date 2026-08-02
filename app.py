@@ -41,13 +41,14 @@ HTML_TEMPLATE = '''
         .chip:hover { background: #f1f3f4; border-color: #bdc1c6; }
         
         #chat-box { width: 100%; text-align: left; display: none; flex-direction: column; gap: 24px; }
-        .msg-container { width: 100%; margin-bottom: 15px; border-bottom: 1px solid #f1f3f4; padding-bottom: 15px; }
+        .msg-container { width: 100%; margin-bottom: 20px; display: flex; flex-direction: column; gap: 12px; }
         
+        /* Clean Chat Bubbles (No 'You:' prefix) */
         .msg { font-size: 16px; line-height: 1.7; white-space: pre-wrap; width: 100%; }
-        .user-msg { color: #1f1f1f; font-weight: 600; background: #f8f9fa; padding: 14px 18px; border-radius: 16px; margin-bottom: 12px; border-left: 4px solid #1a73e8; }
-        .bot-msg { color: #202124; margin-bottom: 12px; padding: 4px 0; }
+        .user-msg { background: #f0f4f9; color: #1f1f1f; padding: 14px 20px; border-radius: 20px 20px 4px 20px; align-self: flex-end; max-width: 85%; margin-left: auto; font-weight: 400; box-shadow: 0 1px 3px rgba(0,0,0,0.02); }
+        .bot-msg { color: #202124; padding: 4px 0; align-self: flex-start; width: 100%; }
         
-        .action-bar { display: flex; gap: 15px; align-items: center; margin-top: 5px; }
+        .action-bar { display: flex; gap: 15px; align-items: center; margin-top: 2px; }
         .action-btn { background: transparent; border: none; color: #5f6368; font-size: 14px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; padding: 6px 10px; border-radius: 8px; transition: 0.2s; }
         .action-btn:hover { background: #f1f3f4; color: #202124; }
         .action-btn.active-action { color: #1a73e8; font-weight: 500; }
@@ -60,9 +61,6 @@ HTML_TEMPLATE = '''
 
         .section-title { font-size: 24px; color: #1f1f1f; margin-bottom: 15px; font-weight: 500; width: 100%; display: flex; justify-content: space-between; align-items: center; }
         
-        .profile-box { background: #f8f9fa; border: 1px solid #dadce0; padding: 30px; border-radius: 16px; text-align: center; width: 100%; max-width: 450px; margin: auto; }
-        .profile-avatar { font-size: 60px; color: #1a73e8; margin-bottom: 15px; }
-
         .bottom-panel { position: fixed; bottom: 65px; left: 0; width: 100%; background: transparent; padding: 12px 20px; display: flex; justify-content: center; z-index: 100; pointer-events: none; }
         .input-box { pointer-events: auto; display: flex; align-items: flex-end; background-color: #f0f4f9; border: 1px solid transparent; border-radius: 28px; padding: 10px 16px; width: 100%; max-width: 750px; transition: 0.2s; box-shadow: 0 2px 10px rgba(0,0,0,0.06); gap: 8px; }
         .input-box:focus-within { background: #ffffff; border-color: #d3e3fd; box-shadow: 0 4px 14px rgba(26,115,232,0.1); }
@@ -108,9 +106,7 @@ HTML_TEMPLATE = '''
                 <button onclick="clearHistory()" style="background: transparent; border: none; color: #ea4335; font-size: 13px; cursor: pointer;"><i class="fa-solid fa-trash"></i> Clear All</button>
             </div>
             <div id="history-container" style="display: flex; flex-direction: column; gap: 15px; width: 100%;">
-                <div style="color: #5f6368; font-size: 15px; text-align: center; margin-top: 40px;">
-                    No past chats found.
-                </div>
+                <div style="color: #5f6368; font-size: 15px; text-align: center; margin-top: 40px;">No past chats found.</div>
             </div>
         </div>
 
@@ -150,9 +146,7 @@ HTML_TEMPLATE = '''
                 <button onclick="clearSaved()" style="background: transparent; border: none; color: #ea4335; font-size: 13px; cursor: pointer;"><i class="fa-solid fa-trash"></i> Clear All</button>
             </div>
             <div id="saved-container" style="display: flex; flex-direction: column; gap: 15px; width: 100%;">
-                <div style="color: #5f6368; font-size: 15px; text-align: center; margin-top: 40px;">
-                    No saved answers yet. Click "Save" under any response.
-                </div>
+                <div style="color: #5f6368; font-size: 15px; text-align: center; margin-top: 40px;">No saved answers yet.</div>
             </div>
         </div>
     </div>
@@ -204,17 +198,9 @@ HTML_TEMPLATE = '''
         }
 
         function toggleVoiceInput() {
-            if (!recognition) {
-                alert('Voice input is not supported on your browser.');
-                return;
-            }
-            if (isListening) {
-                recognition.stop();
-                stopListeningVisual();
-            } else {
-                recognition.start();
-                startListeningVisual();
-            }
+            if (!recognition) { alert('Voice input not supported.'); return; }
+            if (isListening) { recognition.stop(); stopListeningVisual(); }
+            else { recognition.start(); startListeningVisual(); }
         }
 
         function startListeningVisual() {
@@ -239,10 +225,8 @@ HTML_TEMPLATE = '''
         function switchTab(tabName, element) {
             document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
             document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-            
             document.getElementById('view-' + tabName).classList.add('active');
             element.classList.add('active');
-
             document.getElementById('input-container-wrapper').style.display = (tabName === 'home') ? 'flex' : 'none';
         }
 
@@ -256,7 +240,6 @@ HTML_TEMPLATE = '''
                 currentSessionChats = [];
                 updateHistoryUI();
             }
-            
             document.getElementById('home-welcome').style.display = 'block';
             const chatBox = document.getElementById('chat-box');
             chatBox.style.display = 'none';
@@ -273,10 +256,7 @@ HTML_TEMPLATE = '''
         }
 
         function handleKey(e) {
-            if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault();
-                sendMessage();
-            }
+            if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
         }
 
         function toggleLike(btn) {
@@ -302,10 +282,8 @@ HTML_TEMPLATE = '''
         function saveAnswer(btn) {
             const text = btn.getAttribute('data-content');
             if (btn.classList.contains('active-action')) return;
-            
             btn.classList.add('active-action');
             btn.innerHTML = '<i class="fa-solid fa-bookmark"></i> Saved';
-            
             if (!savedItems.includes(text)) {
                 savedItems.push(text);
                 localStorage.setItem('tibyan_saved_items', JSON.stringify(savedItems));
@@ -332,33 +310,26 @@ HTML_TEMPLATE = '''
         function updateSavedUI() {
             const container = document.getElementById('saved-container');
             if (savedItems.length === 0) {
-                container.innerHTML = '<div style="color: #5f6368; font-size: 15px; text-align: center; margin-top: 40px;">No saved answers yet. Click "Save" under any response.</div>';
+                container.innerHTML = '<div style="color: #5f6368; font-size: 15px; text-align: center; margin-top: 40px;">No saved answers yet.</div>';
                 return;
             }
             container.innerHTML = '';
             savedItems.forEach((item, index) => {
-                container.innerHTML += `
-                    <div style="background: #f8f9fa; border: 1px solid #dadce0; padding: 20px; border-radius: 16px; font-size: 15px; line-height: 1.6; color: #202124;">
-                        <div style="color: #1a73e8; font-weight: 500; margin-bottom: 8px;">Saved Answer #${index + 1}</div>
-                        ${item}
-                    </div>
-                `;
+                container.innerHTML += `<div style="background: #f8f9fa; border: 1px solid #dadce0; padding: 20px; border-radius: 16px; font-size: 15px; line-height: 1.6; color: #202124;"><div style="color: #1a73e8; font-weight: 500; margin-bottom: 8px;">Saved Answer #${index + 1}</div>${item}</div>`;
             });
         }
 
         function updateHistoryUI() {
             const container = document.getElementById('history-container');
             if (allPastSessions.length === 0) {
-                container.innerHTML = '<div style="color: #5f6368; font-size: 15px; text-align: center; margin-top: 40px;">No past chats found. Click "New Chat" to save current chat.</div>';
+                container.innerHTML = '<div style="color: #5f6368; font-size: 15px; text-align: center; margin-top: 40px;">No past chats found.</div>';
                 return;
             }
             container.innerHTML = '';
-            allPastSessions.forEach((session, sIndex) => {
-                let sessionHtml = `<div style="background: #f8f9fa; border: 1px solid #dadce0; padding: 15px; border-radius: 16px; margin-bottom: 10px;">
-                    <div style="color: #1a73e8; font-weight: 500; margin-bottom: 10px; font-size: 13px;"><i class="fa-solid fa-clock"></i> Session: ${session.date}</div>`;
-                
+            allPastSessions.forEach((session) => {
+                let sessionHtml = `<div style="background: #f8f9fa; border: 1px solid #dadce0; padding: 15px; border-radius: 16px; margin-bottom: 10px;"><div style="color: #1a73e8; font-weight: 500; margin-bottom: 10px; font-size: 13px;"><i class="fa-solid fa-clock"></i> Session: ${session.date}</div>`;
                 session.chats.forEach(chat => {
-                    sessionHtml += `<div style="margin-bottom: 8px; font-size: 14px;"><strong>Q:</strong> ${chat.user}<br><span style="color: #5f6368;"><strong>A:</strong> ${chat.bot.substring(0, 90)}...</span></div>`;
+                    sessionHtml += `<div style="margin-bottom: 8px; font-size: 14px;"><strong>${chat.user}</strong><br><span style="color: #5f6368;">${chat.bot.substring(0, 90)}...</span></div>`;
                 });
                 sessionHtml += `</div>`;
                 container.innerHTML += sessionHtml;
@@ -376,7 +347,12 @@ HTML_TEMPLATE = '''
             if (homeWelcome) homeWelcome.style.display = 'none';
             chatBox.style.display = 'flex';
 
-            chatBox.innerHTML += `<div class="msg-container"><div class="msg user-msg">You: ${message}</div></div>`;
+            // Clean User Message Bubble (No 'You:' prefix)
+            chatBox.innerHTML += `
+                <div class="msg-container">
+                    <div class="msg user-msg">${message}</div>
+                </div>`;
+            
             input.value = '';
             input.style.height = '24px';
             window.scrollTo(0, document.body.scrollHeight);
@@ -404,8 +380,7 @@ HTML_TEMPLATE = '''
                             <button class="action-btn" data-content="${safeText.replace(/"/g, '&quot;')}" onclick="copyText(this)"><i class="fa-regular fa-copy"></i> Copy</button>
                             <button class="action-btn" data-content="${safeText.replace(/"/g, '&quot;')}" onclick="saveAnswer(this)"><i class="fa-regular fa-bookmark"></i> Save</button>
                         </div>
-                    </div>
-                `;
+                    </div>`;
                 window.scrollTo(0, document.body.scrollHeight);
             } catch (err) {
                 chatBox.innerHTML += `<div class="msg-container"><div class="msg bot-msg">Error: Unable to fetch response.</div></div>`;
