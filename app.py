@@ -1,172 +1,152 @@
-from flask import Flask, render_template_string, request, jsonify
+from flask import Flask, request, jsonify, render_template_string
+import os
 import requests
 
 app = Flask(__name__)
 
-# Aapki Groq API Key
-GROQ_API_KEY = "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"
+# Fetch GROQ API KEY from Environment Variables for security
+GROQ_API_KEY = os.environ.get("GROQ_API_KEY")
 
-HTML_TEMPLATE = """
+HTML_TEMPLATE = '''
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Tibyan AI</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
-        body { 
-            background-color: #081A12; 
-            color: #FFFFFF; 
-            font-family: 'Segoe UI', sans-serif; 
-            margin: 0; 
-            padding: 20px 20px 90px 20px; 
-            display: flex; 
-            flex-direction: column; 
-            align-items: center; 
-            min-height: 100vh;
-            box-sizing: border-box;
-        }
-        .header { text-align: center; margin-top: 10px; }
-        h1 { color: #D4AF37; font-size: 28px; margin-bottom: 5px; }
-        p { color: #D1D5DB; font-size: 13px; }
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+        body { background-color: #031e11; color: #ffffff; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
         
-        .chat-container { width: 100%; max-width: 600px; margin-top: 15px; flex-grow: 1; }
-        .card { background-color: #163728; border-radius: 12px; padding: 15px; margin-bottom: 15px; border-left: 4px solid #D4AF37; display: none; }
-        
-        .input-box { 
-            position: fixed; 
-            bottom: 65px; 
-            width: 90%; 
-            max-width: 600px; 
-            display: flex; 
-            background: #163728; 
-            border-radius: 25px; 
-            border: 1px solid #D4AF37; 
-            padding: 3px 12px; 
-        }
-        input { flex: 1; background: transparent; border: none; color: white; padding: 10px; outline: none; font-size: 14px; }
-        button { background: #0D2B1E; border: none; color: #D4AF37; padding: 8px 16px; border-radius: 20px; font-weight: bold; cursor: pointer; }
-        
-        .bottom-nav {
-            position: fixed;
-            bottom: 0;
-            left: 0;
-            width: 100%;
-            background-color: #0D2B1E;
-            display: flex;
-            justify-content: space-around;
-            padding: 10px 0;
-            border-top: 1px solid #163728;
-            z-index: 1000;
-        }
-        .nav-item {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            color: #A0AEC0;
-            text-decoration: none;
-            font-size: 11px;
-            cursor: pointer;
-        }
-        .nav-item.active { color: #D4AF37; }
-        .nav-icon { font-size: 18px; margin-bottom: 2px; }
+        header { display: flex; align-items: center; padding: 15px 20px; gap: 15px; background-color: #031e11; }
+        .menu-btn { font-size: 20px; color: #d4af37; cursor: pointer; }
+        .logo-text { font-size: 20px; font-weight: bold; color: #d4af37; }
+
+        .container { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px; overflow-y: auto; text-align: center; }
+        .greeting { font-size: 32px; color: #d4af37; margin-bottom: 8px; font-family: serif; }
+        .sub-greeting { font-size: 14px; color: #a0b0a8; margin-bottom: 25px; }
+
+        .suggestions { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin-bottom: 20px; max-width: 400px; }
+        .chip { background: transparent; border: 1px solid #1a422d; color: #a0b0a8; padding: 10px 16px; border-radius: 12px; font-size: 13px; cursor: pointer; transition: 0.2s; }
+        .chip:hover { border-color: #d4af37; color: #ffffff; }
+
+        #chat-box { width: 100%; max-width: 500px; text-align: left; display: none; margin-bottom: 20px; }
+        .msg { padding: 12px 16px; border-radius: 12px; margin-bottom: 10px; font-size: 14px; line-height: 1.5; }
+        .user-msg { background: #1a422d; color: #fff; align-self: flex-end; margin-left: 20%; }
+        .bot-msg { background: #072e1b; border: 1px solid #d4af37; color: #e0e0e0; }
+
+        .input-box { display: flex; align-items: center; background-color: #0d301e; border: 1px solid #1a422d; border-radius: 25px; padding: 8px 16px; margin: 0 15px 10px 15px; width: calc(100% - 30px); max-width: 500px; align-self: center; }
+        .input-box input { flex: 1; background: transparent; border: none; outline: none; color: #fff; font-size: 14px; }
+        .input-box input::placeholder { color: #6b8275; }
+        .send-btn { background: transparent; border: none; color: #d4af37; font-size: 18px; cursor: pointer; margin-left: 10px; }
+
+        nav { display: flex; justify-content: space-around; background-color: #031e11; padding: 12px 0; border-top: 1px solid #0d301e; }
+        .nav-item { display: flex; flex-direction: column; align-items: center; color: #5a7566; font-size: 11px; text-decoration: none; gap: 4px; }
+        .nav-item.active { color: #d4af37; }
+        .nav-item i { font-size: 18px; }
     </style>
 </head>
 <body>
-    <div class="header">
-        <h1>السلام عليكم</h1>
-        <p>Authentic Islamic Knowledge, Powered by AI</p>
-    </div>
 
-    <div class="chat-container">
-        <div id="responseCard" class="card">
-            <h4 style="color:#D4AF37; margin:0 0 10px 0;">Tibyan Assistant:</h4>
-            <div id="responseText"></div>
+    <header>
+        <i class="fa-solid fa-bars menu-btn"></i>
+        <div class="logo-text">Tibyan AI</div>
+    </header>
+
+    <div class="container" id="main-container">
+        <div class="greeting">السلام عليكم</div>
+        <div class="sub-greeting">Ask anything about Islam from authentic sources</div>
+
+        <div class="suggestions">
+            <div class="chip" onclick="sendSuggestion('What breaks the fast?')">What breaks the fast?</div>
+            <div class="chip" onclick="sendSuggestion('Virtues of Ayat al-Kursi')">Virtues of Ayat al-Kursi</div>
+            <div class="chip" onclick="sendSuggestion('How to perform Tahajjud?')">How to perform Tahajjud?</div>
         </div>
+
+        <div id="chat-box"></div>
     </div>
 
     <div class="input-box">
-        <input type="text" id="userInput" placeholder="Ask anything about Quran, Hadith, Fiqh...">
-        <button onclick="askAI()">Ask</button>
+        <input type="text" id="user-input" placeholder="Type your question..." onkeypress="handleKey(event)">
+        <button class="send-btn" onclick="sendMessage()"><i class="fa-solid fa-paper-plane"></i></button>
     </div>
 
-    <div class="bottom-nav">
-        <div class="nav-item active">
-            <span class="nav-icon">💬</span>
-            <span>Chat</span>
-        </div>
-        <div class="nav-item">
-            <span class="nav-icon">📚</span>
-            <span>Library</span>
-        </div>
-        <div class="nav-item">
-            <span class="nav-icon">👤</span>
-            <span>Profile</span>
-        </div>
-        <div class="nav-item">
-            <span class="nav-icon">⚙️</span>
-            <span>Settings</span>
-        </div>
-    </div>
+    <nav>
+        <a href="#" class="nav-item active"><i class="fa-solid fa-house"></i>Home</a>
+        <a href="#" class="nav-item"><i class="fa-solid fa-book-open"></i>Library</a>
+        <a href="#" class="nav-item"><i class="fa-solid fa-bookmark"></i>Saved</a>
+        <a href="#" class="nav-item"><i class="fa-solid fa-user"></i>Profile</a>
+    </nav>
 
     <script>
-        async function askAI() {
-            let input = document.getElementById('userInput').value;
-            if(!input) return;
-            
-            let card = document.getElementById('responseCard');
-            let textDiv = document.getElementById('responseText');
-            
-            card.style.display = "block";
-            textDiv.innerText = "Searching sources...";
-            
-            let res = await fetch('/ask', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({query: input})
-            });
-            
-            let data = await res.json();
-            textDiv.innerText = data.answer;
+        function sendSuggestion(text) {
+            document.getElementById('user-input').value = text;
+            sendMessage();
+        }
+
+        function handleKey(e) {
+            if (e.key === 'Enter') sendMessage();
+        }
+
+        async function sendMessage() {
+            const input = document.getElementById('user-input');
+            const message = input.value.trim();
+            if (!message) return;
+
+            const chatBox = document.getElementById('chat-box');
+            chatBox.style.display = 'block';
+
+            document.querySelector('.suggestions').style.display = 'none';
+            document.querySelector('.greeting').style.display = 'none';
+            document.querySelector('.sub-greeting').style.display = 'none';
+
+            chatBox.innerHTML += `<div class="msg user-msg">${message}</div>`;
+            input.value = '';
+
+            try {
+                const response = await fetch('/chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ message: message })
+                });
+                const data = await response.json();
+                chatBox.innerHTML += `<div class="msg bot-msg">${data.response}</div>`;
+                chatBox.scrollTop = chatBox.scrollHeight;
+            } catch (err) {
+                chatBox.innerHTML += `<div class="msg bot-msg">Sorry, error getting response.</div>`;
+            }
         }
     </script>
 </body>
 </html>
-"""
+'''
 
 @app.route('/')
 def home():
     return render_template_string(HTML_TEMPLATE)
 
-@app.route('/ask', methods=['POST'])
-def ask():
-    user_query = request.json.get("query", "")
-    
+@app.route('/chat', methods=['POST'])
+def chat():
+    user_msg = request.json.get('message', '')
     url = "https://api.groq.com/openai/v1/chat/completions"
     headers = {
         "Authorization": f"Bearer {GROQ_API_KEY}",
         "Content-Type": "application/json"
     }
-    payload = {
+    data = {
         "model": "llama-3.3-70b-versatile",
         "messages": [
-            {"role": "system", "content": "You are Tibyan AI, an Islamic Knowledge Assistant. Answer politely with references."},
-            {"role": "user", "content": user_query}
+            {"role": "system", "content": "You are Tibyan AI, an authentic Islamic assistant. Provide accurate answers based on Quran and Hadith with references."},
+            {"role": "user", "content": user_msg}
         ]
     }
-    
     try:
-        r = requests.post(url, headers=headers, json=payload)
-        data = r.json()
-        if 'choices' in data and len(data['choices']) > 0:
-            ans = data['choices'][0]['message']['content']
-            return jsonify({"answer": ans})
-        elif 'error' in data:
-            return jsonify({"answer": f"Groq Error: {data['error']['message']}"})
-        else:
-            return jsonify({"answer": "Response empty. Please try again."})
+        res = requests.post(url, json=data, headers=headers)
+        bot_response = res.json()['choices'][0]['message']['content']
+        return jsonify({"response": bot_response})
     except Exception as e:
-        return jsonify({"answer": f"Server Error: {str(e)}"})
+        return jsonify({"response": "Error: Unable to fetch response."})
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000, debug=True)
+    app.run(host='0.0.0.0', port=5000)
