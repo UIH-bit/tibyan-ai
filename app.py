@@ -318,7 +318,8 @@ def chat():
 
     if user_image:
         content_list.append({"type": "image_url", "image_url": {"url": user_image}})
-        model_name = "llama-3.2-11b-vision-preview" # Vision model for image support
+        model_name = ""model": "llama-3.3-70b-versatile"
+" # Vision model for image support
     else:
         model_name = "llama-3.3-70b-versatile"
 
