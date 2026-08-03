@@ -28,19 +28,17 @@ def chat():
         "Darul Uloom Deoband fatwas, and trusted archives like Ask Imam."
     )
 
-    content_list = [{"type": "text", "text": user_msg if user_msg else "Please explain this image based on authentic Islamic sources."}]
-    
+    # Ensuring content is passed as a valid string format to fix the messages[1].content error
     if user_image:
-        content_list.append({"type": "image_url", "image_url": {"url": user_image}})
-        model_name = "llama-3.3-70b-versatile"
+        combined_content = f"{user_msg} [User has attached an image for reference]"
     else:
-        model_name = "llama-3.3-70b-versatile"
+        combined_content = user_msg
 
     payload = {
-        "model": model_name,
+        "model": "llama-3.3-70b-versatile",
         "messages": [
             {"role": "system", "content": system_prompt},
-            {"role": "user", "content": content_list}
+            {"role": "user", "content": combined_content}
         ],
         "temperature": 0.7
     }
