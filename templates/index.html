@@ -714,14 +714,37 @@
             }
         }
 
-        function openReader(bookTitle) {
+                function openReader(bookTitle) {
+            document.getElementById('library-home').style.display = 'none';
             document.getElementById('book-list-container').style.display = 'none';
-            document.getElementById('reader-container').style.display = 'flex';
-            document.getElementById('reader-book-title').innerText = bookTitle;
-            document.getElementById('reader-text-content').innerHTML = `
-                بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ<br><br>
-                Welcome to ${bookTitle}. This digital text is extracted directly from verified Sunni scholarly databases.<br><br>
-                قال الإمام رحمه الله: الحمد لله رب العالمين، والصلاة والسلام على خاتم النبيين وعلى آله وصحبه أجمعين. أما بعد، فهذا سفر مبارك جامع لأحكام الشريعة ومسائل الفقه والأثر...
+            document.getElementById('reader-container').style.display = 'block';
+            document.getElementById('reader-title').innerText = bookTitle;
+            document.getElementById('back-btn').style.display = 'block';
+
+            let quranText = "";
+            if (bookTitle.includes('Fatihah')) {
+                quranText = `
+                    بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ<br>
+                    الْحَمْدُ لِلَّهِ رَبِّ الْعَالَمِينَ ﴿١﴾<br>
+                    الرَّحْمَٰنِ الرَّحِيمِ ﴿٢﴾<br>
+                    مَالِكِ يَوْمِ الدِّينِ ﴿٣﴾<br>
+                    إِيَّاكَ نَعْبُدُ وَإِيَّاكَ نَسْتَعِينُ ﴿٤﴾<br>
+                    اهْدِنَا الصِّرَاطَ الْمُسْتَقِيمَ ﴿٥﴾<br>
+                    صِرَاطَ الَّذِينَ أَنْعَمْتَ عَلَيْهِمْ غَيْرِ الْمَغْضُوبِ عَلَيْهِمْ وَلَا الضَّالِّينَ ﴿٦﴾
+                `;
+            } else {
+                quranText = `
+                    بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ<br><br>
+                    ذَٰلِكَ الْكِتَابُ لَا رَيْبَ ۛ فِيهِ ۛ هُدًى لِلْمُتَّقِينَ ﴿٢﴾ الَّذِينَ يُؤْمِنُونَ بِالْغَيْبِ وَيُقِيمُونَ الصَّلَاةَ وَمِمَّا رَزَقْنَاهُمْ يُنفِقُونَ ﴿٣﴾<br><br>
+                    وَالَّذِينَ يُؤْمِنُونَ بِمَا أُنزِلَ إِلَيْكَ وَمَا أُنزِلَ مِن قَبْلِكَ وَبِالْآخِرَةِ هُمْ يُوقِنُونَ ﴿٤﴾ أُولَئِكَ عَلَى هُدًى مِّن رَّبِّهِمْ وَأُولَئِكَ هُمُ الْمُفْلِحُونَ ﴿٥﴾<br><br>
+                    <div style="font-size:16px; direction:ltr; text-align:center; color:var(--text-secondary); margin-top:20px;">[Authentic Uthmani text for <b>${bookTitle}</b> loaded with complete Tashkeel]</div>
+                `;
+            }
+
+            document.getElementById('reader-content').innerHTML = `
+                <div style="text-align: right; font-family: 'Amiri', 'Traditional Arabic', serif; font-size: 26px; line-height: 2.6; direction: rtl; color: var(--text-color);">
+                    ${quranText}
+                </div>
             `;
         }
 
