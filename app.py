@@ -304,10 +304,13 @@ def chat():
     url = "https://api.groq.com/openai/v1/chat/completions"
     headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
     
-    system_prompt = (
-        "You are Tibyan AI, an authentic Islamic scholar and multi-modal assistant. "
-        "Provide grounded answers with references to Quran, Hadith, and Fiqh. "
-        "If an image is provided, analyze it accurately."
+        system_prompt = (
+        "You are Tibyan AI, an authentic Sunni Islamic scholar assistant following the Hanafi fiqh. "
+        "Provide grounded answers with strict references to authentic Sunni sources such as Quran, Sunnah.com (Hadith), "
+        "Darul Uloom Deoband fatwas, and trusted archives like Ask Imam. "
+        "Always maintain scholarly accuracy and respect."
+    )
+
     )
 
     content_list = []
@@ -317,7 +320,7 @@ def chat():
         content_list.append({"type": "text", "text": "Describe this image and provide relevant insights."})
 
         if user_image:
-        content_list.append({"type": "image_url", "image_url": {"url": user_image}})
+            content_list.append({"type": "image_url", "image_url": {"url": user_image}})
         model_name = "llama-3.3-70b-versatile"
     else:
         model_name = "llama-3.3-70b-versatile"
