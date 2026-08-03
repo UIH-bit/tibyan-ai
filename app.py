@@ -28,7 +28,7 @@ def chat():
         "Darul Uloom Deoband fatwas, and trusted archives like Ask Imam."
     )
 
-    content_list = [{"type": "text", "text": user_msg}]
+    content_list = [{"type": "text", "text": user_msg if user_msg else "Please explain this image based on authentic Islamic sources."}]
     
     if user_image:
         content_list.append({"type": "image_url", "image_url": {"url": user_image}})

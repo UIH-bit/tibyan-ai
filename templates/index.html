@@ -4,113 +4,194 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Tibyan AI</title>
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
-        body { background-color: #031e11; color: #ffffff; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
-        
-        /* Header */
-        header { display: flex; align-items: center; padding: 15px 20px; gap: 15px; background-color: #031e11; }
-        .menu-btn { font-size: 20px; color: #d4af37; cursor: pointer; }
-        .logo-text { font-size: 20px; font-weight: bold; color: #d4af37; }
-
-        /* Main Chat Container */
-        .container { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px; overflow-y: auto; text-align: center; }
-        .greeting { font-size: 32px; color: #d4af37; margin-bottom: 8px; font-family: serif; }
-        .sub-greeting { font-size: 14px; color: #a0b0a8; margin-bottom: 25px; }
-
-        /* Quick Suggestion Chips */
-        .suggestions { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin-bottom: 20px; max-width: 400px; }
-        .chip { background: transparent; border: 1px solid #1a422d; color: #a0b0a8; padding: 10px 16px; border-radius: 12px; font-size: 13px; cursor: pointer; transition: 0.2s; }
-        .chip:hover { border-color: #d4af37; color: #ffffff; }
-
-        /* Chat Output Box */
-        #chat-box { width: 100%; max-width: 500px; text-align: left; display: none; margin-bottom: 20px; }
-        .msg { padding: 12px 16px; border-radius: 12px; margin-bottom: 10px; font-size: 14px; line-height: 1.5; }
-        .user-msg { background: #1a422d; color: #fff; align-self: flex-end; margin-left: 20%; }
-        .bot-msg { background: #072e1b; border: 1px solid #d4af37; color: #e0e0e0; }
-
-        /* Input Area */
-        .input-box { display: flex; align-items: center; background-color: #0d301e; border: 1px solid #1a422d; border-radius: 25px; padding: 8px 16px; margin: 0 15px 10px 15px; width: calc(100% - 30px); max-width: 500px; align-self: center; }
-        .input-box input { flex: 1; background: transparent; border: none; outline: none; color: #fff; font-size: 14px; }
-        .input-box input::placeholder { color: #6b8275; }
-        .send-btn { background: transparent; border: none; color: #d4af37; font-size: 18px; cursor: pointer; margin-left: 10px; }
-
-        /* Bottom Nav Bar */
-        nav { display: flex; justify-content: space-around; background-color: #031e11; padding: 12px 0; border-top: 1px solid #0d301e; }
-        .nav-item { display: flex; flex-direction: column; align-items: center; color: #5a7566; font-size: 11px; text-decoration: none; gap: 4px; }
-        .nav-item.active { color: #d4af37; }
-        .nav-item i { font-size: 18px; }
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f6f9;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+        header {
+            background-color: #1b4332;
+            color: white;
+            padding: 15px;
+            text-align: center;
+            font-size: 20px;
+            font-weight: bold;
+        }
+        #chat-container {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            padding-bottom: 90px;
+        }
+        .message {
+            max-width: 80%;
+            padding: 12px 16px;
+            border-radius: 12px;
+            line-height: 1.5;
+            font-size: 15px;
+            word-wrap: break-word;
+        }
+        .user-message {
+            background-color: #d8f3dc;
+            color: #081c15;
+            align-self: flex-end;
+            border-bottom-right-radius: 2px;
+        }
+        .bot-message {
+            background-color: #ffffff;
+            color: #212529;
+            align-self: flex-start;
+            border-bottom-left-radius: 2px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        }
+        /* Floating Input Bar like the screenshot */
+        .input-container {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 90%;
+            max-width: 700px;
+            background: #ffffff;
+            display: flex;
+            align-items: center;
+            padding: 8px 15px;
+            border-radius: 30px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            border: 1px solid #ddd;
+        }
+        .input-container input[type="text"] {
+            flex: 1;
+            border: none;
+            outline: none;
+            font-size: 15px;
+            padding: 10px;
+            background: transparent;
+        }
+        .input-container button {
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 20px;
+            color: #555;
+            padding: 5px 8px;
+        }
+        .input-container .send-btn {
+            background-color: #1b4332;
+            color: white;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+        }
+        #image-preview {
+            max-height: 50px;
+            margin-right: 10px;
+            border-radius: 5px;
+            display: none;
+        }
     </style>
 </head>
 <body>
 
-    <header>
-        <i class="fa-solid fa-bars menu-btn"></i>
-        <div class="logo-text">Tibyan AI</div>
-    </header>
+    <header>Tibyan AI - Authentic Islamic Guidance</header>
 
-    <div class="container" id="main-container">
-        <div class="greeting">السلام عليكم</div>
-        <div class="sub-greeting">Ask anything about Islam from authentic sources</div>
-
-        <div class="suggestions">
-            <div class="chip" onclick="sendSuggestion('What breaks the fast?')">What breaks the fast?</div>
-            <div class="chip" onclick="sendSuggestion('Virtues of Ayat al-Kursi')">Virtues of Ayat al-Kursi</div>
-            <div class="chip" onclick="sendSuggestion('How to perform Tahajjud?')">How to perform Tahajjud?</div>
-        </div>
-
-        <div id="chat-box"></div>
+    <div id="chat-container">
+        <div class="message bot-message">السلام عليكم! Ask anything about Islam from authentic sources (Quran, Sunnah, Deoband Fatwas, Ask Imam).</div>
     </div>
 
-    <div class="input-box">
-        <input type="text" id="user-input" placeholder="Type your question..." onkeypress="handleKey(event)">
-        <button class="send-btn" onclick="sendMessage()"><i class="fa-solid fa-paper-plane"></i></button>
+    <div class="input-container">
+        <!-- Hidden Image Input -->
+        <input type="file" id="imageInput" accept="image/*" style="display: none;" onchange="previewImage(event)">
+        <button type="button" onclick="document.getElementById('imageInput').click()" title="Attach Image">➕</button>
+        
+        <img id="image-preview" src="" alt="Preview">
+        
+        <input type="text" id="userInput" placeholder="Ask anything about Quran, Hadith, Fiqh..." onkeypress="handleKeyPress(event)">
+        
+        <button class="send-btn" onclick="sendMessage()">➤</button>
     </div>
-
-    <nav>
-        <a href="#" class="nav-item active"><i class="fa-solid fa-house"></i>Home</a>
-        <a href="#" class="nav-item"><i class="fa-solid fa-book-open"></i>Library</a>
-        <a href="#" class="nav-item"><i class="fa-solid fa-bookmark"></i>Saved</a>
-        <a href="#" class="nav-item"><i class="fa-solid fa-user"></i>Profile</a>
-    </nav>
 
     <script>
-        function sendSuggestion(text) {
-            document.getElementById('user-input').value = text;
-            sendMessage();
-        }
+        let base64Image = null;
 
-        function handleKey(e) {
-            if (e.key === 'Enter') sendMessage();
+        function previewImage(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    base64Image = e.target.result;
+                    const preview = document.getElementById('image-preview');
+                    preview.src = base64Image;
+                    preview.style.display = 'block';
+                }
+                reader.readAsDataURL(file);
+            }
         }
 
         async function sendMessage() {
-            const input = document.getElementById('user-input');
-            const message = input.value.trim();
-            if (!message) return;
+            const inputField = document.getElementById('userInput');
+            const messageText = inputField.value.trim();
+            const container = document.getElementById('chat-container');
 
-            const chatBox = document.getElementById('chat-box');
-            chatBox.style.display = 'block';
+            if (!messageText && !base64Image) return;
 
-            document.querySelector('.suggestions').style.display = 'none';
-            document.querySelector('.greeting').style.display = 'none';
-            document.querySelector('.sub-greeting').style.display = 'none';
+            // Display User Message
+            let userHtml = `<div class="message user-message">`;
+            if (base64Image) {
+                userHtml += `<img src="${base64Image}" style="max-width:150px; border-radius:8px; display:block; margin-bottom:5px;">`;
+            }
+            if (messageText) {
+                userHtml += `<span>${messageText}</span>`;
+            }
+            userHtml += `</div>`;
+            container.innerHTML += userHtml;
 
-            chatBox.innerHTML += `<div class="msg user-msg">${message}</div>`;
-            input.value = '';
+            const payloadMessage = messageText;
+            const payloadImage = base64Image;
+
+            // Clear inputs
+            inputField.value = '';
+            document.getElementById('image-preview').style.display = 'none';
+            base64Image = null;
+            container.scrollTop = container.scrollHeight;
+
+            // Loading state
+            const loadingId = 'loading-' + Date.now();
+            container.innerHTML += `<div id="${loadingId}" class="message bot-message">Thinking with authentic sources...</div>`;
+            container.scrollTop = container.scrollHeight;
 
             try {
                 const response = await fetch('/chat', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ message: message })
+                    body: JSON.stringify({ message: payloadMessage, image: payloadImage })
                 });
                 const data = await response.json();
-                chatBox.innerHTML += `<div class="msg bot-msg">${data.response}</div>`;
-                chatBox.scrollTop = chatBox.scrollHeight;
-            } catch (err) {
-                chatBox.innerHTML += `<div class="msg bot-msg">Sorry, error getting response.</div>`;
+                
+                document.getElementById(loadingId).remove();
+                container.innerHTML += `<div class="message bot-message">${data.response.replace(/\n/g, '<br>')}</div>`;
+                container.scrollTop = container.scrollHeight;
+            } catch (error) {
+                document.getElementById(loadingId).remove();
+                container.innerHTML += `<div class="message bot-message">Error connecting to server.</div>`;
+            }
+        }
+
+        function handleKeyPress(event) {
+            if (event.key === 'Enter') {
+                sendMessage();
             }
         }
     </script>
