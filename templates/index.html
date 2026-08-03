@@ -34,10 +34,24 @@
             height: 100%;
             left: -260px;
             transition: left 0.3s ease;
-            z-index: 1000;
+            z-index: 1100;
         }
         #sidebar.open {
             left: 0;
+        }
+        /* Backdrop to close sidebar on outside click */
+        #backdrop {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(0,0,0,0.4);
+            display: none;
+            z-index: 1050;
+        }
+        #backdrop.show {
+            display: block;
         }
         .sidebar-header {
             padding: 20px;
@@ -51,6 +65,7 @@
             padding: 0;
             margin: 0;
             flex: 1;
+            overflow-y: auto;
         }
         .sidebar-menu li a {
             display: block;
@@ -59,6 +74,7 @@
             text-decoration: none;
             font-size: 16px;
             transition: background 0.2s;
+            cursor: pointer;
         }
         .sidebar-menu li a:hover {
             background-color: #e2e6ea;
@@ -91,6 +107,17 @@
             font-size: 22px;
             cursor: pointer;
         }
+        /* Views */
+        .view-section {
+            display: none;
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+        }
+        .view-section.active {
+            display: flex;
+            flex-direction: column;
+        }
         /* Chat & Welcome Container */
         #chat-container {
             flex: 1;
@@ -101,7 +128,6 @@
             gap: 15px;
             padding-bottom: 110px;
         }
-        /* Welcome Center Screen */
         #welcome-screen {
             display: flex;
             flex-direction: column;
@@ -164,7 +190,29 @@
             align-self: flex-start;
             border: 1px solid var(--border-color);
         }
-        /* Auto-Expanding Floating Typing Bar */
+        /* Library Specific Styles */
+        .library-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+        .library-card {
+            background: #f8f9fa;
+            border: 1px solid var(--border-color);
+            padding: 20px;
+            border-radius: 12px;
+            cursor: pointer;
+            text-align: center;
+            font-weight: 600;
+            color: var(--accent-color);
+            transition: 0.2s;
+        }
+        .library-card:hover {
+            background: var(--accent-color);
+            color: white;
+        }
+        /* Floating Typing Bar */
         .input-container {
             position: fixed;
             bottom: 20px;
@@ -180,6 +228,7 @@
             border: 1px solid #ced4da;
             box-shadow: 0 4px 15px rgba(0,0,0,0.08);
             gap: 10px;
+            z-index: 100;
         }
         .input-container textarea {
             flex: 1;
@@ -203,7 +252,7 @@
             padding-bottom: 6px;
         }
         .send-btn {
-            background-color: #007bff; /* Blue round button */
+            background-color: #007bff;
             color: #ffffff;
             border: none;
             border-radius: 50%;
@@ -228,15 +277,18 @@
 </head>
 <body>
 
+    <!-- Backdrop Overlay -->
+    <div id="backdrop" onclick="toggleSidebar()"></div>
+
     <!-- Sidebar -->
     <div id="sidebar">
         <div class="sidebar-header">Tibyan AI</div>
         <ul class="sidebar-menu">
-            <li><a href="#" onclick="toggleSidebar()">🏠 Home</a></li>
-            <li><a href="#" onclick="toggleSidebar()">📚 Library</a></li>
-            <li><a href="#" onclick="toggleSidebar()">💾 Saved</a></li>
-            <li><a href="#" onclick="toggleSidebar()">👤 Profile</a></li>
-            <li><a href="#" onclick="toggleSidebar()">ℹ️ About</a></li>
+            <li><a onclick="switchView('home')">🏠 Home</a></li>
+            <li><a onclick="switchView('library')">📚 Library (Maktaba Shamila)</a></li>
+            <li><a onclick="switchView('saved')">💾 Saved & Favorites</a></li>
+            <li><a onclick="switchView('profile')">👤 Profile</a></li>
+            <li><a onclick="switchView('about')">ℹ️ About</a></li>
         </ul>
     </div>
 
@@ -244,24 +296,65 @@
     <div class="main-content">
         <header>
             <button class="menu-btn" onclick="toggleSidebar()">☰</button>
-            <span>Tibyan AI</span>
+            <span id="header-title">Tibyan AI</span>
         </header>
 
-        <div id="chat-container">
-            <!-- Welcome screen with Arabic greeting and suggestions -->
-            <div id="welcome-screen">
-                <div class="arabic-greeting">السلام عليكم</div>
-                <div class="welcome-sub">Ask anything about Islam from authentic sources</div>
-                <div class="suggestions">
-                    <button class="suggestion-chip" onclick="sendSuggestion('What breaks the fast?')">What breaks the fast?</button>
-                    <button class="suggestion-chip" onclick="sendSuggestion('Virtues of Ayat al-Kursi')">Virtues of Ayat al-Kursi</button>
-                    <button class="suggestion-chip" onclick="sendSuggestion('How to perform Tahajjud?')">How to perform Tahajjud?</button>
+        <!-- Home View (Chat & Suggestions) -->
+        <div id="home-view" class="view-section active">
+            <div id="chat-container">
+                <div id="welcome-screen">
+                    <div class="arabic-greeting">السلام عليكم</div>
+                    <div class="welcome-sub">Ask anything about Islam from authentic sources</div>
+                    <div class="suggestions">
+                        <button class="suggestion-chip" onclick="sendSuggestion('What breaks the fast?')">What breaks the fast?</button>
+                        <button class="suggestion-chip" onclick="sendSuggestion('Virtues of Ayat al-Kursi')">Virtues of Ayat al-Kursi</button>
+                        <button class="suggestion-chip" onclick="sendSuggestion('How to perform Tahajjud?')">How to perform Tahajjud?</button>
+                    </div>
                 </div>
             </div>
         </div>
 
-        <!-- Floating Input Bar -->
-        <div class="input-container">
+        <!-- Library View (Maktaba Shamila Sections) -->
+        <div id="library-view" class="view-section">
+            <h2>Maktaba Shamila Library</h2>
+            <p>Select a section to explore authentic texts and books:</p>
+            <div class="library-grid">
+                <div class="library-card">📖 Qur'an</div>
+                <div class="library-card">📜 Tafsir</div>
+                <div class="library-card">⚡ Hadith</div>
+                <div class="library-card">⚖️ Fiqh</div>
+                <div class="library-card">📐 Usul al-Fiqh</div>
+                <div class="library-card">🛡️ Aqeedah</div>
+                <div class="library-card">🔤 Arabic</div>
+                <div class="library-card">📝 Fatwa</div>
+                <div class="library-card">🏛️ History</div>
+                <div class="library-card">🌟 Seerah</div>
+                <div class="library-card">👥 Biography</div>
+                <div class="library-card">💰 Islamic Finance</div>
+                <div class="library-card">🌐 Comparative Religion</div>
+            </div>
+        </div>
+
+        <!-- Saved View -->
+        <div id="saved-view" class="view-section">
+            <h2>Saved & Collections</h2>
+            <p>Your downloaded books, highlights, notes, and favorites will appear here.</p>
+        </div>
+
+        <!-- Profile View -->
+        <div id="profile-view" class="view-section">
+            <h2>User Profile</h2>
+            <p>Manage your preferences, reading history, and account settings.</p>
+        </div>
+
+        <!-- About View -->
+        <div id="about-view" class="view-section">
+            <h2>About Tibyan AI</h2>
+            <p>Tibyan AI is an authentic Sunni Islamic scholar assistant following the Hanafi fiqh with full digital library support.</p>
+        </div>
+
+        <!-- Floating Input Bar (Active only on Home view) -->
+        <div class="input-container" id="input-bar-container">
             <input type="file" id="imageInput" accept="image/*" style="display: none;" onchange="previewImage(event)">
             <button type="button" class="plus-btn" onclick="document.getElementById('imageInput').click()" title="Attach Image">＋</button>
             
@@ -277,7 +370,30 @@
         let base64Image = null;
 
         function toggleSidebar() {
-            document.getElementById('sidebar').classList.toggle('open');
+            const sidebar = document.getElementById('sidebar');
+            const backdrop = document.getElementById('backdrop');
+            sidebar.classList.toggle('open');
+            backdrop.classList.toggle('show');
+        }
+
+        function switchView(viewName) {
+            toggleSidebar();
+            
+            // Hide all views
+            document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active'));
+            
+            // Show selected view
+            document.getElementById(viewName + '-view').classList.add('active');
+            
+            // Hide/Show input bar based on view
+            const inputContainer = document.getElementById('input-bar-container');
+            if (viewName === 'home') {
+                inputContainer.style.display = 'flex';
+                document.getElementById('header-title').innerText = 'Tibyan AI';
+            } else {
+                inputContainer.style.display = 'none';
+                document.getElementById('header-title').innerText = viewName.toUpperCase();
+            }
         }
 
         function autoExpand(textarea) {
