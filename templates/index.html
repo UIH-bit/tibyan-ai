@@ -39,7 +39,6 @@
         #sidebar.open {
             left: 0;
         }
-        /* Backdrop to close sidebar on outside click */
         #backdrop {
             position: fixed;
             top: 0;
@@ -170,8 +169,19 @@
             border-color: var(--accent-color);
         }
         /* Chat Messages */
+        .message-wrapper {
+            display: flex;
+            flex-direction: column;
+            max-width: 85%;
+            margin-bottom: 10px;
+        }
+        .user-wrapper {
+            align-self: flex-end;
+        }
+        .bot-wrapper {
+            align-self: flex-start;
+        }
         .message {
-            max-width: 80%;
             padding: 12px 16px;
             border-radius: 12px;
             line-height: 1.5;
@@ -181,14 +191,36 @@
         .user-message {
             background-color: #d8f3dc;
             color: #081c15;
-            align-self: flex-end;
             border: 1px solid #b7e4c7;
         }
         .bot-message {
             background-color: #f8f9fa;
             color: var(--text-color);
-            align-self: flex-start;
             border: 1px solid var(--border-color);
+        }
+        /* Action Buttons under Bot Message */
+        .action-bar {
+            display: flex;
+            gap: 10px;
+            margin-top: 6px;
+            padding-left: 4px;
+        }
+        .action-btn {
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 13px;
+            color: #6c757d;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            padding: 2px 6px;
+            border-radius: 4px;
+            transition: background 0.2s;
+        }
+        .action-btn:hover {
+            background-color: #e2e6ea;
+            color: var(--accent-color);
         }
         /* Library Specific Styles */
         .library-grid {
@@ -319,26 +351,28 @@
             <h2>Maktaba Shamila Library</h2>
             <p>Select a section to explore authentic texts and books:</p>
             <div class="library-grid">
-                <div class="library-card">📖 Qur'an</div>
-                <div class="library-card">📜 Tafsir</div>
-                <div class="library-card">⚡ Hadith</div>
-                <div class="library-card">⚖️ Fiqh</div>
-                <div class="library-card">📐 Usul al-Fiqh</div>
-                <div class="library-card">🛡️ Aqeedah</div>
-                <div class="library-card">🔤 Arabic</div>
-                <div class="library-card">📝 Fatwa</div>
-                <div class="library-card">🏛️ History</div>
-                <div class="library-card">🌟 Seerah</div>
-                <div class="library-card">👥 Biography</div>
-                <div class="library-card">💰 Islamic Finance</div>
-                <div class="library-card">🌐 Comparative Religion</div>
+                <div class="library-card" onclick="openLibrarySection('Qur\'an')">📖 Qur'an</div>
+                <div class="library-card" onclick="openLibrarySection('Tafsir')">📜 Tafsir</div>
+                <div class="library-card" onclick="openLibrarySection('Hadith')">⚡ Hadith</div>
+                <div class="library-card" onclick="openLibrarySection('Fiqh')">⚖️ Fiqh</div>
+                <div class="library-card" onclick="openLibrarySection('Usul al-Fiqh')">📐 Usul al-Fiqh</div>
+                <div class="library-card" onclick="openLibrarySection('Aqeedah')">🛡️ Aqeedah</div>
+                <div class="library-card" onclick="openLibrarySection('Arabic')">🔤 Arabic</div>
+                <div class="library-card" onclick="openLibrarySection('Fatwa')">📝 Fatwa</div>
+                <div class="library-card" onclick="openLibrarySection('History')">🏛️ History</div>
+                <div class="library-card" onclick="openLibrarySection('Seerah')">🌟 Seerah</div>
+                <div class="library-card" onclick="openLibrarySection('Biography')">👥 Biography</div>
+                <div class="library-card" onclick="openLibrarySection('Islamic Finance')">💰 Islamic Finance</div>
+                <div class="library-card" onclick="openLibrarySection('Comparative Religion')">🌐 Comparative Religion</div>
             </div>
         </div>
 
         <!-- Saved View -->
         <div id="saved-view" class="view-section">
             <h2>Saved & Collections</h2>
-            <p>Your downloaded books, highlights, notes, and favorites will appear here.</p>
+            <div id="saved-list" style="margin-top: 15px;">
+                <p>No saved answers or books yet. Click 'Save' on any response to add it here.</p>
+            </div>
         </div>
 
         <!-- Profile View -->
@@ -368,6 +402,7 @@
 
     <script>
         let base64Image = null;
+        let savedItems = [];
 
         function toggleSidebar() {
             const sidebar = document.getElementById('sidebar');
@@ -379,13 +414,9 @@
         function switchView(viewName) {
             toggleSidebar();
             
-            // Hide all views
             document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active'));
-            
-            // Show selected view
             document.getElementById(viewName + '-view').classList.add('active');
             
-            // Hide/Show input bar based on view
             const inputContainer = document.getElementById('input-bar-container');
             if (viewName === 'home') {
                 inputContainer.style.display = 'flex';
@@ -394,6 +425,10 @@
                 inputContainer.style.display = 'none';
                 document.getElementById('header-title').innerText = viewName.toUpperCase();
             }
+        }
+
+        function openLibrarySection(sectionName) {
+            alert("Opening Maktaba Shamila section: " + sectionName + ". Digital book viewer loading...");
         }
 
         function autoExpand(textarea) {
@@ -433,14 +468,14 @@
                 welcomeScreen.remove();
             }
 
-            let userHtml = `<div class="message user-message">`;
+            let userHtml = `<div class="message-wrapper user-wrapper"><div class="message user-message">`;
             if (base64Image) {
                 userHtml += `<img src="${base64Image}" style="max-width:150px; border-radius:6px; display:block; margin-bottom:5px;">`;
             }
             if (messageText) {
                 userHtml += `<span>${messageText.replace(/\n/g, '<br>')}</span>`;
             }
-            userHtml += `</div>`;
+            userHtml += `</div></div>`;
             container.innerHTML += userHtml;
 
             const payloadMessage = messageText;
@@ -453,7 +488,7 @@
             container.scrollTop = container.scrollHeight;
 
             const loadingId = 'loading-' + Date.now();
-            container.innerHTML += `<div id="${loadingId}" class="message bot-message">Thinking from authentic sources...</div>`;
+            container.innerHTML += `<div id="${loadingId}" class="message-wrapper bot-wrapper"><div class="message bot-message">Thinking from authentic sources...</div></div>`;
             container.scrollTop = container.scrollHeight;
 
             try {
@@ -465,11 +500,68 @@
                 const data = await response.json();
                 
                 document.getElementById(loadingId).remove();
-                container.innerHTML += `<div class="message bot-message">${data.response.replace(/\n/g, '<br>')}</div>`;
+                
+                const responseId = 'resp-' + Date.now();
+                const botReplyText = data.response.replace(/\n/g, '<br>');
+
+                const botHtml = `
+                    <div class="message-wrapper bot-wrapper" id="${responseId}">
+                        <div class="message bot-message">${botReplyText}</div>
+                        <div class="action-bar">
+                            <button class="action-btn" onclick="handleLike('${responseId}')">👍 Like</button>
+                            <button class="action-btn" onclick="handleDislike('${responseId}')">👎 Dislike</button>
+                            <button class="action-btn" onclick="handleSave(this, '${responseId}')">💾 Save</button>
+                            <button class="action-btn" onclick="handleShare('${responseId}')">🔗 Share</button>
+                        </div>
+                    </div>
+                `;
+                container.innerHTML += botHtml;
                 container.scrollTop = container.scrollHeight;
             } catch (error) {
                 document.getElementById(loadingId).remove();
-                container.innerHTML += `<div class="message bot-message">Connection error occurred.</div>`;
+                container.innerHTML += `<div class="message-wrapper bot-wrapper"><div class="message bot-message">Connection error occurred.</div></div>`;
+            }
+        }
+
+        function handleLike(id) {
+            alert("Thank you for your feedback! Response liked.");
+        }
+
+        function handleDislike(id) {
+            alert("Thank you for your feedback! We will improve.");
+        }
+
+        function handleSave(btn, id) {
+            const textElement = document.getElementById(id).querySelector('.bot-message').innerText;
+            savedItems.push(textElement);
+            btn.innerText = "✅ Saved";
+            btn.style.color = "#1b4332";
+            updateSavedView();
+        }
+
+        function updateSavedView() {
+            const savedList = document.getElementById('saved-list');
+            if (savedItems.length === 0) {
+                savedList.innerHTML = `<p>No saved answers or books yet. Click 'Save' on any response to add it here.</p>`;
+                return;
+            }
+            let html = "";
+            savedItems.forEach((item, index) => {
+                html += `<div style="background:#f8f9fa; border:1px solid #ced4da; padding:12px; border-radius:8px; margin-bottom:10px;"><b>Saved #${index+1}:</b><br>${item}</div>`;
+            });
+            savedList.innerHTML = html;
+        }
+
+        function handleShare(id) {
+            const textElement = document.getElementById(id).querySelector('.bot-message').innerText;
+            if (navigator.share) {
+                navigator.share({
+                    title: 'Tibyan AI Answer',
+                    text: textElement
+                }).catch(() => {});
+            } else {
+                navigator.clipboard.writeText(textElement);
+                alert("Answer copied to clipboard!");
             }
         }
 
