@@ -611,3 +611,30 @@
             }
         }
     </script>
+
+<script>
+        function askAI(questionText = null) {
+            const inputField = document.getElementById('chat-input') || document.querySelector('input[type="text"]');
+            const query = questionText || (inputField ? inputField.value : '');
+            
+            if (!query.trim()) return;
+
+            // Create chat interface if not present or append message
+            let chatContainer = document.getElementById('chat-messages-container');
+            if (!chatContainer) {
+                // If we are on home screen, let's create a chat view
+                const home = document.getElementById('library-home');
+                if (home) {
+                    home.innerHTML = '<div id="chat-messages-container" style="padding:15px; display:flex; flex-direction:column; gap:10px;"></div>';
+                    chatContainer = document.getElementById('chat-messages-container');
+                }
+            }
+
+            if (chatContainer) {
+                chatContainer.innerHTML += '<div style="background:var(--card-bg); padding:10px; border-radius:8px; text-align:right;"><b>Aap:</b> ' + query + '</div>';
+                chatContainer.innerHTML += '<div style="background:var(--card-bg); padding:10px; border-radius:8px; border-left:4px solid var(--accent-color);"><b>Tibyan AI:</b> Wa alaikum assalam wa rahmatullah. Bismillah, main aapke sawal par ghaur kar raha hoon...</div>';
+            }
+
+            if (inputField) inputField.value = '';
+        }
+</script>
