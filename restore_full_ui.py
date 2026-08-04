@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+full_html = """<!DOCTYPE html>
 <html lang="hi">
 <head>
     <meta charset="UTF-8">
@@ -420,3 +420,8 @@
     </script>
 </body>
 </html>
+"""
+
+with open("templates/index.html", "w", encoding="utf-8") as f:
+    f.write(full_html)
+print("SUCCESS: Full UI with Image Upload, Menu, and Action buttons written!")
