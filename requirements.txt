@@ -1,4 +1,4 @@
 flask
-gunicon
+gunicorn
 requests
 google-generativeai
