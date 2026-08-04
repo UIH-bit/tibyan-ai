@@ -79,3 +79,25 @@ def chat():
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
+
+
+
+import requests
+
+@app.route('/api/content/chapters', methods=['GET'])
+def get_content_chapters():
+    try:
+        url = "https://content.quran.foundation/api/v4/chapters"
+        response = requests.get(url)
+        return jsonify(response.json())
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/content/verses/<int:chapter_id>', methods=['GET'])
+def get_content_verses(chapter_id):
+    try:
+        url = f"https://content.quran.foundation/api/v4/verses/by_chapter/{chapter_id}"
+        response = requests.get(url)
+        return jsonify(response.json())
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
