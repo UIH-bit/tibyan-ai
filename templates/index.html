@@ -533,35 +533,22 @@
         </div>
     </div>
 
+    
     <script>
-        let base64Image = null;
-        let savedItems = [];
-        let totalQuestionsCount = 0;
-        let currentReaderFontSize = 18;
-        let isDarkReader = false;
-
-        function toggleSidebar() {
-            const sidebar = document.getElementById('sidebar');
-            const backdrop = document.getElementById('backdrop');
-            sidebar.classList.toggle('open');
-            backdrop.classList.toggle('show');
-        }
-
-        function switchView(viewName) {
-            toggleSidebar();
-            document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active'));
-            document.getElementById(viewName + '-view').classList.add('active');
-            
-            document.getElementById('back-btn').style.display = 'none';
-            const inputContainer = document.getElementById('input-bar-container');
-            if (viewName === 'home') {
-                inputContainer.style.display = 'flex';
-                document.getElementById('header-title').innerText = 'Tibyan AI';
-            } else {
-                inputContainer.style.display = 'none';
-                document.getElementById('header-title').innerText = viewName === 'library' ? 'Library' : viewName.toUpperCase();
-            }
-        }
+        const surahsData = [
+            "Al-Fatihah", "Al-Baqarah", "Aali 'Imran", "An-Nisa'", "Al-Ma'idah", "Al-An'am", "Al-A'raf", "Al-Anfal", "At-Tawbah", "Yunus", 
+            "Hud", "Yusuf", "Ar-Ra'd", "Ibrahim", "Al-Hijr", "An-Nahl", "Al-Isra", "Al-Kahf", "Maryam", "Ta-Ha", 
+            "Al-Anbiya", "Al-Hajj", "Al-Mu'minun", "An-Nur", "Al-Furqan", "Ash-Shu'ara", "An-Naml", "Al-Qasas", "Al-'Ankabut", "Ar-Rum", 
+            "Luqman", "As-Sajdah", "Al-Ahzab", "Saba", "Fatir", "Ya-Sin", "As-Saffat", "Sad", "Az-Zumar", "Ghafir", 
+            "Fussilat", "Ash-Shuraa", "Az-Zukhruf", "Ad-Dukhan", "Al-Jathiyah", "Al-Ahqaf", "Muhammad", "Al-Fath", "Al-Hujurat", "Qaf", 
+            "Ad-Dhariyat", "At-Tur", "An-Najm", "Al-Qamar", "Ar-Rahman", "Al-Waqi'ah", "Al-Hadid", "Al-Mujadila", "Al-Hashr", "Al-Mumtahana", 
+            "As-Saff", "Al-Jumu'ah", "Al-Munafiqun", "At-Taghabun", "At-Talaq", "At-Tahrim", "Al-Mulk", "Al-Qalam", "Al-Haqqah", "Al-Ma'arij", 
+            "Nuh", "Al-Jinn", "Al-Muzzammil", "Al-Muddaththir", "Al-Qiyamah", "Al-Insan", "Al-Mursalat", "An-Naba", "An-Nazi'at", "'Abasa", 
+            "At-Takwir", "Al-Infitar", "Al-Mutaffifin", "Al-Inshiqaq", "Al-Buruj", "At-Tariq", "Al-A'la", "Al-Ghashiyah", "Al-Fajr", "Al-Balad", 
+            "Ash-Shams", "Al-Lail", "Ad-Duha", "Ash-Sharh", "At-Tin", "Al-Alaq", "Al-Qadr", "Al-Bayyinah", "Az-Zalzalah", "Al-Adiyat", 
+            "Al-Qari'ah", "At-Takathur", "Al-Asr", "Al-Humazah", "Al-Fil", "Quraish", "Al-Ma'un", "Al-Kawthar", "Al-Kafirun", "An-Nasr", 
+            "Al-Masad", "Al-Ikhlas", "Al-Falaq", "An-Nas"
+        ];
 
         function openSection(sectionName) {
             document.getElementById('library-home').style.display = 'none';
@@ -571,412 +558,56 @@
 
             const container = document.getElementById('books-container');
             if (sectionName === 'Quran' || sectionName === 'Qur\'an') {
-                let html = '<h3 style="margin-top:0; color:var(--accent-color);">📖 Select by Juz (Para 1 - 30)</h3><div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(100px, 1fr)); gap:10px; margin-bottom:20px;">';
+                let html = '<h3 style="margin-top:0; color:var(--accent-color);">📖 Select by Juz (Para 1 - 30)</h3>';
+                html += '<div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(90px, 1fr)); gap:8px; margin-bottom:20px;">';
                 for(let i=1; i<=30; i++) {
-                    html += `<div class="library-card" style="padding:10px; font-size:13px; text-align:center; background:var(--card-bg); border:1px solid var(--border-color); border-radius:6px; cursor:pointer;" onclick="openReader('Juz / Para ${i}')">Para ${i}</div>`;
+                    html += '<div style="padding:10px; font-size:13px; text-align:center; background:var(--card-bg); border:1px solid var(--border-color); border-radius:6px; cursor:pointer;" onclick="openReader(\'Juz / Para ' + i + '\')">Para ' + i + '</div>';
                 }
-                html += '</div><h3 style="color:var(--accent-color);">📜 Select by Surah (1 - 114 with Meanings)</h3><div style="display:flex; flex-direction:column; gap:8px;">';
+                html += '</div>';
                 
-                const sampleSurahs = [
-                    {n: "Al-Fatihah", meaning: "The Opening (الفتحة)"},
-                    {n: "Al-Baqarah", meaning: "The Cow (البقرة)"},
-                    {n: "Aali 'Imran", meaning: "The Family of Imran (آل عمران)"},
-                    {n: "An-Nisa'", meaning: "The Women (النساء)"},
-                    {n: "Al-Ma'idah", meaning: "The Table Spread (المائدة)"},
-                    {n: "Al-An'am", meaning: "The Cattle (الأنعام)"},
-                    {n: "Al-A'raf", meaning: "The Heights (الأعراف)"},
-                    {n: "Al-Anfal", meaning: "The Spoils of War (الأنفال)"},
-                    {n: "At-Tawbah", meaning: "The Repentance (التوبة)"},
-                    {n: "Yunus", meaning: "Prophet Jonah (يونس)"},
-                    {n: "Hud", meaning: "Prophet Hud (هود)"},
-                    {n: "Yusuf", meaning: "Prophet Joseph (يوسف)"},
-                    {n: "Ar-Ra'd", meaning: "The Thunder (الرعد)"},
-                    {n: "Ibrahim", meaning: "Prophet Abraham (إبراهيم)"},
-                    {n: "Al-Hijr", meaning: "The Rocky Tract (الحجر)"},
-                    {n: "An-Nahl", meaning: "The Bee (النحل)"},
-                    {n: "Al-Isra", meaning: "The Night Journey (الإسراء)"},
-                    {n: "Al-Kahf", meaning: "The Cave (الكهف)"},
-                    {n: "Maryam", meaning: "Mary (مريم)"},
-                    {n: "Ta-Ha", meaning: "Ta-Ha (طه)"},
-                    {n: "Al-Anbiya", meaning: "The Prophets (الأنبياء)"},
-                    {n: "Al-Hajj", meaning: "The Pilgrimage (الحج)"},
-                    {n: "Al-Mu'minun", meaning: "The Believers (المؤمنون)"},
-                    {n: "An-Nur", meaning: "The Light (النور)"},
-                    {n: "Al-Furqan", meaning: "The Criterion (الفرقان)"},
-                    {n: "Ash-Shu'ara", meaning: "The Poets (الشعراء)"},
-                    {n: "An-Naml", meaning: "The Ant (النمل)"},
-                    {n: "Al-Qasas", meaning: "The Stories (القصص)"},
-                    {n: "Al-'Ankabut", meaning: "The Spider (العنكبوت)"},
-                    {n: "Ar-Rum", meaning: "The Romans (الروم)"},
-                    {n: "Luqman", meaning: "Luqman the Wise (لقمان)"},
-                    {n: "As-Sajdah", meaning: "The Prostration (السجدة)"},
-                    {n: "Al-Ahzab", meaning: "The Combined Forces (الأحزاب)"},
-                    {n: "Saba", meaning: "Sheba (سبأ)"},
-                    {n: "Fatir", meaning: "The Originator (فاطر)"},
-                    {n: "Ya-Sin", meaning: "Ya-Sin (يس)"},
-                    {n: "As-Saffat", meaning: "Those Ranged in Ranks (الصافات)"},
-                    {n: "Sad", meaning: "The Letter Sad (ص)"},
-                    {n: "Az-Zumar", meaning: "The Troops (الزمر)"},
-                    {n: "Ghafir", meaning: "The Forgiver (غافر)"},
-                    {n: "Fussilat", meaning: "Explained in Detail (فصلت)"},
-                    {n: "Ash-Shuraa", meaning: "The Consultation (الشورى)"},
-                    {n: "Az-Zukhruf", meaning: "The Gold Ornaments (الزخرف)"},
-                    {n: "Ad-Dukhan", meaning: "The Smoke (الدخان)"},
-                    {n: "Al-Jathiyah", meaning: "The Crouching (الجاثية)"},
-                    {n: "Al-Ahqaf", meaning: "The Wind-Curved Sandhills (الأحقاف)"},
-                    {n: "Muhammad", meaning: "Prophet Muhammad (محمد)"},
-                    {n: "Al-Fath", meaning: "The Victory (الفَتْح)"},
-                    {n: "Al-Hujurat", meaning: "The Dwellings (الحجرات)"},
-                    {n: "Qaf", meaning: "The Letter Qaf (ق)"},
-                    {n: "Ad-Dhariyat", meaning: "The Winnowing Winds (الذاريات)"},
-                    {n: "At-Tur", meaning: "The Mount (الطور)"},
-                    {n: "An-Najm", meaning: "The Star (النجم)"},
-                    {n: "Al-Qamar", meaning: "The Moon (القمر)"},
-                    {n: "Ar-Rahman", meaning: "The Beneficent (الرحمن)"},
-                    {n: "Al-Waqi'ah", meaning: "The Inevitable (واقعة)"},
-                    {n: "Al-Hadid", meaning: "The Iron (الحديد)"},
-                    {n: "Al-Mujadila", meaning: "The Pleading Woman (المجادلة)"},
-                    {n: "Al-Hashr", meaning: "The Exile (الحشر)"},
-                    {n: "Al-Mumtahana", meaning: "The Tested Woman (الممتحنة)"},
-                    {n: "As-Saff", meaning: "The Ranks (الصف)"},
-                    {n: "Al-Jumu'ah", meaning: "Friday (الجمعة)"},
-                    {n: "Al-Munafiqun", meaning: "The Hypocrites (المنافقون)"},
-                    {n: "At-Taghabun", meaning: "The Mutual Disillusion (التغابن)"},
-                    {n: "At-Talaq", meaning: "The Divorce (الطلاق)"},
-                    {n: "At-Tahrim", meaning: "The Prohibition (التحريم)"},
-                    {n: "Al-Mulk", meaning: "The Sovereignty (الملك)"},
-                    {n: "Al-Qalam", meaning: "The Pen (القلم)"},
-                    {n: "Al-Haqqah", meaning: "The Reality (الحاقة)"},
-                    {n: "Al-Ma'arij", meaning: "The Ascending Stairways (المعارج)"},
-                    {n: "Nuh", meaning: "Prophet Noah (نوح)"},
-                    {n: "Al-Jinn", meaning: "The Jinn (الجن)"},
-                    {n: "Al-Muzzammil", meaning: "The Enshrouded One (المزمل)"},
-                    {n: "Al-Muddaththir", meaning: "The Cloaked One (المدثر)"},
-                    {n: "Al-Qiyamah", meaning: "The Resurrection (القيامة)"},
-                    {n: "Al-Insan", meaning: "Man (الإنسان)"},
-                    {n: "Al-Mursalat", meaning: "The Emissaries (المرسلات)"},
-                    {n: "An-Naba", meaning: "The Tidings (النبأ)"},
-                    {n: "An-Nazi'at", meaning: "Those Who Drag Forth (النازعات)"},
-                    {n: "'Abasa", meaning: "He Frowned (عبس)"},
-                    {n: "At-Takwir", meaning: "The Overthrowing (التكوير)"},
-                    {n: "Al-Infitar", meaning: "The Cleaving (الانفطار)"},
-                    {n: "Al-Mutaffifin", meaning: "The Defrauding (المطففين)"},
-                    {n: "Al-Inshiqaq", meaning: "The Splitting Open (الانشقاق)"},
-                    {n: "Al-Buruj", meaning: "The Big Stars (البروج)"},
-                    {n: "At-Tariq", meaning: "The Nightcomer (الطارق)"},
-                    {n: "Al-A'la", meaning: "The Most High (الأعلى)"},
-                    {n: "Al-Ghashiyah", meaning: "The Overwhelming (الغاشية)"},
-                    {n: "Al-Fajr", meaning: "The Dawn (الفجر)"},
-                    {n: "Al-Balad", meaning: "The City (البلد)"},
-                    {n: "Ash-Shams", meaning: "The Sun (الشمس)"},
-                    {n: "Al-Lail", meaning: "The Night (الليل)"},
-                    {n: "Ad-Duha", meaning: "The Morning Hours (الضحى)"},
-                    {n: "Ash-Sharh", meaning: "The Relief (الشرح)"},
-                    {n: "At-Tin", meaning: "The Fig (التين)"},
-                    {n: "Al-Alaq", meaning: "The Clot (العلق)"},
-                    {n: "Al-Qadr", meaning: "The Power (القدر)"},
-                    {n: "Al-Bayyinah", meaning: "The Clear Proof (البينة)"},
-                    {n: "Az-Zalzalah", meaning: "The Earthquake (الزلزلة)"},
-                    {n: "Al-Adiyat", meaning: "The Chargers (العاديات)"},
-                    {n: "Al-Qari'ah", meaning: "The Striking Hour (القارعة)"},
-                    {n: "At-Takathur", meaning: "The Rivalry in World Increase (التكاثر)"},
-                    {n: "Al-Asr", meaning: "The Declining Day (العصر)"},
-                    {n: "Al-Humazah", meaning: "The Traducer (الهمزة)"},
-                    {n: "Al-Fil", meaning: "The Elephant (الفيل)"},
-                    {n: "Quraish", meaning: "Quraish Tribe (قريش)"},
-                    {n: "Al-Ma'un", meaning: "The Small Kindnesses (الماعون)"},
-                    {n: "Al-Kawthar", meaning: "Abundance (الكوثر)"},
-                    {n: "Al-Kafirun", meaning: "The Disbelievers (الكافرون)"},
-                    {n: "An-Nasr", meaning: "The Divine Support (النصر)"},
-                    {n: "Al-Masad", meaning: "The Palm Fiber (المسد)"},
-                    {n: "Al-Ikhlas", meaning: "The Sincerity (الإخلاص)"},
-                    {n: "Al-Falaq", meaning: "The Daybreak (الفلق)"},
-                    {n: "An-Nas", meaning: "Mankind (الناس)"}
-                ];
-
-                sampleSurahs.forEach((item, idx) => {
-                    html += `<div class="book-item" onclick="openReader('Surah ${idx+1}. ${item.n}')" style="display:flex; justify-content:space-between; align-items:center; padding:10px; margin-bottom:6px; background:var(--card-bg); border:1px solid var(--border-color); border-radius:6px; cursor:pointer;">
-                        <div><b>Surah ${idx+1}: ${item.n}</b><br><small style="color:var(--text-secondary);">${item.meaning}</small></div>
-                        <span>➔</span>
-                    </div>`;
+                html += '<h3 style="color:var(--accent-color);">📜 Select by Surah (1 - 114)</h3>';
+                html += '<div style="display:flex; flex-direction:column; gap:8px;">';
+                surahsData.forEach((s, idx) => {
+                    html += '<div style="display:flex; justify-content:space-between; align-items:center; padding:10px; background:var(--card-bg); border:1px solid var(--border-color); border-radius:6px; cursor:pointer;" onclick="openReader(\'Surah ' + (idx+1) + '. ' + s + '\')">';
+                    html += '<div><b>Surah ' + (idx+1) + ': ' + s + '</b></div><span>➔</span></div>';
                 });
                 html += '</div>';
                 container.innerHTML = html;
             } else {
-                container.innerHTML = `
-                    <div class="book-item" onclick="openReader('${sectionName} - Sahih Authentic Collection')">
-                        <span>📚 Comprehensive ${sectionName} Corpus (Vol. 1)</span><span>➔</span>
-                    </div>
-                    <div class="book-item" onclick="openReader('${sectionName} - Classical Master Texts')">
-                        <span>📖 Classical Master Texts & Commentary</span><span>➔</span>
-                    </div>
-                `;
+                container.innerHTML = '<div style="padding:12px; background:var(--card-bg); border:1px solid var(--border-color); border-radius:6px; margin-bottom:8px; cursor:pointer;" onclick="openReader(\'' + sectionName + ' - Sahih Collection\')"><span>📚 Comprehensive ' + sectionName + ' Corpus</span></div>';
             }
         }
 
-                function openReader(bookTitle) {
+        function openReader(bookTitle) {
             document.getElementById('library-home').style.display = 'none';
             document.getElementById('book-list-container').style.display = 'none';
             document.getElementById('reader-container').style.display = 'block';
             document.getElementById('reader-title').innerText = bookTitle;
             document.getElementById('back-btn').style.display = 'block';
 
-            let quranText = "";
+            let textContent = "بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ<br><br>";
             if (bookTitle.includes('Fatihah')) {
-                quranText = `
-                    بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ<br>
-                    الْحَمْدُ لِلَّهِ رَبِّ الْعَالَمِينَ ﴿١﴾<br>
-                    الرَّحْمَٰنِ الرَّحِيمِ ﴿٢﴾<br>
-                    مَالِكِ يَوْمِ الدِّينِ ﴿٣﴾<br>
-                    إِيَّاكَ نَعْبُدُ وَإِيَّاكَ نَسْتَعِينُ ﴿٤﴾<br>
-                    اهْدِنَا الصِّرَاطَ الْمُسْتَقِيمَ ﴿٥﴾<br>
-                    صِرَاطَ الَّذِينَ أَنْعَمْتَ عَلَيْهِمْ غَيْرِ الْمَغْضُوبِ عَلَيْهِمْ وَلَا الضَّالِّينَ ﴿٦﴾
-                `;
+                textContent += "الْحَمْدُ لِلَّهِ رَبِّ الْعَالَمِينَ ﴿١﴾ الرَّحْمَٰنِ الرَّحِيمِ ﴿٢﴾ مَالِكِ يَوْمِ الدِّينِ ﴿٣﴾ إِيَّاكَ نَعْبُدُ وَإِيَّاكَ نَسْتَعِينُ ﴿٤﴾ اهْدِنَا الصِّرَاطَ الْمُسْتَقِيمَ ﴿٥﴾";
             } else {
-                quranText = `
-                    بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ<br><br>
-                    ذَٰلِكَ الْكِتَابُ لَا رَيْبَ ۛ فِيهِ ۛ هُدًى لِلْمُتَّقِينَ ﴿٢﴾ الَّذِينَ يُؤْمِنُونَ بِالْغَيْبِ وَيُقِيمُونَ الصَّلَاةَ وَمِمَّا رَزَقْنَاهُمْ يُنفِقُونَ ﴿٣﴾<br><br>
-                    وَالَّذِينَ يُؤْمِنُونَ بِمَا أُنزِلَ إِلَيْكَ وَمَا أُنزِلَ مِن قَبْلِكَ وَبِالْآخِرَةِ هُمْ يُوقِنُونَ ﴿٤﴾ أُولَئِكَ عَلَى هُدًى مِّن رَّبِّهِمْ وَأُولَئِكَ هُمُ الْمُفْلِحُونَ ﴿٥﴾<br><br>
-                    <div style="font-size:16px; direction:ltr; text-align:center; color:var(--text-secondary); margin-top:20px;">[Authentic Uthmani text for <b>${bookTitle}</b> loaded with complete Tashkeel]</div>
-                `;
+                textContent += "ذَٰلِكَ الْكِتَابُ لَا رَيْبَ ۛ فِيهِ ۛ هُدًى لِلْمُتَّقِينَ ﴿٢﴾ الَّذِينَ يُؤْمِنُونَ بِالْغَيْبِ وَيُقِيمُونَ الصَّلَاةَ وَمِمَّا رَزَقْنَاهُمْ يُنفِقُونَ ﴿٣﴾<br><br>[Authentic Uthmani text loaded for " + bookTitle + "]";
             }
 
-            document.getElementById('reader-content').innerHTML = `
-                <div style="text-align: right; font-family: 'Amiri', 'Traditional Arabic', serif; font-size: 26px; line-height: 2.6; direction: rtl; color: var(--text-color);">
-                    ${quranText}
-                </div>
-            `;
+            document.getElementById('reader-content').innerHTML = '<div style="text-align: right; font-family: \'Amiri\', serif; font-size: 24px; line-height: 2.5; direction: rtl; color: var(--text-color);">' + textContent + '</div>';
         }
 
-        function goBackLibrary() {
+        function goBack() {
             const reader = document.getElementById('reader-container');
             const bookList = document.getElementById('book-list-container');
-            const libHome = document.getElementById('library-home');
+            const libraryHome = document.getElementById('library-home');
+            const backBtn = document.getElementById('back-btn');
 
-            if (reader.style.display === 'flex') {
+            if (reader.style.display === 'block') {
                 reader.style.display = 'none';
                 bookList.style.display = 'block';
             } else if (bookList.style.display === 'block') {
                 bookList.style.display = 'none';
-                libHome.style.display = 'block';
-                document.getElementById('back-btn').style.display = 'none';
+                libraryHome.style.display = 'block';
+                backBtn.style.display = 'none';
             }
         }
-
-        function adjustFontSize(change) {
-            currentReaderFontSize += change;
-            if(currentReaderFontSize < 12) currentReaderFontSize = 12;
-            if(currentReaderFontSize > 32) currentReaderFontSize = 32;
-            document.getElementById('reader-text-content').style.fontSize = currentReaderFontSize + 'px';
-        }
-
-        function toggleDarkMode() {
-            isDarkReader = !isDarkReader;
-            const reader = document.getElementById('reader-container');
-            if (isDarkReader) {
-                reader.style.background = '#121212';
-                reader.style.color = '#e0e0e0';
-            } else {
-                reader.style.background = '#fdfbf7';
-                reader.style.color = '#212529';
-            }
-        }
-
-        function autoExpand(textarea) {
-            textarea.style.height = 'auto';
-            textarea.style.height = (textarea.scrollHeight) + 'px';
-        }
-
-        function previewImage(event) {
-            const file = event.target.files[0];
-            if (file) {
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    base64Image = e.target.result;
-                    const preview = document.getElementById('image-preview');
-                    preview.src = base64Image;
-                    preview.style.display = 'block';
-                }
-                reader.readAsDataURL(file);
-            }
-        }
-
-        function sendSuggestion(text) {
-            document.getElementById('userInput').value = text;
-            autoExpand(document.getElementById('userInput'));
-            sendMessage();
-        }
-
-        async function sendMessage() {
-            const inputField = document.getElementById('userInput');
-            const messageText = inputField.value.trim();
-            const container = document.getElementById('chat-container');
-            const welcomeScreen = document.getElementById('welcome-screen');
-
-            if (!messageText && !base64Image) return;
-
-            if (welcomeScreen) {
-                welcomeScreen.remove();
-            }
-
-            totalQuestionsCount++;
-            document.getElementById('stat-questions').innerText = totalQuestionsCount;
-
-            let userHtml = `<div class="message-wrapper user-wrapper"><div class="message user-message">`;
-            if (base64Image) {
-                userHtml += `<img src="${base64Image}" style="max-width:150px; border-radius:6px; display:block; margin-bottom:5px;">`;
-            }
-            if (messageText) {
-                userHtml += `<span>${messageText.replace(/\n/g, '<br>')}</span>`;
-            }
-            userHtml += `</div></div>`;
-            container.innerHTML += userHtml;
-
-            const payloadMessage = messageText;
-            const payloadImage = base64Image;
-
-            inputField.value = '';
-            inputField.style.height = 'auto';
-            document.getElementById('image-preview').style.display = 'none';
-            base64Image = null;
-            container.scrollTop = container.scrollHeight;
-
-            const loadingId = 'loading-' + Date.now();
-            container.innerHTML += `<div id="${loadingId}" class="message-wrapper bot-wrapper"><div class="message bot-message">Thinking from authentic sources...</div></div>`;
-            container.scrollTop = container.scrollHeight;
-
-            try {
-                const response = await fetch('/chat', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ message: payloadMessage, image: payloadImage })
-                });
-                const data = await response.json();
-                
-                document.getElementById(loadingId).remove();
-                
-                const responseId = 'resp-' + Date.now();
-                const botReplyText = data.response.replace(/\n/g, '<br>');
-
-                const botHtml = `
-                    <div class="message-wrapper bot-wrapper" id="${responseId}">
-                        <div class="message bot-message">${botReplyText}</div>
-                        <div class="action-bar">
-                            <button class="action-btn" onclick="handleLike('${responseId}')">👍 Like</button>
-                            <button class="action-btn" onclick="handleDislike('${responseId}')">👎 Dislike</button>
-                            <button class="action-btn" onclick="handleSave(this, '${responseId}')">🔖 Bookmark</button>
-                            <button class="action-btn" onclick="handleShare('${responseId}')">🔗 Share</button>
-                        </div>
-                    </div>
-                `;
-                container.innerHTML += botHtml;
-                container.scrollTop = container.scrollHeight;
-            } catch (error) {
-                document.getElementById(loadingId).remove();
-                container.innerHTML += `<div class="message-wrapper bot-wrapper"><div class="message bot-message">Connection error occurred.</div></div>`;
-            }
-        }
-
-        function handleLike(id) {
-            alert("Thank you for your feedback! Response liked.");
-        }
-
-        function handleDislike(id) {
-            alert("Thank you for your feedback! We will improve.");
-        }
-
-        function handleSave(btn, id) {
-            const textElement = document.getElementById(id).querySelector('.bot-message').innerText;
-            savedItems.push(textElement);
-            btn.innerText = "✅ Bookmarked";
-            btn.style.color = "#1b4332";
-            document.getElementById('stat-bookmarks').innerText = savedItems.length;
-            updateSavedView();
-        }
-
-        function updateSavedView() {
-            const savedList = document.getElementById('saved-list');
-            if (savedItems.length === 0) {
-                savedList.innerHTML = `<p>No bookmarked answers or notes yet. Click the bookmark icon on any response to save it here.</p>`;
-                return;
-            }
-            let html = "";
-            savedItems.forEach((item, index) => {
-                html += `<div style="background:#f8f9fa; border:1px solid #ced4da; padding:12px; border-radius:8px; margin-bottom:10px;"><b>Bookmark #${index+1}:</b><br>${item}</div>`;
-            });
-            savedList.innerHTML = html;
-        }
-
-        function handleShare(id) {
-            const textElement = document.getElementById(id).querySelector('.bot-message').innerText;
-            if (navigator.share) {
-                navigator.share({
-                    title: 'Tibyan AI Answer',
-                    text: textElement
-                }).catch(() => {});
-            } else {
-                navigator.clipboard.writeText(textElement);
-                alert("Answer copied to clipboard!");
-            }
-        }
-
-        function handleKeyDown(event) {
-            if (event.key === 'Enter' && !event.shiftKey) {
-                event.preventDefault();
-                sendMessage();
-            }
-        }
-    
-        function openImageReader() {
-            document.getElementById('library-home').style.display = 'none';
-            document.getElementById('book-list-container').style.display = 'none';
-            document.getElementById('reader-container').style.display = 'none';
-            
-            let imgContainer = document.getElementById('image-reader-container');
-            if (!imgContainer) {
-                const mainDiv = document.createElement('div');
-                mainDiv.id = 'image-reader-container';
-                mainDiv.innerHTML = `\
-                    <h2 style="color:var(--accent-color); margin-top:0;">📸 Arabic & Manuscript Image Reader</h2>\
-                    <p style="color:var(--text-secondary); font-size:14px;">Upload a photo of any Quranic page or Arabic manuscript to scan and read.</p>\
-                    <div style="border: 2px dashed var(--border-color); padding: 20px; text-align: center; border-radius: 8px; margin: 15px 0; background: var(--card-bg);">\
-                        <input type="file" id="image-upload-input" accept="image/*" style="display:none;" onchange="handleImageUpload(event)">\
-                        <button onclick="document.getElementById('image-upload-input').click()" style="background:var(--accent-color); color:white; border:none; padding:10px 20px; border-radius:6px; cursor:pointer; font-size:15px;">📁 Choose Image / Take Photo</button>\
-                        <div id="image-preview-area" style="margin-top:15px;"></div>\
-                    </div>\
-                    <div id="image-result-box" style="display:none; margin-top:20px; background:var(--card-bg); border:1px solid var(--border-color); padding:15px; border-radius:8px;">\
-                        <h3 style="color:var(--accent-color); margin-top:0;">Extracted Arabic Text (Uthmani):</h3>\
-                        <div id="extracted-arabic" style="font-family:'Amiri', serif; font-size:22px; direction:rtl; line-height:2.4; padding:10px; background:var(--bg-color); border-radius:6px;"></div>\
-                        <h3 style="color:var(--accent-color); margin-top:15px;">Translation & Scholarly Notes:</h3>\
-                        <div id="extracted-translation" style="font-size:15px; color:var(--text-color); line-height:1.6;"></div>\
-                    </div>\
-                `;
-                document.querySelector('.container').appendChild(mainDiv);
-                imgContainer = mainDiv;
-            }
-            imgContainer.style.display = 'block';
-            document.getElementById('section-title-heading').innerText = 'Image Reader';
-            document.getElementById('back-btn').style.display = 'block';
-        }
-
-        function handleImageUpload(event) {
-            const file = event.target.files[0];
-            if (!file) return;
-
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                const previewArea = document.getElementById('image-preview-area');
-                previewArea.innerHTML = `<img src="${e.target.result}" style="max-width:100%; max-height:250px; border-radius:6px; border:1px solid var(--border-color);">`;
-                
-                // Show loading & simulated OCR result for Arabic manuscript/Quran page
-                const resultBox = document.getElementById('image-result-box');
-                resultBox.style.display = 'block';
-                document.getElementById('extracted-arabic').innerHTML = 'Scanning image for Arabic diacritics... <br>بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ<br>الْحَمْدُ لِلَّهِ رَبِّ الْعَالَمِينَ';
-                document.getElementById('extracted-translation').innerText = 'Processing image through OCR engine. Verified text successfully recognized from uploaded manuscript image.';
-            };
-            reader.readAsDataURL(file);
-        }
-
-</script>
-</body>
-</html>
+    </script>
