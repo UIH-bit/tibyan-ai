@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+professional_html = """<!DOCTYPE html>
 <html lang="hi">
 <head>
     <meta charset="UTF-8">
@@ -548,3 +548,8 @@
     </script>
 </body>
 </html>
+"""
+
+with open("templates/index.html", "w", encoding="utf-8") as f:
+    f.write(professional_html)
+print("SUCCESS: Professional Multi-view UI written!")
