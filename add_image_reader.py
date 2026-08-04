@@ -1,102 +1,78 @@
-with open("templates/index.html", "r", encoding="utf-8") as f:
-    html = f.read()
+with open("app.py", "r", encoding="utf-8") as f:
+    code = f.read()
 
-# 1. Add Image Reader card to the library home view
-old_grid = 'id="library-home"'
-# Let's add an Image Reader button in the library view or navigation
-image_reader_html = """
-    <!-- Image Reader Modal / View -->
-    <div id="image-reader-container" style="display:none; padding:15px;">
-        <h2 style="color:var(--accent-color); margin-top:0;">📸 Arabic & Manuscript Image Reader</h2>
-        <p style="color:var(--text-secondary); font-size:14px;">Upload or snap a photo of any Quranic page, manuscript, or Arabic text to extract and read it instantly.</p>
+image_reader_logic = """
+@app.route('/api/chat', methods=['POST'])
+def chat_api():
+    try:
+        data = request.get_json()
+        user_msg = data.get('message', '').strip() if data else ''
+        image_data = data.get('image', None) if data else None
         
-        <div style="border: 2px dashed var(--border-color); padding: 20px; text-align: center; border-radius: 8px; margin: 15px 0; background: var(--card-bg);">
-            <input type="file" id="image-upload-input" accept="image/*" style="display:none;" onchange="handleImageUpload(event)">
-            <button onclick="document.getElementById('image-upload-input').click()" style="background:var(--accent-color); color:white; border:none; padding:10px 20px; border-radius:6px; cursor:pointer; font-size:15px;">📁 Choose Image / Take Photo</button>
-            <div id="image-preview-area" style="margin-top:15px;"></div>
-        </div>
+        if not user_msg and not image_data:
+            return jsonify({"response": "Ma'zrat chahte hain, aapne na koi sawal pucha aur na hi tasveer bheji."})
 
-        <div id="image-result-box" style="display:none; margin-top:20px; background:var(--card-bg); border:1px solid var(--border-color); padding:15px; border-radius:8px;">
-            <h3 style="color:var(--accent-color); margin-top:0;">Extracted Arabic Text (Uthmani):</h3>
-            <div id="extracted-arabic" style="font-family:'Amiri', serif; font-size:22px; direction:rtl; line-height:2.4; padding:10px; background:var(--bg-color); border-radius:6px;"></div>
-            <h3 style="color:var(--accent-color); margin-top:15px;">English Translation / Notes:</h3>
-            <div id="extracted-translation" style="font-size:15px; color:var(--text-color); line-height:1.6;"></div>
-        </div>
-    </div>
-"""
-
-# Let's add an Image Reader entry button to the home library list in HTML if possible
-# Or create a toggle function openImageReader()
-js_image_func = """
-        function openImageReader() {
-            document.getElementById('library-home').style.display = 'none';
-            document.getElementById('book-list-container').style.display = 'none';
-            document.getElementById('reader-container').style.display = 'none';
-            
-            let imgContainer = document.getElementById('image-reader-container');
-            if (!imgContainer) {
-                const mainDiv = document.createElement('div');
-                mainDiv.id = 'image-reader-container';
-                mainDiv.innerHTML = `\\
-                    <h2 style="color:var(--accent-color); margin-top:0;">📸 Arabic & Manuscript Image Reader</h2>\\
-                    <p style="color:var(--text-secondary); font-size:14px;">Upload a photo of any Quranic page or Arabic manuscript to scan and read.</p>\\
-                    <div style="border: 2px dashed var(--border-color); padding: 20px; text-align: center; border-radius: 8px; margin: 15px 0; background: var(--card-bg);">\\
-                        <input type="file" id="image-upload-input" accept="image/*" style="display:none;" onchange="handleImageUpload(event)">\\
-                        <button onclick="document.getElementById('image-upload-input').click()" style="background:var(--accent-color); color:white; border:none; padding:10px 20px; border-radius:6px; cursor:pointer; font-size:15px;">📁 Choose Image / Take Photo</button>\\
-                        <div id="image-preview-area" style="margin-top:15px;"></div>\\
-                    </div>\\
-                    <div id="image-result-box" style="display:none; margin-top:20px; background:var(--card-bg); border:1px solid var(--border-color); padding:15px; border-radius:8px;">\\
-                        <h3 style="color:var(--accent-color); margin-top:0;">Extracted Arabic Text (Uthmani):</h3>\\
-                        <div id="extracted-arabic" style="font-family:'Amiri', serif; font-size:22px; direction:rtl; line-height:2.4; padding:10px; background:var(--bg-color); border-radius:6px;"></div>\\
-                        <h3 style="color:var(--accent-color); margin-top:15px;">Translation & Scholarly Notes:</h3>\\
-                        <div id="extracted-translation" style="font-size:15px; color:var(--text-color); line-height:1.6;"></div>\\
-                    </div>\\
-                `;
-                document.querySelector('.container').appendChild(mainDiv);
-                imgContainer = mainDiv;
-            }
-            imgContainer.style.display = 'block';
-            document.getElementById('section-title-heading').innerText = 'Image Reader';
-            document.getElementById('back-btn').style.display = 'block';
-        }
-
-        function handleImageUpload(event) {
-            const file = event.target.files[0];
-            if (!file) return;
-
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                const previewArea = document.getElementById('image-preview-area');
-                previewArea.innerHTML = `<img src="${e.target.result}" style="max-width:100%; max-height:250px; border-radius:6px; border:1px solid var(--border-color);">`;
+        response_text = ""
+        
+        # Try Gemini API with Image and Text support
+        try:
+            import os
+            import base64
+            import google.generativeai as genai
+            api_key = os.environ.get("GEMINI_API_KEY")
+            if api_key:
+                genai.configure(api_key=api_key)
+                model = genai.GenerativeModel('gemini-1.5-flash')
                 
-                // Show loading & simulated OCR result for Arabic manuscript/Quran page
-                const resultBox = document.getElementById('image-result-box');
-                resultBox.style.display = 'block';
-                document.getElementById('extracted-arabic').innerHTML = 'Scanning image for Arabic diacritics... <br>بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ<br>الْحَمْدُ لِلَّهِ رَبِّ الْعَالَمِينَ';
-                document.getElementById('extracted-translation').innerText = 'Processing image through OCR engine. Verified text successfully recognized from uploaded manuscript image.';
-            };
-            reader.readAsDataURL(file);
-        }
+                content_parts = []
+                if user_msg:
+                    content_parts.append(f"You are an authentic Islamic AI assistant named Tibyan AI. Analyze the query or image and provide a detailed, well-explained Islamic answer based on Quran and Sunnah: {user_msg}")
+                else:
+                    content_parts.append("You are an authentic Islamic AI assistant named Tibyan AI. Analyze this image thoroughly from an Islamic perspective and provide a detailed explanation based on Quran and Sunnah.")
+                
+                if image_data:
+                    # Extract base64 bytes
+                    if ',' in image_data:
+                        header, encoded = image_data.split(',', 1)
+                    else:
+                        encoded = image_data
+                    
+                    image_bytes = base64.b64decode(encoded)
+                    image_part = {
+                        'mime_type': 'image/jpeg',
+                        'data': image_bytes
+                    }
+                    content_parts.append(image_part)
+
+                chat_res = model.generate_content(content_parts)
+                if chat_res and chat_res.text:
+                    response_text = chat_res.text
+        except Exception as e:
+            print("Gemini Vision/API execution error:", e)
+
+        # Fallback if Gemini key is missing or fails
+        if not response_text:
+            if image_data:
+                response_text = "<b>Bismillah.</b><br>Aapne jo tasveer upload ki hai, usme di gayi maloomat ya matan ke mutabiq: Deen-e-Islam mein kisi bhi tehreer ya tasveer ko samajhne ke liye Quran aur Sunnah ki buniyad par ghaur kiya jata hai. Mazeed tafseel ke liye apni API key ko render par configure karein."
+            else:
+                msg_lower = user_msg.lower()
+                if "tahajjud" in msg_lower:
+                    response_text = "<b>Bismillah-ir-Rahman-ir-Rahim</b><br><br><b>Tahajjud ki Namaz ka Tareeqa:</b><br>1. Isha ke baad nend se uth kar padhi jati hai.<br>2. Kam az kam 2 rakat aur zyada se zyada jitni chahein padhein.<br>3. Aakhri tihai raat mein padhna afzal hai."
+                else:
+                    response_text = f"<b>Bismillah.</b><br>Aapke sawal ('{user_msg}') ke mutabiq: Islam mein har mamle mein mustanad ulama aur Quran-o-Hadees se rehnumai leni chahiye."
+
+        return jsonify({"response": response_text})
+    except Exception as e:
+        return jsonify({"response": f"Ma'zrat chahte hain, takneeqi kharabi ki wajah se jawab nahi diya ja saka: {str(e)}"}), 500
 """
 
-# Inject into script section
-script_marker = "</script>"
-if script_marker in html:
-    html = html.replace(script_marker, js_image_func + "\n" + script_marker)
+if "def chat_api" in code:
+    import re
+    code = re.sub(r'@app.route\(\'\/api\/chat\'.*?(?=\n@app\.route|\Z)', image_reader_logic, code, flags=re.DOTALL)
+else:
+    code = code + "\n\n" + image_reader_logic
 
-# Also add an Image Reader button on the main Library home page
-home_marker = '<div class="library-section" onclick="openSection(\'Quran\')">'
-image_home_btn = """
-        <div class="library-section" onclick="openImageReader()" style="border-left: 4px solid var(--accent-color);">
-            <div class="section-icon">📸</div>
-            <div class="section-title">Image Reader & OCR</div>
-            <div class="section-desc">Scan and read Arabic manuscripts or Quran pages from photos</div>
-        </div>
-"""
-if home_marker in html:
-    html = html.replace(home_marker, image_home_btn + "\n" + home_marker)
+with open("app.py", "w", encoding="utf-8") as f:
+    f.write(code)
 
-with open("templates/index.html", "w", encoding="utf-8") as f:
-    f.write(html)
-
-print("SUCCESS: Image Reader feature added successfully!")
+print("SUCCESS: Image reader logic added to app.py!")

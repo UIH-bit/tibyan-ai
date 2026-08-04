@@ -114,59 +114,65 @@ def get_content_verses(chapter_id):
 
 
 
+
 @app.route('/api/chat', methods=['POST'])
 def chat_api():
     try:
         data = request.get_json()
         user_msg = data.get('message', '').strip() if data else ''
+        image_data = data.get('image', None) if data else None
         
-        if not user_msg:
-            return jsonify({"response": "Ma'zrat chahte hain, aapne koi sawal nahi pucha."})
+        if not user_msg and not image_data:
+            return jsonify({"response": "Ma'zrat chahte hain, aapne na koi sawal pucha aur na hi tasveer bheji."})
 
         response_text = ""
         
-        # Try Gemini API if key is present
+        # Try Gemini API with Image and Text support
         try:
             import os
+            import base64
             import google.generativeai as genai
             api_key = os.environ.get("GEMINI_API_KEY")
             if api_key:
                 genai.configure(api_key=api_key)
                 model = genai.GenerativeModel('gemini-1.5-flash')
-                prompt = f"You are an authentic Islamic AI assistant named Tibyan AI. Provide a detailed, comprehensive, and well-explained answer based on Quran and Sunnah for the following query: {user_msg}"
-                chat_res = model.generate_content(prompt)
+                
+                content_parts = []
+                if user_msg:
+                    content_parts.append(f"You are an authentic Islamic AI assistant named Tibyan AI. Analyze the query or image and provide a detailed, well-explained Islamic answer based on Quran and Sunnah: {user_msg}")
+                else:
+                    content_parts.append("You are an authentic Islamic AI assistant named Tibyan AI. Analyze this image thoroughly from an Islamic perspective and provide a detailed explanation based on Quran and Sunnah.")
+                
+                if image_data:
+                    # Extract base64 bytes
+                    if ',' in image_data:
+                        header, encoded = image_data.split(',', 1)
+                    else:
+                        encoded = image_data
+                    
+                    image_bytes = base64.b64decode(encoded)
+                    image_part = {
+                        'mime_type': 'image/jpeg',
+                        'data': image_bytes
+                    }
+                    content_parts.append(image_part)
+
+                chat_res = model.generate_content(content_parts)
                 if chat_res and chat_res.text:
                     response_text = chat_res.text
         except Exception as e:
-            print("Gemini API execution error:", e)
+            print("Gemini Vision/API execution error:", e)
 
-        # Detailed Fallback responses if Gemini is not configured
+        # Fallback if Gemini key is missing or fails
         if not response_text:
-            msg_lower = user_msg.lower()
-            if "tahajjud" in msg_lower:
-                response_text = '''<b>Bismillah-ir-Rahman-ir-Rahim</b><br><br>
-<b>Tahajjud ki Namaz ka Tareeqa aur Tafseel:</b><br><br>
-1. <b>Waqt:</b> Tahajjud ki namaz Isha ki namaz ke baad se lekar Subah Sadiq (Fajar ka waqt shuru hone) tak padhi ja sakti hai. Behtareen waqt raat ka aakhri tihai (last third) hissa hai.<br>
-2. <b>Nend se Bedari:</b> Iske liye zaroori hai ki aap Isha ke baad so jayein aur phir raat mein uthein.<br>
-3. <b>Rakat:</b> Iski kam az kam 2 rakat hain aur zyada se zyada 8 ya 12 rakat tak padhi ja sakti hain. Do-do karke salam pherna afzal hai.<br>
-4. <b>Padhne ka Tareeqa:</b> Har rakat mein Surah Al-Fatihah ke baad koi bhi lambi ya yaad shuda Surah padhein. Ruku aur Sujood mein khoob sukoon, khushoo aur lamba-pan rakhein aur Allah se dua maangein.<br>
-5. <b>Witr:</b> Tahajjud ke baad aakhir mein Witr ki namaz ada ki jati hai.'''
-            elif "fast" in msg_lower or "roza" in msg_lower:
-                response_text = '''<b>Bismillah-ir-Rahman-ir-Rahim</b><br><br>
-<b>Roze ko todne (Invalidate karne) wali cheezein:</b><br><br>
-1. Jaan-boojh kar khana ya peena.<br>
-2. Jaan-boojh kar ulti (vomit) karna.<br>
-3. Jinsi taaluq qaim karna.<br>
-4. Haiz (menstruation) ya Nifas ka shuru hona.<br><br>
-<i>Note:</i> Bhool kar khane ya peene se roza nahi tutta (Sahih Al-Bukhari).'''
-            elif "kursi" in msg_lower:
-                response_text = '''<b>Bismillah-ir-Rahman-ir-Rahim</b><br><br>
-<b>Ayat al-Kursi (Surah Al-Baqarah: 255) ki Fazeelat:</b><br><br>
-- Yeh Quran-e-Kareem ki sabse azeem aayat hai.<br>
-- Isme Allah Ta'ala ki wahdaniyat, uski haayati, aur uski sultanat ka bayaan hai.<br>
-- Hadees ke mutabiq, jo shakhs har farz namaz ke baad isko padhta hai, use jannat mein jaane se sirf maut rokti hai.'''
+            if image_data:
+                response_text = "<b>Bismillah.</b><br>Aapne jo tasveer upload ki hai, usme di gayi maloomat ya matan ke mutabiq: Deen-e-Islam mein kisi bhi tehreer ya tasveer ko samajhne ke liye Quran aur Sunnah ki buniyad par ghaur kiya jata hai. Mazeed tafseel ke liye apni API key ko render par configure karein."
             else:
-                response_text = f"<b>Bismillah.</b><br>Aapke sawal ('{user_msg}') ke mutabiq: Islam mein har masle ka hal Quran-e-Kareem aur Hadees-e-Nabwi mein mojood hai. Is mamle mein deen ke must مستند sources aur ulama se ruju karna behtar hai."
+                msg_lower = user_msg.lower()
+                if "tahajjud" in msg_lower:
+                    response_text = "<b>Bismillah-ir-Rahman-ir-Rahim</b><br><br><b>Tahajjud ki Namaz ka Tareeqa:</b><br>1. Isha ke baad nend se uth kar padhi jati hai.<br>2. Kam az kam 2 rakat aur zyada se zyada jitni chahein padhein.<br>3. Aakhri tihai raat mein padhna afzal hai."
+                else:
+                    response_text = f"<b>Bismillah.</b><br>Aapke sawal ('{user_msg}') ke mutabiq: Islam mein har mamle mein mustanad ulama aur Quran-o-Hadees se rehnumai leni chahiye."
 
         return jsonify({"response": response_text})
     except Exception as e:
