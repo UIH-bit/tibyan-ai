@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+clean_html = """<!DOCTYPE html>
 <html lang="hi">
 <head>
     <meta charset="UTF-8">
@@ -218,3 +218,8 @@
     </script>
 </body>
 </html>
+"""
+
+with open("templates/index.html", "w", encoding="utf-8") as f:
+    f.write(clean_html)
+print("SUCCESS: Clean UI written!")
