@@ -276,6 +276,22 @@
             margin-top: 0;
         }
     </style>
+
+<script>
+// Persistent Saved Answers using localStorage
+function saveAnswerLocally(question, answerText) {
+    let saved = JSON.parse(localStorage.getItem('tibyan_saved_answers') || '[]');
+    // Check if already saved
+    if(!saved.some(item => item.answer === answerText)) {
+        saved.push({question: question, answer: answerText, date: new Date().toLocaleDateString()});
+        localStorage.setItem('tibyan_saved_answers', JSON.stringify(saved));
+    }
+}
+
+function getSavedAnswers() {
+    return JSON.parse(localStorage.getItem('tibyan_saved_answers') || '[]');
+}
+</script>
 </head>
 <body>
 
