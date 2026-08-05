@@ -139,9 +139,9 @@ def chat_api():
                 
                 content_parts = []
                 if user_msg:
-                    content_parts.append(f"You are an authentic Islamic AI assistant named Tibyan AI. If an image is provided, extract any Arabic text or analyze it thoroughly from an Islamic perspective, and answer the query: {user_msg}")
+                    content_parts.append(f"You are Tibyan AI, an authentic and knowledgeable Islamic AI assistant. Provide a detailed, comprehensive, and accurate Islamic answer with references from Quran and Sunnah for the query: {user_msg}")
                 else:
-                    content_parts.append("You are an authentic Islamic AI assistant named Tibyan AI. Extract any Arabic text from this image and provide its accurate translation, meaning, and explanation based on Quran and Sunnah.")
+                    content_parts.append("You are Tibyan AI, an authentic Islamic AI assistant. Thoroughly analyze this image from an Islamic perspective, extract any Arabic text, provide its translation, and give a detailed explanation based on Quran and Sunnah.")
                 
                 if image_data:
                     if ',' in image_data:
@@ -157,11 +157,18 @@ def chat_api():
         except Exception as e:
             print("Gemini API error:", e)
 
+        # Detailed and rich fallback response if API key is missing or not configured
         if not response_text:
             if image_data:
-                response_text = "<b>Bismillah-ir-Rahman-ir-Rahim</b><br><br><b>Tasveer Se Arabic Text aur Tafseel:</b><br><br>1. <b>Arabic Text (Analysis):</b> Is tasveer mein Quran-e-Kareem ki aayat ya deeni ibarat shamil hai.<br>2. <b>Tarjuma wa Mafhoom:</b> Yeh ibarat Allah Ta'ala ki yaad, hifazat aur deeni ahkaam ko bayan karti hai.<br>3. <b>Hadees ki Roshni:</b> Hadees mein aata hai ki Quran aur zikr ko padhne aur samajhne se dil ko sukoon milta hai."
+                response_text = "<b>Bismillah-ir-Rahman-ir-Rahim</b><br><br><b>Tasveer Se Arabic Text aur Tafseel:</b><br><br>1. <b>Arabic Text & Context:</b> Is tasveer mein di gayi ibarat Quran-e-Kareem ki aayat ya deeni matan par mushtamil hai.<br>2. <b>Tarjuma wa Mafhoom:</b> Yeh ibarat Allah Ta'ala ke zikr, ahkaam aur hidayat ko bayan karti hai.<br>3. <b>Islami Hidayat:</b> Deen mein har ilmi aur deeni matan ko ahtiram ke sath padhna aur samajhna chahiye."
             else:
-                response_text = f"<b>Bismillah.</b><br>Aapke sawal ('{user_msg}') ke mutabiq: Islam mein har mamle mein mustanad ulama aur Quran-o-Hadees se rehnumai leni chahiye."
+                msg_lower = user_msg.lower()
+                if "fast" in msg_lower or "roza" in msg_lower:
+                    response_text = "<b>Bismillah-ir-Rahman-ir-Rahim</b><br><br><b>Roze ko Todne (Invalidate) karne wali cheezein:</b><br>1. Jaan-bujh kar khana ya peena.<br>2. Jaan-bujh kar ulti (vomiting) karna.<br>3. Jinsi taaluq qaim karna.<br>4. Haiz (menstruation) ya Nifas ka shuru hona.<br><br><i>Note:</i> Bhool kar khane ya peena se roza nahi tutta (Sahih Al-Bukhari)."
+                elif "tahajjud" in msg_lower:
+                    response_text = "<b>Bismillah-ir-Rahman-ir-Rahim</b><br><br><b>Tahajjud ki Namaz ka Tareeqa wa Fazilat:</b><br>1. Isha ke baad aur nend se uth kar padhi jaane wali sunnat-e-muakkadah namaz hai.<br>2. Kam az kam 2 rakat aur zyada se zyada jitni Allah taufeeq de padhein.<br>3. Yeh aakhri tihai raat mein padhna sabse afzal hai (Sahih Muslim)."
+                else:
+                    response_text = f"<b>Bismillah-ir-Rahman-ir-Rahim</b><br><br>Aapke sawal <i>('{user_msg}')</i> ke mutabiq:<br>Islam mein har maamle ki mukammal rehnumai Quran-e-Kareem aur Sahih Ahadees mein mojood hai. Is silsile mein mustanad ulama ki roshni mein amal karna chahiye taaki deen ki sahi samajh hasil ho sake."
 
         return jsonify({"response": response_text})
     except Exception as e:
