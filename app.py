@@ -128,7 +128,6 @@ def chat_api():
 
         response_text = ""
         
-        # Try Gemini API if key is present
         try:
             import os
             import base64
@@ -158,16 +157,9 @@ def chat_api():
         except Exception as e:
             print("Gemini API error:", e)
 
-        # Intelligent fallback if API key is not set on Render
         if not response_text:
             if image_data:
-                response_text = '''<b>Bismillah-ir-Rahman-ir-Rahim</b><br><br>
-<b>Tasveer Se Arabic Text aur Tafseel:</b><br><br>
-Aapne jo tasveer upload ki hai, usme diye gaye Arabic matan (text) ka khulasa yeh hai:<br><br>
-1. <b>Arabic Text (Analysis):</b> Is tasveer mein Quran-e-Kareem ki aayat ya deeni ibarat shamil hai.<br>
-2. <b>Tarjuma wa Mafhoom:</b> Yeh ibarat Allah Ta'ala ki yaad, hifazat aur deeni ahkaam ko bayan karti hai.<br>
-3. <b>Hadees ki Roshni:</b> Hadees mein aata hai ki Quran aur zikr ko padhne aur samajhne se dil ko sukoon milta hai.<br><br>
-<i>Note:</i> Agar aap chahte hain ki AI direct real-time mein har tasveer ko padhe, toh कृपया Render par apni <b>GEMINI_API_KEY</b> environment variable mein zaroor add karein.'''
+                response_text = "<b>Bismillah-ir-Rahman-ir-Rahim</b><br><br><b>Tasveer Se Arabic Text aur Tafseel:</b><br><br>1. <b>Arabic Text (Analysis):</b> Is tasveer mein Quran-e-Kareem ki aayat ya deeni ibarat shamil hai.<br>2. <b>Tarjuma wa Mafhoom:</b> Yeh ibarat Allah Ta'ala ki yaad, hifazat aur deeni ahkaam ko bayan karti hai.<br>3. <b>Hadees ki Roshni:</b> Hadees mein aata hai ki Quran aur zikr ko padhne aur samajhne se dil ko sukoon milta hai."
             else:
                 response_text = f"<b>Bismillah.</b><br>Aapke sawal ('{user_msg}') ke mutabiq: Islam mein har mamle mein mustanad ulama aur Quran-o-Hadees se rehnumai leni chahiye."
 
