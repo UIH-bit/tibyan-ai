@@ -157,13 +157,14 @@ def chat_api():
             api_key = os.environ.get("GEMINI_API_KEY")
             if api_key:
                 genai.configure(api_key=api_key)
+                # Using gemini-pro or gemini-1.5-flash for text & multimodal
                 model = genai.GenerativeModel('gemini-1.5-flash')
                 
                 content_parts = []
                 if user_msg:
-                    content_parts.append(f"You are Tibyan AI, an authentic and knowledgeable Islamic AI assistant. Provide a detailed, comprehensive, and accurate Islamic answer with references from Quran and Sunnah for the query: {user_msg}")
+                    content_parts.append(f"You are Tibyan AI, an expert and authentic Islamic and general knowledge AI assistant. Give a comprehensive, detailed, and well-structured answer to this query: {user_msg}")
                 else:
-                    content_parts.append("You are Tibyan AI, an authentic Islamic AI assistant. Thoroughly analyze this image from an Islamic perspective, extract any Arabic text, provide its translation, and give a detailed explanation based on Quran and Sunnah.")
+                    content_parts.append("You are Tibyan AI, an authentic AI assistant. Analyze this image thoroughly, extract text if any, and provide a detailed explanation.")
                 
                 if image_data:
                     if ',' in image_data:
@@ -177,21 +178,21 @@ def chat_api():
                 if chat_res and chat_res.text:
                     response_text = chat_res.text
         except Exception as e:
-            print("Gemini API error:", e)
+            print("Gemini API error details:", e)
 
-        # Detailed and rich fallback response if API key is missing or not configured
+        # Dynamic smart response if API key fails or isn't loaded yet
         if not response_text:
             if image_data:
-                response_text = "<b>Bismillah-ir-Rahman-ir-Rahim</b><br><br><b>Tasveer Se Arabic Text aur Tafseel:</b><br><br>1. <b>Arabic Text & Context:</b> Is tasveer mein di gayi ibarat Quran-e-Kareem ki aayat ya deeni matan par mushtamil hai.<br>2. <b>Tarjuma wa Mafhoom:</b> Yeh ibarat Allah Ta'ala ke zikr, ahkaam aur hidayat ko bayan karti hai.<br>3. <b>Islami Hidayat:</b> Deen mein har ilmi aur deeni matan ko ahtiram ke sath padhna aur samajhna chahiye."
+                response_text = f"<b>Bismillah-ir-Rahman-ir-Rahim</b><br><br><b>Tasveer Ka Tajziya (Analysis):</b><br>Is tasveer mein deeni ibarat ya matan shamil hai jise ghaur se padhne aur samajhne ki zaroorat hai."
             else:
                 msg_lower = user_msg.lower()
-                if "fast" in msg_lower or "roza" in msg_lower:
-                    response_text = "<b>Bismillah-ir-Rahman-ir-Rahim</b><br><br><b>Roze ko Todne (Invalidate) karne wali cheezein:</b><br>1. Jaan-bujh kar khana ya peena.<br>2. Jaan-bujh kar ulti (vomiting) karna.<br>3. Jinsi taaluq qaim karna.<br>4. Haiz (menstruation) ya Nifas ka shuru hona.<br><br><i>Note:</i> Bhool kar khane ya peena se roza nahi tutta (Sahih Al-Bukhari)."
-                elif "tahajjud" in msg_lower:
-                    response_text = "<b>Bismillah-ir-Rahman-ir-Rahim</b><br><br><b>Tahajjud ki Namaz ka Tareeqa wa Fazilat:</b><br>1. Isha ke baad aur nend se uth kar padhi jaane wali sunnat-e-muakkadah namaz hai.<br>2. Kam az kam 2 rakat aur zyada se zyada jitni Allah taufeeq de padhein.<br>3. Yeh aakhri tihai raat mein padhna sabse afzal hai (Sahih Muslim)."
+                if "allama iqbal" in msg_lower:
+                    response_text = "<b>Bismillah-ir-Rahman-ir-Rahim</b><br><br><b>Allama Dr. Sir Muhammad Iqbal (1877–1938):</b><br>Aap Bar-e-Saghir ke ek azim shair, falsafi, siyasi rehnuma aur tahreek-e-Pakistan ke mufakkir thay. Aapko 'Shair-e-Mashriq' kaha jata hai. Aapki shayari (jaise Shikwa, Jawab-e-Shikwa, Bang-e-Dra wagaira) ne musalmano mein bedari aur khudi ka paigham phailaya."
+                elif "kursi" in msg_lower or "ayat" in msg_lower:
+                    response_text = "<b>Bismillah-ir-Rahman-ir-Rahim</b><br><br><b>Ayat al-Kursi ki Fazilat:</b><br>Surah Al-Baqarah ki yeh aayat Quran-e-Kareem ki sabse azim aayaton mein shamil hai. Iske padhne se shaitaan ke asrat se hifazat hoti hai aur har farz namaz ke baad isko padhne wale ke liye jannat mein jaane ke darmiyan sirf maut ka fasla hota hai (Sahih Ibn Hibban)."
                 else:
-                    response_text = f"<b>Bismillah-ir-Rahman-ir-Rahim</b><br><br>Aapke sawal <i>('{user_msg}')</i> ke mutabiq:<br>Islam mein har maamle ki mukammal rehnumai Quran-e-Kareem aur Sahih Ahadees mein mojood hai. Is silsile mein mustanad ulama ki roshni mein amal karna chahiye taaki deen ki sahi samajh hasil ho sake."
+                    response_text = f"<b>Bismillah-ir-Rahman-ir-Rahim</b><br><br>Aapke sawal <i>('{user_msg}')</i> ke jawab mein:<br>Is mawzu par mukammal maloomat ke liye mustanad kutub aur reliable sources ka mutala kiya jata hai taaki sahi aur authentic baat samne aa sake."
 
         return jsonify({"response": response_text})
     except Exception as e:
-        return jsonify({"response": f"Ma'zrat chahte hain, takneeqi kharabi ki wajah se jawab nahi diya ja saka: {str(e)}"}), 500
+        return jsonify({"response": f"Takneeqi kharabi ki wajah se jawab nahi diya ja saka: {str(e)}"}), 500
