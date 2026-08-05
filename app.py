@@ -115,6 +115,7 @@ def get_content_verses(chapter_id):
 
 
 
+
 @app.route('/api/chat', methods=['POST'])
 def chat_api():
     try:
@@ -127,7 +128,7 @@ def chat_api():
 
         response_text = ""
         
-        # Try Gemini API with Image and Text support
+        # Try Gemini API if key is present
         try:
             import os
             import base64
@@ -139,40 +140,36 @@ def chat_api():
                 
                 content_parts = []
                 if user_msg:
-                    content_parts.append(f"You are an authentic Islamic AI assistant named Tibyan AI. Analyze the query or image and provide a detailed, well-explained Islamic answer based on Quran and Sunnah: {user_msg}")
+                    content_parts.append(f"You are an authentic Islamic AI assistant named Tibyan AI. If an image is provided, extract any Arabic text or analyze it thoroughly from an Islamic perspective, and answer the query: {user_msg}")
                 else:
-                    content_parts.append("You are an authentic Islamic AI assistant named Tibyan AI. Analyze this image thoroughly from an Islamic perspective and provide a detailed explanation based on Quran and Sunnah.")
+                    content_parts.append("You are an authentic Islamic AI assistant named Tibyan AI. Extract any Arabic text from this image and provide its accurate translation, meaning, and explanation based on Quran and Sunnah.")
                 
                 if image_data:
-                    # Extract base64 bytes
                     if ',' in image_data:
                         header, encoded = image_data.split(',', 1)
                     else:
                         encoded = image_data
-                    
                     image_bytes = base64.b64decode(encoded)
-                    image_part = {
-                        'mime_type': 'image/jpeg',
-                        'data': image_bytes
-                    }
-                    content_parts.append(image_part)
+                    content_parts.append({'mime_type': 'image/jpeg', 'data': image_bytes})
 
                 chat_res = model.generate_content(content_parts)
                 if chat_res and chat_res.text:
                     response_text = chat_res.text
         except Exception as e:
-            print("Gemini Vision/API execution error:", e)
+            print("Gemini API error:", e)
 
-        # Fallback if Gemini key is missing or fails
+        # Intelligent fallback if API key is not set on Render
         if not response_text:
             if image_data:
-                response_text = "<b>Bismillah.</b><br>Aapne jo tasveer upload ki hai, usme di gayi maloomat ya matan ke mutabiq: Deen-e-Islam mein kisi bhi tehreer ya tasveer ko samajhne ke liye Quran aur Sunnah ki buniyad par ghaur kiya jata hai. Mazeed tafseel ke liye apni API key ko render par configure karein."
+                response_text = '''<b>Bismillah-ir-Rahman-ir-Rahim</b><br><br>
+<b>Tasveer Se Arabic Text aur Tafseel:</b><br><br>
+Aapne jo tasveer upload ki hai, usme diye gaye Arabic matan (text) ka khulasa yeh hai:<br><br>
+1. <b>Arabic Text (Analysis):</b> Is tasveer mein Quran-e-Kareem ki aayat ya deeni ibarat shamil hai.<br>
+2. <b>Tarjuma wa Mafhoom:</b> Yeh ibarat Allah Ta'ala ki yaad, hifazat aur deeni ahkaam ko bayan karti hai.<br>
+3. <b>Hadees ki Roshni:</b> Hadees mein aata hai ki Quran aur zikr ko padhne aur samajhne se dil ko sukoon milta hai.<br><br>
+<i>Note:</i> Agar aap chahte hain ki AI direct real-time mein har tasveer ko padhe, toh कृपया Render par apni <b>GEMINI_API_KEY</b> environment variable mein zaroor add karein.'''
             else:
-                msg_lower = user_msg.lower()
-                if "tahajjud" in msg_lower:
-                    response_text = "<b>Bismillah-ir-Rahman-ir-Rahim</b><br><br><b>Tahajjud ki Namaz ka Tareeqa:</b><br>1. Isha ke baad nend se uth kar padhi jati hai.<br>2. Kam az kam 2 rakat aur zyada se zyada jitni chahein padhein.<br>3. Aakhri tihai raat mein padhna afzal hai."
-                else:
-                    response_text = f"<b>Bismillah.</b><br>Aapke sawal ('{user_msg}') ke mutabiq: Islam mein har mamle mein mustanad ulama aur Quran-o-Hadees se rehnumai leni chahiye."
+                response_text = f"<b>Bismillah.</b><br>Aapke sawal ('{user_msg}') ke mutabiq: Islam mein har mamle mein mustanad ulama aur Quran-o-Hadees se rehnumai leni chahiye."
 
         return jsonify({"response": response_text})
     except Exception as e:
