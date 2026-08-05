@@ -1,4 +1,26 @@
 
+def fetch_deeni_reference(query):
+    try:
+        import requests
+        from bs4 import BeautifulSoup
+        # Example search or lookup logic from authentic sources
+        # For demonstration, we can query a search or use requests to fetch info
+        headers = {'User-Agent': 'Mozilla/5.0'}
+        search_url = f"https://html.duckduckgo.com/html/?q={query}+site:darulifta-deoband.com"
+        res = requests.get(search_url, headers=headers, timeout=5)
+        if res.status_code == 200:
+            soup = BeautifulSoup(res.text, 'html.parser')
+            results = []
+            for a in soup.find_all('a', class_='result__snippet', limit=2):
+                results.append(a.get_text())
+            if results:
+                return " | ".join(results)
+    except Exception as e:
+        print("Scraping error:", e)
+    return ""
+
+
+
 import os
 import google.generativeai as genai
 
