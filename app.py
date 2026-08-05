@@ -28,18 +28,19 @@ def chat_api():
         
         if not api_key:
             return jsonify({
-                "response": "<b>Bismillah-ir-Rahman-ir-Rahim</b><br><br><b>Takneeqi Wajah (API Key Missing):</b><br>Render dashboard par <b>GEMINI_API_KEY</b> set nahi hai. Kripya Render par apni API key add karein taaki AI har naye sawal ka live aur tafsili jawab de sake."
+                "response": "<b>Bismillah-ir-Rahman-ir-Rahim</b><br><br><b>Takneeqi Wajah (API Key Missing):</b><br>Render dashboard par <b>GEMINI_API_KEY</b> set nahi hai. Kripya Render par apni API key add karein."
             })
 
         try:
             genai.configure(api_key=api_key)
-            model = genai.GenerativeModel('gemini-1.5-flash')
+            # Using the stable general model name
+            model = genai.GenerativeModel('gemini-1.5-pro')
             
             prompt_instruction = (
                 "You are Tibyan AI, an expert, authentic, and scholarly Islamic AI assistant. "
                 "The user can ask any question related to Islam, Quran, Surahs, History, or general matters. "
                 "You must NOT give short or brief answers. Always provide a very detailed, comprehensive, structured, and well-explained answer in Hinglish/Urdu. "
-                "If the user asks about any Surah, Ayah, Para, or Quranic topic, you MUST provide the exact authentic Arabic text (if applicable), "
+                "If the user asks about any Surah, Ayah, Para, or Quranic topic, you MUST provide the exact authentic Arabic text, "
                 "its accurate translation, and a detailed explanation in Hinglish/Urdu. "
                 f"User Query: {user_msg}"
             )
@@ -57,10 +58,17 @@ def chat_api():
             if chat_res and chat_res.text:
                 response_text = chat_res.text
             else:
-                response_text = "<b>Bismillah-ir-Rahman-ir-Rahim</b><br><br>AI se response hasil karne mein dushwari hui. Kripya dobara koshish karein."
+                response_text = "<b>Bismillah-ir-Rahman-ir-Rahim</b><br><br>AI se response hasil karne mein dushwari hui."
                 
         except Exception as e:
-            response_text = f"<b>Bismillah-ir-Rahman-ir-Rahim</b><br><br><b>Gemini API Error:</b> {str(e)}<br>Kripya apni API key check karein."
+            # Fallback to gemini-pro if pro fails
+            try:
+                model = genai.GenerativeModel('gemini-pro')
+                chat_res = model.generate_content(user_msg)
+                if chat_res and chat_res.text:
+                    response_text = chat_res.text
+            except Exception as e2:
+                response_text = f"<b>Bismillah-ir-Rahman-ir-Rahim</b><br><br><b>Gemini API Error:</b> {str(e2)}"
 
         return jsonify({"response": response_text})
     except Exception as e:
