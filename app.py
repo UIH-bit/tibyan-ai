@@ -5,6 +5,10 @@ import os
 
 app = Flask(__name__)
 
+@app.route('/', methods=['GET'])
+def home():
+    return jsonify({"status": "Tibyan AI Server is Live and Running!"})
+
 @app.route('/generate', methods=['POST'])
 def generate():
     data = request.json
