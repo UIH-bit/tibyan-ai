@@ -29,7 +29,8 @@ def call_groq_api(prompt_text, image_base64=None):
         'Content-Type': 'application/json'
     }
     
-    model_name = "llama-3.2-90b-vision-preview" if image_base64 else "llama-3.3-70b-versatile"
+    # Updated vision model name
+    model_name = "qwen/qwen3.6-27b" if image_base64 else "llama-3.3-70b-versatile"
     
     content_list = [{"type": "text", "text": prompt_text}]
     if image_base64:
@@ -476,5 +477,5 @@ def generate():
     ai_response = call_groq_api(f"{context_data}\nUser Question: {user_prompt}", image_base64=img_data)
     return jsonify({'response': ai_response})
 
-if __name__ == '__main__':
+if __name__ == 'main':
     app.run(host='0.0.0.0', port=5000)
