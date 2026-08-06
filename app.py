@@ -8,8 +8,8 @@ app = Flask(__name__)
 api_key = os.environ.get("GEMINI_API_KEY")
 genai.configure(api_key=api_key)
 
-# Using the standard gemini-1.5-flash model
-model = genai.GenerativeModel('gemini-1.5-flash')
+# Using a robust fallback model name for older google-generativeai packages
+model = genai.GenerativeModel('gemini-pro')
 
 def fetch_quran_api(query):
     try:
@@ -91,7 +91,7 @@ HTML_TEMPLATE = """
             <li onclick="toggleMenu()"><span>🏠</span> Home</li>
             <li onclick="alert('Quran Foundation API connected via api.quran.com')"><span>📖</span> Quran References</li>
             <li onclick="alert('Sunnah.com API integration active.')"><span>📜</span> Hadith Sources</li>
-            <li onclick="alert('Tibyan AI v1.5')"><span>ℹ️</span> About</li>
+            <li onclick="alert('Tibyan AI v1.6')"><span>ℹ️</span> About</li>
         </ul>
     </div>
 
