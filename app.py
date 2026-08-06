@@ -1,28 +1,14 @@
 from flask import Flask, request, jsonify, render_template_string
 import google.generativeai as genai
 import os
-import requests
 
 app = Flask(__name__)
 
-# Configure Gemini API
 api_key = os.environ.get("GEMINI_API_KEY")
 genai.configure(api_key=api_key)
 
-# Using Gemini 1.5 Flash
-model = genai.GenerativeModel('gemini-1.5-flash')
-
-def fetch_quranic_data(query):
-    """Optional: Fetch real-time data from Quran Foundation API if needed"""
-    try:
-        # Example endpoint for quran.com search
-        url = f"https://api.quran.com/api/v4/search?q={query}&size=3"
-        response = requests.get(url, timeout=5)
-        if response.status_code == 200:
-            return response.json()
-    except Exception as e:
-        print("Quran API Error:", e)
-    return None
+# Using the correct model name for Python SDK
+model = genai.GenerativeModel('gemini-1.5-flash-latest')
 
 HTML_TEMPLATE = """
 <!DOCTYPE html>
@@ -64,19 +50,22 @@ HTML_TEMPLATE = """
         .user-msg { background: #f0f4f1; color: #1e3d2f; align-self: flex-end; margin-left: auto; }
         .ai-msg { background: #ffffff; border: 1px solid #e0e0e0; color: #222; align-self: flex-start; }
 
-        .input-area { display: flex; align-items: center; padding: 15px 10px; border-top: 1px solid #eaeaea; background: #fff; gap: 10px; max-width: 800px; width: 100%; margin: 0 auto; }
-        .action-btn { background: #f4f4f4; border: none; border-radius: 50%; width: 40px; height: 40px; font-size: 20px; cursor: pointer; display: flex; align-items: center; justify-content: center; color: #555; }
-        .text-input { flex: 1; border: 1px solid #e0e0e0; border-radius: 25px; padding: 12px 20px; font-size: 15px; outline: none; background: #f9f9f9; }
+        .input-area { display: flex; align-items: flex-end; padding: 12px 15px; border-top: 1px solid #eaeaea; background: #fff; gap: 10px; max-width: 800px; width: 100%; margin: 0 auto; }
+        .action-btn { background: #f4f4f4; border: none; border-radius: 50%; width: 40px; height: 40px; min-width: 40px; font-size: 20px; cursor: pointer; display: flex; align-items: center; justify-content: center; color: #555; margin-bottom: 2px; }
+        
+        .text-input { flex: 1; border: 1px solid #e0e0e0; border-radius: 20px; padding: 10px 18px; font-size: 15px; outline: none; background: #f9f9f9; resize: none; max-height: 120px; overflow-y: auto; line-height: 1.4; }
         .text-input:focus { border-color: #1e3d2f; background: #fff; }
-        .send-btn { background: #1e3d2f; border: none; border-radius: 50%; width: 42px; height: 42px; display: flex; align-items: center; justify-content: center; cursor: pointer; color: white; }
-        .send-btn svg { width: 18px; height: 18px; fill: currentColor; }
+        
+        .send-btn { background: #1e3d2f; border: none; border-radius: 50%; width: 42px; height: 42px; min-width: 42px; display: flex; align-items: center; justify-content: center; cursor: pointer; color: white; margin-bottom: 2px; transition: 0.2s; }
+        .send-btn:hover { background: #162d23; }
+        .send-btn svg { width: 18px; height: 18px; fill: currentColor; transform: rotate(45deg); margin-left: -2px; margin-top: 2px; }
     </style>
 </head>
 <body>
 
     <header>
         <button class="menu-btn" onclick="toggleMenu()">☰</button>
-        <div class="logo">Tibyan AI <span style="font-size: 12px; color: #666; font-weight: normal;">(Quran & Sunnah Integrated)</span></div>
+        <div class="logo">Tibyan AI</div>
     </header>
 
     <div class="overlay" id="overlay" onclick="toggleMenu()"></div>
@@ -84,9 +73,9 @@ HTML_TEMPLATE = """
         <div class="sidebar-header">Tibyan AI Menu</div>
         <ul class="sidebar-menu">
             <li onclick="toggleMenu()"><span>🏠</span> Home</li>
-            <li onclick="alert('Quran Foundation API connected for precise references.')"><span>📖</span> Quran References</li>
-            <li onclick="alert('Sunnah.com API integration active for authentic Hadiths.')"><span>📜</span> Hadith Sources</li>
-            <li onclick="alert('Tibyan AI v1.1 - Authentic Knowledge')"><span>ℹ️</span> About</li>
+            <li onclick="alert('Quran Foundation API connected.')"><span>📖</span> Quran References</li>
+            <li onclick="alert('Sunnah.com API integration active.')"><span>📜</span> Hadith Sources</li>
+            <li onclick="alert('Tibyan AI v1.2')"><span>ℹ️</span> About</li>
         </ul>
     </div>
 
@@ -107,8 +96,8 @@ HTML_TEMPLATE = """
         </div>
 
         <div class="input-area">
-            <button class="action-btn" onclick="document.getElementById('userInput').value='+'">+</button>
-            <input type="text" id="userInput" class="text-input" placeholder="Ask about Quran, Hadith, or Islamic rulings..." onkeypress="handleKeyPress(event)">
+            <button class="action-btn" onclick="document.getElementById('userInput').value=''; autoResize(document.getElementById('userInput'));">+</button>
+            <textarea id="userInput" class="text-input" rows="1" placeholder="Type your question..." oninput="autoResize(this)" onkeydown="handleKeyDown(event)"></textarea>
             <button class="send-btn" onclick="submitQuery()">
                 <svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"></path></svg>
             </button>
@@ -121,14 +110,22 @@ HTML_TEMPLATE = """
             document.getElementById('overlay').classList.toggle('active');
         }
 
-        function handleKeyPress(e) {
-            if (e.key === 'Enter') {
+        function autoResize(textarea) {
+            textarea.style.height = 'auto';
+            textarea.style.height = (textarea.scrollHeight) + 'px';
+        }
+
+        function handleKeyDown(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
                 submitQuery();
             }
         }
 
         function sendPrompt(text) {
-            document.getElementById('userInput').value = text;
+            const input = document.getElementById('userInput');
+            input.value = text;
+            autoResize(input);
             submitQuery();
         }
 
@@ -145,6 +142,7 @@ HTML_TEMPLATE = """
             const historyBox = document.getElementById('chat-history');
             historyBox.innerHTML += `<div class="message user-msg">${query}</div>`;
             inputField.value = '';
+            inputField.style.height = 'auto';
             window.scrollTo(0, document.body.scrollHeight);
 
             const loadingId = 'loading-' + Date.now();
@@ -184,7 +182,6 @@ def generate():
     data = request.json
     user_prompt = data.get('prompt', '')
     
-    # System instruction to force Gemini to act as an authentic Islamic scholar using Quran & Sunnah references
     system_instruction = (
         "You are Tibyan AI, an expert, knowledgeable, and strictly authentic Islamic research assistant. "
         "Whenever a user asks a question, you must provide answers based firmly on the Quran and authentic Sunnah (Sahih Hadiths like Bukhari, Muslim, Abu Dawood, Tirmidhi, etc.). "
@@ -193,7 +190,6 @@ def generate():
     )
     
     try:
-        # Pass the system prompt combined with user prompt
         full_prompt = f"{system_instruction}\n\nUser Question: {user_prompt}"
         response = model.generate_content(full_prompt)
         return jsonify({'response': response.text})
