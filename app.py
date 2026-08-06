@@ -1,7 +1,6 @@
 from flask import Flask, request, jsonify, render_template_string
 import os
 import requests
-import base64
 
 app = Flask(__name__)
 
@@ -29,7 +28,6 @@ def call_groq_api(prompt_text, image_base64=None):
         'Content-Type': 'application/json'
     }
     
-    # Updated vision model name
     model_name = "qwen/qwen3.6-27b" if image_base64 else "llama-3.3-70b-versatile"
     
     content_list = [{"type": "text", "text": prompt_text}]
@@ -52,8 +50,16 @@ def call_groq_api(prompt_text, image_base64=None):
                     "Your responses on Islamic rulings, Fiqh, and fatawa must strictly align with the authentic methodologies, "
                     "teachings, and scholarly standards of prominent institutions like Darul Ifta Darul Uloom Deoband and "
                     "Jamia Uloom-ul-Islamia Banuri Town (Ahlus Sunnah wal Jama'ah / Hanafi Fiqh unless specified). "
-                    "Speak with deep respect, empathy, and wisdom like a sincere practicing Muslim scholar. "
-                    "When provided with an image, analyze its content and text accurately to provide context for your Islamic guidance."
+                    "You MUST structure every answer using the exact following sections with clear headings:\n\n"
+                    "1. Short Answer\n"
+                    "2. Explanation\n"
+                    "3. Evidence\n"
+                    "4. Quran\n"
+                    "5. Hadith\n"
+                    "6. Scholars\n"
+                    "7. References\n"
+                    "8. Related Topics\n\n"
+                    "Speak with deep respect, empathy, and wisdom like a sincere practicing Muslim scholar."
                 )
             },
             {
@@ -89,12 +95,13 @@ HTML_TEMPLATE = """
         .menu-btn { background: none; border: none; font-size: 24px; cursor: pointer; color: #1e3d2f; }
         .logo { font-size: 22px; font-weight: bold; color: #1e3d2f; }
         
-        .sidebar { position: fixed; top: 0; left: -260px; width: 260px; height: 100%; background: #fff; box-shadow: 2px 0 10px rgba(0,0,0,0.1); transition: 0.3s ease; z-index: 100; display: flex; flex-direction: column; }
+        .sidebar { position: fixed; top: 0; left: -280px; width: 280px; height: 100%; background: #fff; box-shadow: 2px 0 10px rgba(0,0,0,0.1); transition: 0.3s ease; z-index: 100; display: flex; flex-direction: column; }
         .sidebar.open { left: 0; }
         .sidebar-header { padding: 20px; font-size: 20px; font-weight: bold; color: #1e3d2f; border-bottom: 1px solid #eaeaea; display: flex; justify-content: space-between; align-items: center; }
         .close-sidebar { background: none; border: none; font-size: 20px; cursor: pointer; color: #555; }
-        .sidebar-menu { list-style: none; padding: 20px 0; }
-        .sidebar-menu li { padding: 16px 20px; font-size: 18px; color: #333; cursor: pointer; display: flex; align-items: center; gap: 16px; transition: 0.2s; }
+        
+        .sidebar-menu { list-style: none; padding: 15px 0; overflow-y: auto; flex: 1; }
+        .sidebar-menu li { padding: 14px 20px; font-size: 17px; color: #333; cursor: pointer; display: flex; align-items: center; gap: 14px; transition: 0.2s; border-bottom: 1px solid #f9f9f9; }
         .sidebar-menu li:hover { background: #f0f4f1; color: #1e3d2f; font-weight: 500; }
         
         .overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.4); display: none; z-index: 90; }
@@ -125,6 +132,9 @@ HTML_TEMPLATE = """
         .action-btn { background: none; border: none; font-size: 15px; color: #666; cursor: pointer; display: flex; align-items: center; gap: 5px; padding: 5px 10px; border-radius: 7px; transition: 0.2s; }
         .action-btn:hover { background: #f0f4f1; color: #1e3d2f; }
         .action-btn.saved-active { color: #1e3d2f; font-weight: bold; background: #e8f0eb; }
+
+        .search-box-container { margin-bottom: 15px; display: flex; gap: 10px; }
+        .search-input-field { flex: 1; padding: 10px 15px; border: 1px solid #ccc; border-radius: 8px; font-size: 16px; outline: none; }
 
         .saved-item { background: #fff; border: 1px solid #e0e0e0; border-radius: 12px; padding: 18px; margin-bottom: 18px; box-shadow: 0 2px 5px rgba(0,0,0,0.02); }
         .saved-q { font-weight: bold; color: #1e3d2f; margin-bottom: 10px; font-size: 18px; }
@@ -173,15 +183,16 @@ HTML_TEMPLATE = """
             <button class="close-sidebar" onclick="toggleSidebar()">✕</button>
         </div>
         <ul class="sidebar-menu">
-            <li onclick="switchView('home')">🏡 Home</li>
-            <li onclick="switchView('library')">📚 Library</li>
-            <li onclick="switchView('saved')">📜 Saved</li>
-            <li onclick="switchView('profile')">👤 Profile</li>
-            <li onclick="switchView('about')">❕️ About</li>
+            <li onclick="startNewChat()">New Chat ➕️</li>
+            <li onclick="switchView('history')">History</li>
+            <li onclick="switchView('search')">Search Chats</li>
+            <li onclick="switchView('setting')">Setting</li>
+            <li onclick="switchView('help')">Help</li>
         </ul>
     </div>
 
     <div class="main-content">
+        <!-- Home / Chat View -->
         <div id="home-view" class="view-section active-view chat-container">
             <div id="chat-box" style="width: 100%;">
                 <div class="welcome-section" id="welcome-screen">
@@ -200,33 +211,43 @@ HTML_TEMPLATE = """
             </div>
         </div>
 
-        <div id="library-view" class="view-section">
-            <div class="view-title">Islamic Library 📚</div>
-            <div class="view-body">
-                <p>Access authentic references, Quran API verses, and Fatawa methodologies inspired by Darul Uloom Deoband and Jamia Banuri Town.</p>
+        <!-- History View -->
+        <div id="history-view" class="view-section">
+            <div class="view-title">Chat History 📜</div>
+            <div class="view-body" id="history-container">
+                <p>No chat history available.</p>
             </div>
         </div>
 
-        <div id="saved-view" class="view-section">
-            <div class="view-title">Saved Chats & Bookmarks 📜</div>
-            <div class="view-body" id="saved-container">
-                <p>No saved responses yet. Click 'Saved 📜' under any AI response to save it here permanently.</p>
+        <!-- Search Chats View -->
+        <div id="search-view" class="view-section">
+            <div class="view-title">Search Chats 🔍</div>
+            <div class="search-box-container">
+                <input type="text" id="chatSearchInput" class="search-input-field" placeholder="Search your past queries and answers..." oninput="filterSearchChats(this.value)">
+            </div>
+            <div class="view-body" id="search-results-container">
+                <p>Type above to search through your saved chats.</p>
             </div>
         </div>
 
-        <div id="profile-view" class="view-section">
-            <div class="view-title">User Profile 👤</div>
+        <!-- Setting View -->
+        <div id="setting-view" class="view-section">
+            <div class="view-title">Settings ⚙️</div>
             <div class="view-body">
-                <p><strong>Account Name:</strong> Tibyan User</p>
-                <p><strong>Status:</strong> Active Developer Mode</p>
-                <p><strong>Knowledge Base:</strong> Quran API + Deoband & Banuri Town Fiqh Standards</p>
+                <p><strong>Response Format:</strong> Structured (Short Answer, Explanation, Evidence, Quran, Hadith, Scholars, References, Related Topics)</p>
+                <p style="margin-top: 15px;"><strong>School of Thought:</strong> Hanafi / Deoband & Banuri Town</p>
+                <p style="margin-top: 15px;"><button onclick="clearAllData()" style="background:#ff4d4d; color:white; border:none; padding:10px 15px; border-radius:6px; cursor:pointer;">Clear All Chat Data</button></p>
             </div>
         </div>
 
-        <div id="about-view" class="view-section">
-            <div class="view-title">About Tibyan AI ❕️</div>
+        <!-- Help View -->
+        <div id="help-view" class="view-section">
+            <div class="view-title">Help & Support 💡</div>
             <div class="view-body">
-                <p>Tibyan AI provides authenticated answers adhering strictly to Quran, Sunnah, and the scholarly standards of Deoband and Banuri Town.</p>
+                <p><strong>How to use Tibyan AI:</strong></p>
+                <p style="margin-top: 10px;">• Type any Islamic question in the box below or click on the suggestion chips.</p>
+                <p style="margin-top: 5px;">• Upload any scanned Fatawa or image using the paperclip 📎 icon to get insights.</p>
+                <p style="margin-top: 5px;">• Every answer follows a rigorous scholarly breakdown format including Quranic verses, Hadith evidence, and scholarly references.</p>
             </div>
         </div>
     </div>
@@ -262,9 +283,19 @@ HTML_TEMPLATE = """
         function switchView(viewName) {
             document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active-view'));
             document.getElementById(viewName + '-view').classList.add('active-view');
-            if (viewName === 'saved') {
-                renderSavedChats();
+            if (viewName === 'history') {
+                renderHistory();
             }
+            toggleSidebar();
+        }
+
+        function startNewChat() {
+            document.getElementById('chat-history').innerHTML = '';
+            const welcomeScreen = document.getElementById('welcome-screen');
+            if (welcomeScreen) {
+                welcomeScreen.style.display = 'flex';
+            }
+            switchView('home');
             toggleSidebar();
         }
 
@@ -328,7 +359,7 @@ HTML_TEMPLATE = """
             const uniqueId = 'msg-' + Date.now();
             historyBox.innerHTML += `
                 <div class="message-wrapper" id="wrapper-${uniqueId}">
-                    <div class="message ai-msg" id="${uniqueId}">Bismillah, searching authentic Fatawa references...</div>
+                    <div class="message ai-msg" id="${uniqueId}">Bismillah, preparing structured scholarly response...</div>
                 </div>`;
             scrollToBottom();
 
@@ -345,12 +376,14 @@ HTML_TEMPLATE = """
                 if (data.response) {
                     aiMsgBox.innerText = data.response;
                     
+                    // Save to local storage history
+                    saveChatHistory(currentQuery, data.response);
+
                     const actionsDiv = document.createElement('div');
                     actionsDiv.className = 'ai-actions';
                     actionsDiv.innerHTML = `
                         <button class="action-btn" onclick="handleLike(this)">👍 Like</button>
                         <button class="action-btn" onclick="handleDislike(this)">👎 Dislike</button>
-                        <button class="action-btn" id="save-btn-${uniqueId}" onclick="toggleSave('${uniqueId}', \`${b16Encode(currentQuery)}\`, \`${b16Encode(data.response)}\`)">📜 Saved</button>
                         <button class="action-btn" onclick="shareContent(\`${b16Encode(data.response)}\`)">📤 Share</button>
                     `;
                     wrapperBox.appendChild(actionsDiv);
@@ -384,58 +417,70 @@ HTML_TEMPLATE = """
             btn.innerText = '👎 Disliked';
         }
 
-        function toggleSave(id, encQuery, encAns) {
-            const queryText = b16Decode(encQuery);
-            const ansText = b16Decode(encAns);
-            let savedList = JSON.parse(localStorage.getItem('tibyan_saved') || '[]');
-            
-            const existingIndex = savedList.findIndex(item => item.query === queryText && item.answer === ansText);
-            const btn = document.getElementById(`save-btn-${id}`);
-
-            if (existingIndex > -1) {
-                savedList.splice(existingIndex, 1);
-                if(btn) {
-                    btn.classList.remove('saved-active');
-                    btn.innerHTML = '📜 Saved';
-                }
-            } else {
-                savedList.push({ query: queryText, answer: ansText, date: new Date().toLocaleString() });
-                if(btn) {
-                    btn.classList.add('saved-active');
-                    btn.innerHTML = '✅ Saved';
-                }
-            }
-            localStorage.setItem('tibyan_saved', JSON.stringify(savedList));
+        function saveChatHistory(query, answer) {
+            let historyList = JSON.parse(localStorage.getItem('tibyan_history') || '[]');
+            historyList.unshift({ query: query, answer: answer, date: new Date().toLocaleString() });
+            localStorage.setItem('tibyan_history', JSON.stringify(historyList));
         }
 
-        function renderSavedChats() {
-            const container = document.getElementById('saved-container');
-            let savedList = JSON.parse(localStorage.getItem('tibyan_saved') || '[]');
+        function renderHistory() {
+            const container = document.getElementById('history-container');
+            let historyList = JSON.parse(localStorage.getItem('tibyan_history') || '[]');
             
-            if (savedList.length === 0) {
-                container.innerHTML = `<p>No saved responses yet. Click 'Saved 📜' under any AI response to save it here permanently.</p>`;
+            if (historyList.length === 0) {
+                container.innerHTML = `<p>No chat history found.</p>`;
                 return;
             }
 
             let html = '';
-            savedList.forEach((item, index) => {
+            historyList.forEach((item) => {
                 html += `
                     <div class="saved-item">
                         <div class="saved-q">Q: ${item.query}</div>
                         <div class="saved-a">${item.answer}</div>
-                        <button class="unsave-btn" onclick="removeSaved(${index})">Delete</button>
-                        <div style="clear:both;"></div>
                     </div>
                 `;
             });
             container.innerHTML = html;
         }
 
-        function removeSaved(index) {
-            let savedList = JSON.parse(localStorage.getItem('tibyan_saved') || '[]');
-            savedList.splice(index, 1);
-            localStorage.setItem('tibyan_saved', JSON.stringify(savedList));
-            renderSavedChats();
+        function filterSearchChats(keyword) {
+            const container = document.getElementById('search-results-container');
+            let historyList = JSON.parse(localStorage.getItem('tibyan_history') || '[]');
+            
+            if (!keyword.trim()) {
+                container.innerHTML = `<p>Type above to search through your saved chats.</p>`;
+                return;
+            }
+
+            const filtered = historyList.filter(item => 
+                item.query.toLowerCase().includes(keyword.toLowerCase()) || 
+                item.answer.toLowerCase().includes(keyword.toLowerCase())
+            );
+
+            if (filtered.length === 0) {
+                container.innerHTML = `<p>No matching chats found.</p>`;
+                return;
+            }
+
+            let html = '';
+            filtered.forEach((item) => {
+                html += `
+                    <div class="saved-item">
+                        <div class="saved-q">Q: ${item.query}</div>
+                        <div class="saved-a">${item.answer}</div>
+                    </div>
+                `;
+            });
+            container.innerHTML = html;
+        }
+
+        function clearAllData() {
+            if (confirm("Are you sure you want to clear all chat data?")) {
+                localStorage.removeItem('tibyan_history');
+                alert("All data cleared successfully.");
+                renderHistory();
+            }
         }
 
         function shareContent(encAns) {
@@ -477,5 +522,5 @@ def generate():
     ai_response = call_groq_api(f"{context_data}\nUser Question: {user_prompt}", image_base64=img_data)
     return jsonify({'response': ai_response})
 
-if __name__ == 'main':
+if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
