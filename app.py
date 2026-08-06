@@ -4,7 +4,8 @@ import requests
 
 app = Flask(__name__)
 
-api_key = os.environ.get("GEMINI_API_KEY")
+# Groq API Key (Free & No Limits)
+api_key = os.environ.get("GROQ_API_KEY") or os.environ.get("GEMINI_API_KEY")
 
 def fetch_quran_api(query):
     try:
@@ -21,22 +22,27 @@ def fetch_quran_api(query):
         print("Quran API Error:", e)
     return None
 
-def call_gemini_api(prompt_text):
-    # Using gemini-2.0-flash with v1 endpoint for guaranteed stability
-    url = f"https://generativelanguage.googleapis.com/v1/models/gemini-2.0-flash:generateContent?key={api_key}"
-    headers = {'Content-Type': 'application/json'}
+def call_groq_api(prompt_text):
+    url = "https://api.groq.com/openai/v1/chat/completions"
+    headers = {
+        'Authorization': f'Bearer {api_key}',
+        'Content-Type': 'application/json'
+    }
     payload = {
-        "contents": [{
-            "parts": [{"text": prompt_text}]
-        }]
+        "model": "llama-3.3-70b-versatile",
+        "messages": [
+            {"role": "system", "content": "You are Tibyan AI, an authentic and knowledgeable Islamic assistant. Answer queries accurately using the provided Quran data and Islamic principles."},
+            {"role": "user", "content": prompt_text}
+        ],
+        "temperature": 0.7
     }
     try:
         response = requests.post(url, headers=headers, json=payload, timeout=15)
         if response.status_code == 200:
             res_data = response.json()
-            return res_data['candidates'][0]['content']['parts'][0]['text']
+            return res_data['choices'][0]['message']['content']
         else:
-            return f"API Error ({response.status_code}): {response.text}"
+            return f"Groq API Error ({response.status_code}): {response.text}"
     except Exception as e:
         return f"Request Exception: {str(e)}"
 
@@ -153,8 +159,8 @@ def generate():
     data = request.json
     user_prompt = data.get('prompt', '')
     quran_data = fetch_quran_api(user_prompt)
-    context_data = f"\nQuran Data:\n{quran_data}\n" if quran_data else ""
-    ai_response = call_gemini_api(f"Answer accurately: {context_data}\nQuestion: {user_prompt}")
+    context_data = f"\nQuran Data References:\n{quran_data}\n" if quran_data else ""
+    ai_response = call_groq_api(f"{context_data}\nUser Question: {user_prompt}")
     return jsonify({'response': ai_response})
 
 if __name__ == '__main__':
