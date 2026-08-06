@@ -22,8 +22,8 @@ def fetch_quran_api(query):
     return None
 
 def call_gemini_api(prompt_text):
-    # Using direct REST API URL for gemini-1.5-flash which avoids all python SDK 404 bugs
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={api_key}"
+    # Using the current standard gemini-2.5-flash model endpoint
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={api_key}"
     headers = {'Content-Type': 'application/json'}
     payload = {
         "contents": [{
@@ -105,7 +105,7 @@ HTML_TEMPLATE = """
             <li onclick="toggleMenu()"><span>🏠</span> Home</li>
             <li onclick="alert('Quran Foundation API connected via api.quran.com')"><span>📖</span> Quran References</li>
             <li onclick="alert('Sunnah.com API integration active.')"><span>📜</span> Hadith Sources</li>
-            <li onclick="alert('Tibyan AI v3.0 REST API')"><span>ℹ️</span> About</li>
+            <li onclick="alert('Tibyan AI v3.2')"><span>ℹ️</span> About</li>
         </ul>
     </div>
 
