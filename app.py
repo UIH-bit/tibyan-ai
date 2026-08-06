@@ -51,7 +51,8 @@ def call_groq_api(prompt_text, image_base64=None):
                     "Your responses on Islamic rulings, Fiqh, and fatawa must strictly align with the authentic methodologies, "
                     "teachings, and scholarly standards of prominent institutions like Darul Ifta Darul Uloom Deoband and "
                     "Jamia Uloom-ul-Islamia Banuri Town (Ahlus Sunnah wal Jama'ah / Hanafi Fiqh unless specified). "
-                    "Speak with deep respect, empathy, and wisdom like a sincere practicing Muslim scholar."
+                    "Speak with deep respect, empathy, and wisdom like a sincere practicing Muslim scholar. "
+                    "When provided with an image, analyze its content and text accurately to provide context for your Islamic guidance."
                 )
             },
             {
@@ -80,82 +81,80 @@ HTML_TEMPLATE = """
     <title>Tibyan AI - Authentic Islamic Knowledge</title>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
-        body { background-color: #ffffff; color: #111; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+        body { background-color: #ffffff; color: #111; display: flex; flex-direction: column; height: 100vh; overflow: hidden; font-size: 17px; }
         
-        header { display: flex; align-items: center; justify-content: space-between; padding: 15px 20px; border-bottom: 1px solid #eaeaea; background: #fff; z-index: 10; }
+        header { display: flex; align-items: center; justify-content: space-between; padding: 15px 20px; border-bottom: 1px solid #eaeaea; background: #fff; z-index: 10; flex-shrink: 0; }
         .header-left { display: flex; align-items: center; gap: 15px; }
-        .menu-btn { background: none; border: none; font-size: 22px; cursor: pointer; color: #1e3d2f; }
-        .logo { font-size: 20px; font-weight: bold; color: #1e3d2f; }
+        .menu-btn { background: none; border: none; font-size: 24px; cursor: pointer; color: #1e3d2f; }
+        .logo { font-size: 22px; font-weight: bold; color: #1e3d2f; }
         
         .sidebar { position: fixed; top: 0; left: -260px; width: 260px; height: 100%; background: #fff; box-shadow: 2px 0 10px rgba(0,0,0,0.1); transition: 0.3s ease; z-index: 100; display: flex; flex-direction: column; }
         .sidebar.open { left: 0; }
         .sidebar-header { padding: 20px; font-size: 20px; font-weight: bold; color: #1e3d2f; border-bottom: 1px solid #eaeaea; display: flex; justify-content: space-between; align-items: center; }
         .close-sidebar { background: none; border: none; font-size: 20px; cursor: pointer; color: #555; }
         .sidebar-menu { list-style: none; padding: 20px 0; }
-        .sidebar-menu li { padding: 15px 20px; font-size: 16px; color: #333; cursor: pointer; display: flex; align-items: center; gap: 15px; transition: 0.2s; }
+        .sidebar-menu li { padding: 16px 20px; font-size: 18px; color: #333; cursor: pointer; display: flex; align-items: center; gap: 16px; transition: 0.2s; }
         .sidebar-menu li:hover { background: #f0f4f1; color: #1e3d2f; font-weight: 500; }
         
         .overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.4); display: none; z-index: 90; }
         .overlay.active { display: block; }
 
         .main-content { flex: 1; display: flex; flex-direction: column; overflow: hidden; position: relative; }
-        .view-section { display: none; flex: 1; overflow-y: auto; padding: 20px; max-width: 800px; width: 100%; margin: 0 auto; }
+        .view-section { display: none; flex: 1; overflow-y: auto; padding: 20px; max-width: 800px; width: 100%; margin: 0 auto; scroll-behavior: smooth; }
         .view-section.active-view { display: flex; flex-direction: column; }
 
         .chat-container { justify-content: space-between; }
-        .welcome-section { display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; margin: auto 0; width: 100%; }
-        .arabic-greeting { font-size: 36px; color: #1e3d2f; font-weight: bold; margin-bottom: 15px; font-family: serif; }
-        .sub-text { font-size: 16px; color: #555; margin-bottom: 30px; }
+        .welcome-section { display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; margin: auto 0; width: 100%; padding: 20px 0; }
+        .arabic-greeting { font-size: 40px; color: #1e3d2f; font-weight: bold; margin-bottom: 15px; font-family: serif; }
+        .sub-text { font-size: 18px; color: #555; margin-bottom: 30px; line-height: 1.5; }
         
-        .suggestions { width: 100%; display: flex; flex-direction: column; align-items: center; gap: 12px; max-width: 500px; margin: 0 auto; }
-        .suggestions-row { display: flex; justify-content: center; gap: 12px; width: 100%; }
-        .suggestion-chip { background: #fff; border: 1px solid #e0e0e0; border-radius: 30px; padding: 12px 18px; font-size: 14px; color: #333; cursor: pointer; text-align: center; box-shadow: 0 2px 5px rgba(0,0,0,0.02); transition: 0.2s; flex: 1; }
+        .suggestions { width: 100%; display: flex; flex-direction: column; align-items: center; gap: 14px; max-width: 550px; margin: 0 auto; }
+        .suggestions-row { display: flex; justify-content: center; gap: 14px; width: 100%; }
+        .suggestion-chip { background: #fff; border: 1px solid #e0e0e0; border-radius: 30px; padding: 14px 20px; font-size: 16px; color: #333; cursor: pointer; text-align: center; box-shadow: 0 2px 5px rgba(0,0,0,0.02); transition: 0.2s; flex: 1; }
         .suggestion-chip:hover { border-color: #1e3d2f; background: #f9fbf9; }
-        .suggestion-center { max-width: 260px; width: 100%; }
+        .suggestion-center { max-width: 280px; width: 100%; }
 
-        #chat-history { width: 100%; display: flex; flex-direction: column; gap: 15px; margin-bottom: 20px; }
-        .message-wrapper { display: flex; flex-direction: column; width: 100%; margin-bottom: 10px; }
-        .message { padding: 14px 18px; border-radius: 12px; max-width: 85%; line-height: 1.6; font-size: 15px; white-space: pre-wrap; }
+        #chat-history { width: 100%; display: flex; flex-direction: column; gap: 18px; padding-bottom: 20px; }
+        .message-wrapper { display: flex; flex-direction: column; width: 100%; margin-bottom: 12px; }
+        .message { padding: 16px 20px; border-radius: 14px; max-width: 85%; line-height: 1.6; font-size: 17px; white-space: pre-wrap; }
         .user-msg { background: #f0f4f1; color: #1e3d2f; align-self: flex-end; margin-left: auto; }
         .ai-msg { background: #ffffff; border: 1px solid #e0e0e0; color: #222; align-self: flex-start; }
         
-        /* Action buttons below AI messages */
-        .ai-actions { display: flex; gap: 12px; margin-top: 6px; align-self: flex-start; padding-left: 4px; }
-        .action-btn { background: none; border: none; font-size: 13px; color: #666; cursor: pointer; display: flex; align-items: center; gap: 4px; padding: 4px 8px; border-radius: 6px; transition: 0.2s; }
+        .ai-actions { display: flex; gap: 14px; margin-top: 8px; align-self: flex-start; padding-left: 6px; }
+        .action-btn { background: none; border: none; font-size: 15px; color: #666; cursor: pointer; display: flex; align-items: center; gap: 5px; padding: 5px 10px; border-radius: 7px; transition: 0.2s; }
         .action-btn:hover { background: #f0f4f1; color: #1e3d2f; }
         .action-btn.saved-active { color: #1e3d2f; font-weight: bold; background: #e8f0eb; }
 
-        /* Saved list design */
-        .saved-item { background: #fff; border: 1px solid #e0e0e0; border-radius: 10px; padding: 15px; margin-bottom: 15px; box-shadow: 0 2px 5px rgba(0,0,0,0.02); }
-        .saved-q { font-weight: bold; color: #1e3d2f; margin-bottom: 8px; font-size: 15px; }
-        .saved-a { color: #333; font-size: 14px; line-height: 1.5; white-space: pre-wrap; }
-        .unsave-btn { background: #ff4d4d; color: white; border: none; padding: 5px 10px; border-radius: 5px; font-size: 12px; cursor: pointer; margin-top: 10px; float: right; }
+        .saved-item { background: #fff; border: 1px solid #e0e0e0; border-radius: 12px; padding: 18px; margin-bottom: 18px; box-shadow: 0 2px 5px rgba(0,0,0,0.02); }
+        .saved-q { font-weight: bold; color: #1e3d2f; margin-bottom: 10px; font-size: 18px; }
+        .saved-a { color: #333; font-size: 17px; line-height: 1.6; white-space: pre-wrap; }
+        .unsave-btn { background: #ff4d4d; color: white; border: none; padding: 6px 12px; border-radius: 6px; font-size: 14px; cursor: pointer; margin-top: 12px; float: right; }
 
-        .input-area { display: flex; align-items: flex-end; padding: 12px 15px; border-top: 1px solid #eaeaea; background: #fff; gap: 10px; max-width: 800px; width: 100%; margin: 0 auto; }
-        .text-input { flex: 1; border: 1px solid #e0e0e0; border-radius: 20px; padding: 10px 18px; font-size: 15px; outline: none; background: #f9f9f9; resize: none; max-height: 150px; overflow-y: auto; line-height: 1.4; }
+        .input-area { display: flex; align-items: flex-end; padding: 14px 18px; border-top: 1px solid #eaeaea; background: #fff; gap: 12px; max-width: 800px; width: 100%; margin: 0 auto; flex-shrink: 0; }
+        .text-input { flex: 1; border: 1px solid #e0e0e0; border-radius: 24px; padding: 14px 20px; font-size: 17px; outline: none; background: #f9f9f9; resize: none; max-height: 180px; overflow-y: auto; line-height: 1.5; }
         
-        .upload-btn { background: none; border: none; font-size: 22px; cursor: pointer; color: #555; padding-bottom: 8px; }
+        .upload-btn { background: none; border: none; font-size: 26px; cursor: pointer; color: #555; padding-bottom: 10px; }
         .upload-btn:hover { color: #1e3d2f; }
 
         .send-btn { 
-            background: #1e3d2f; border: none; border-radius: 50%; width: 42px; height: 42px; min-width: 42px; 
-            display: flex; align-items: center; justify-content: center; cursor: pointer; color: white; position: relative; margin-bottom: 2px;
+            background: #1e3d2f; border: none; border-radius: 50%; width: 48px; height: 48px; min-width: 48px; 
+            display: flex; align-items: center; justify-content: center; cursor: pointer; color: white; position: relative; margin-bottom: 3px;
         }
-        .send-btn svg { width: 18px; height: 18px; fill: white; transition: transform 0.2s; }
+        .send-btn svg { width: 20px; height: 20px; fill: white; transition: transform 0.2s; }
         
         .send-btn.loading::after {
-            content: ''; position: absolute; top: -3px; left: -3px; right: -3px; bottom: -3px;
-            border: 2px solid transparent; border-top-color: #4CAF50; border-radius: 50%;
+            content: ''; position: absolute; top: -4px; left: -4px; right: -4px; bottom: -4px;
+            border: 2.5px solid transparent; border-top-color: #4CAF50; border-radius: 50%;
             animation: spin 0.8s linear infinite;
         }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
-        #imagePreviewContainer { display: none; padding: 5px 15px; align-items: center; gap: 10px; background: #f9f9f9; max-width: 800px; margin: 0 auto; border-top: 1px solid #eaeaea; }
-        #imagePreviewContainer img { width: 45px; height: 45px; object-fit: cover; border-radius: 6px; border: 1px solid #ccc; }
-        .remove-img { background: #ff4d4d; color: white; border: none; border-radius: 50%; width: 20px; height: 20px; font-size: 12px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+        #imagePreviewContainer { display: none; padding: 6px 18px; align-items: center; gap: 12px; background: #f9f9f9; max-width: 800px; margin: 0 auto; border-top: 1px solid #eaeaea; flex-shrink: 0; }
+        #imagePreviewContainer img { width: 55px; height: 55px; object-fit: cover; border-radius: 8px; border: 1px solid #ccc; }
+        .remove-img { background: #ff4d4d; color: white; border: none; border-radius: 50%; width: 24px; height: 24px; font-size: 14px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
 
-        .view-title { font-size: 24px; color: #1e3d2f; margin-bottom: 15px; font-weight: bold; }
-        .view-body { font-size: 15px; color: #444; line-height: 1.6; }
+        .view-title { font-size: 28px; color: #1e3d2f; margin-bottom: 20px; font-weight: bold; }
+        .view-body { font-size: 17px; color: #444; line-height: 1.6; }
     </style>
 </head>
 <body>
@@ -233,7 +232,7 @@ HTML_TEMPLATE = """
 
     <div id="imagePreviewContainer">
         <img id="previewImg" src="" alt="preview">
-        <span id="fileName" style="font-size: 13px; color: #555; flex: 1;"></span>
+        <span id="fileName" style="font-size: 14px; color: #555; flex: 1;"></span>
         <button class="remove-img" onclick="clearImage()">✕</button>
     </div>
 
@@ -249,7 +248,6 @@ HTML_TEMPLATE = """
     <script>
         let selectedBase64Image = null;
 
-        // Auto expanding textarea
         function autoExpand(field) {
             field.style.height = 'inherit';
             field.style.height = (field.scrollHeight) + 'px';
@@ -289,6 +287,11 @@ HTML_TEMPLATE = """
             document.getElementById('imagePreviewContainer').style.display = 'none';
         }
 
+        function scrollToBottom() {
+            const homeView = document.getElementById('home-view');
+            homeView.scrollTop = homeView.scrollHeight;
+        }
+
         async function submitQuery() {
             const inputField = document.getElementById('userInput');
             const query = inputField.value.trim();
@@ -305,10 +308,11 @@ HTML_TEMPLATE = """
             const historyBox = document.getElementById('chat-history');
             let userHtml = `<div class="message-wrapper"><div class="message user-msg">`;
             if (selectedBase64Image) {
-                userHtml += `<img src="data:image/jpeg;base64,${selectedBase64Image}" style="max-width:150px; border-radius:8px; display:block; margin-bottom:8px;">`;
+                userHtml += `<img src="data:image/jpeg;base64,${selectedBase64Image}" style="max-width:180px; border-radius:8px; display:block; margin-bottom:8px;">`;
             }
             userHtml += `${query || 'Analysing uploaded image...'}</div></div>`;
             historyBox.innerHTML += userHtml;
+            scrollToBottom();
 
             const currentQuery = query || 'Uploaded Image Query';
             const currentImg = selectedBase64Image;
@@ -325,7 +329,7 @@ HTML_TEMPLATE = """
                 <div class="message-wrapper" id="wrapper-${uniqueId}">
                     <div class="message ai-msg" id="${uniqueId}">Bismillah, searching authentic Fatawa references...</div>
                 </div>`;
-            window.scrollTo(0, document.body.scrollHeight);
+            scrollToBottom();
 
             try {
                 const response = await fetch('/generate', {
@@ -340,7 +344,6 @@ HTML_TEMPLATE = """
                 if (data.response) {
                     aiMsgBox.innerText = data.response;
                     
-                    // Append action buttons below AI message
                     const actionsDiv = document.createElement('div');
                     actionsDiv.className = 'ai-actions';
                     actionsDiv.innerHTML = `
@@ -358,10 +361,9 @@ HTML_TEMPLATE = """
             } finally {
                 sendBtn.classList.remove('loading');
             }
-            window.scrollTo(0, document.body.scrollHeight);
+            scrollToBottom();
         }
 
-        // Helper functions for safe string encoding/decoding
         function b16Encode(str) {
             return btoa(encodeURIComponent(str));
         }
