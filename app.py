@@ -29,7 +29,7 @@ def call_groq_api(prompt_text, image_base64=None):
         'Content-Type': 'application/json'
     }
     
-    # If image is uploaded, use vision model, otherwise text model
+    # Using currently active Groq models
     model_name = "llama-3.2-90b-vision-preview" if image_base64 else "llama-3.3-70b-versatile"
     
     content_list = [{"type": "text", "text": prompt_text}]
@@ -46,7 +46,7 @@ def call_groq_api(prompt_text, image_base64=None):
         "messages": [
             {
                 "role": "system", 
-                "content": "You are Tibyan AI, an authentic and knowledgeable Islamic assistant. Answer queries accurately using the provided Quran data and image content if provided."
+                "content": "You are Tibyan AI, a knowledgeable, wise, and respectful Muslim assistant. Always begin responses warmly (using Islamic greetings like Bismillah or Assalamu Alaikum when appropriate), speak with deep respect, empathy, and adherence to authentic Islamic principles, Quran, and Sunnah. Avoid robotic or dry language; speak like a sincere practicing Muslim brother/scholar guiding someone."
             },
             {
                 "role": "user", 
@@ -290,7 +290,7 @@ HTML_TEMPLATE = """
             sendBtn.classList.add('loading');
 
             const loadingId = 'loading-' + Date.now();
-            historyBox.innerHTML += `<div class="message ai-msg" id="${loadingId}">Analyzing with Quran & Vision database...</div>`;
+            historyBox.innerHTML += `<div class="message ai-msg" id="${loadingId}">Bismillah, analyzing with Quran database...</div>`;
             window.scrollTo(0, document.body.scrollHeight);
 
             try {
