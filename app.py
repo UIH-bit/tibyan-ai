@@ -114,19 +114,32 @@ HTML_TEMPLATE = """
         .suggestion-center { max-width: 260px; width: 100%; }
 
         #chat-history { width: 100%; display: flex; flex-direction: column; gap: 15px; margin-bottom: 20px; }
+        .message-wrapper { display: flex; flex-direction: column; width: 100%; margin-bottom: 10px; }
         .message { padding: 14px 18px; border-radius: 12px; max-width: 85%; line-height: 1.6; font-size: 15px; white-space: pre-wrap; }
         .user-msg { background: #f0f4f1; color: #1e3d2f; align-self: flex-end; margin-left: auto; }
         .ai-msg { background: #ffffff; border: 1px solid #e0e0e0; color: #222; align-self: flex-start; }
         
+        /* Action buttons below AI messages */
+        .ai-actions { display: flex; gap: 12px; margin-top: 6px; align-self: flex-start; padding-left: 4px; }
+        .action-btn { background: none; border: none; font-size: 13px; color: #666; cursor: pointer; display: flex; align-items: center; gap: 4px; padding: 4px 8px; border-radius: 6px; transition: 0.2s; }
+        .action-btn:hover { background: #f0f4f1; color: #1e3d2f; }
+        .action-btn.saved-active { color: #1e3d2f; font-weight: bold; background: #e8f0eb; }
+
+        /* Saved list design */
+        .saved-item { background: #fff; border: 1px solid #e0e0e0; border-radius: 10px; padding: 15px; margin-bottom: 15px; box-shadow: 0 2px 5px rgba(0,0,0,0.02); }
+        .saved-q { font-weight: bold; color: #1e3d2f; margin-bottom: 8px; font-size: 15px; }
+        .saved-a { color: #333; font-size: 14px; line-height: 1.5; white-space: pre-wrap; }
+        .unsave-btn { background: #ff4d4d; color: white; border: none; padding: 5px 10px; border-radius: 5px; font-size: 12px; cursor: pointer; margin-top: 10px; float: right; }
+
         .input-area { display: flex; align-items: flex-end; padding: 12px 15px; border-top: 1px solid #eaeaea; background: #fff; gap: 10px; max-width: 800px; width: 100%; margin: 0 auto; }
-        .text-input { flex: 1; border: 1px solid #e0e0e0; border-radius: 20px; padding: 10px 18px; font-size: 15px; outline: none; background: #f9f9f9; resize: none; }
+        .text-input { flex: 1; border: 1px solid #e0e0e0; border-radius: 20px; padding: 10px 18px; font-size: 15px; outline: none; background: #f9f9f9; resize: none; max-height: 150px; overflow-y: auto; line-height: 1.4; }
         
         .upload-btn { background: none; border: none; font-size: 22px; cursor: pointer; color: #555; padding-bottom: 8px; }
         .upload-btn:hover { color: #1e3d2f; }
 
         .send-btn { 
             background: #1e3d2f; border: none; border-radius: 50%; width: 42px; height: 42px; min-width: 42px; 
-            display: flex; align-items: center; justify-content: center; cursor: pointer; color: white; position: relative; 
+            display: flex; align-items: center; justify-content: center; cursor: pointer; color: white; position: relative; margin-bottom: 2px;
         }
         .send-btn svg { width: 18px; height: 18px; fill: white; transition: transform 0.2s; }
         
@@ -196,8 +209,8 @@ HTML_TEMPLATE = """
 
         <div id="saved-view" class="view-section">
             <div class="view-title">Saved Chats & Bookmarks 📜</div>
-            <div class="view-body">
-                <p>Your bookmarked conversations and important rulings will appear here.</p>
+            <div class="view-body" id="saved-container">
+                <p>No saved responses yet. Click 'Saved 📜' under any AI response to save it here permanently.</p>
             </div>
         </div>
 
@@ -227,7 +240,7 @@ HTML_TEMPLATE = """
     <div class="input-area">
         <input type="file" id="imageInput" accept="image/*" style="display: none;" onchange="handleImageSelect(event)">
         <button class="upload-btn" onclick="document.getElementById('imageInput').click()" title="Upload Image">📎</button>
-        <textarea id="userInput" class="text-input" rows="1" placeholder="Ask a question or upload an image..."></textarea>
+        <textarea id="userInput" class="text-input" rows="1" placeholder="Ask a question or upload an image..." oninput="autoExpand(this)"></textarea>
         <button class="send-btn" id="sendBtn" onclick="submitQuery()">
             <svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"></path></svg>
         </button>
@@ -235,6 +248,12 @@ HTML_TEMPLATE = """
 
     <script>
         let selectedBase64Image = null;
+
+        // Auto expanding textarea
+        function autoExpand(field) {
+            field.style.height = 'inherit';
+            field.style.height = (field.scrollHeight) + 'px';
+        }
 
         function toggleSidebar() {
             document.getElementById('sidebar').classList.toggle('open');
@@ -244,6 +263,9 @@ HTML_TEMPLATE = """
         function switchView(viewName) {
             document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active-view'));
             document.getElementById(viewName + '-view').classList.add('active-view');
+            if (viewName === 'saved') {
+                renderSavedChats();
+            }
             toggleSidebar();
         }
 
@@ -281,47 +303,154 @@ HTML_TEMPLATE = """
             }
 
             const historyBox = document.getElementById('chat-history');
-            let userHtml = `<div class="message user-msg">`;
+            let userHtml = `<div class="message-wrapper"><div class="message user-msg">`;
             if (selectedBase64Image) {
                 userHtml += `<img src="data:image/jpeg;base64,${selectedBase64Image}" style="max-width:150px; border-radius:8px; display:block; margin-bottom:8px;">`;
             }
-            userHtml += `${query || 'Analysing uploaded image...'}</div>`;
+            userHtml += `${query || 'Analysing uploaded image...'}</div></div>`;
             historyBox.innerHTML += userHtml;
 
+            const currentQuery = query || 'Uploaded Image Query';
             const currentImg = selectedBase64Image;
+            
             inputField.value = '';
+            inputField.style.height = 'inherit';
             clearImage();
             
             const sendBtn = document.getElementById('sendBtn');
             sendBtn.classList.add('loading');
 
-            const loadingId = 'loading-' + Date.now();
-            historyBox.innerHTML += `<div class="message ai-msg" id="${loadingId}">Bismillah, searching authentic Fatawa references...</div>`;
+            const uniqueId = 'msg-' + Date.now();
+            historyBox.innerHTML += `
+                <div class="message-wrapper" id="wrapper-${uniqueId}">
+                    <div class="message ai-msg" id="${uniqueId}">Bismillah, searching authentic Fatawa references...</div>
+                </div>`;
             window.scrollTo(0, document.body.scrollHeight);
 
             try {
                 const response = await fetch('/generate', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ prompt: query, image: currentImg })
+                    body: JSON.stringify({ prompt: currentQuery, image: currentImg })
                 });
                 const data = await response.json();
-                const aiMsgBox = document.getElementById(loadingId);
+                const aiMsgBox = document.getElementById(uniqueId);
+                const wrapperBox = document.getElementById(`wrapper-${uniqueId}`);
+                
                 if (data.response) {
                     aiMsgBox.innerText = data.response;
+                    
+                    // Append action buttons below AI message
+                    const actionsDiv = document.createElement('div');
+                    actionsDiv.className = 'ai-actions';
+                    actionsDiv.innerHTML = `
+                        <button class="action-btn" onclick="handleLike(this)">👍 Like</button>
+                        <button class="action-btn" onclick="handleDislike(this)">👎 Dislike</button>
+                        <button class="action-btn" id="save-btn-${uniqueId}" onclick="toggleSave('${uniqueId}', \`${b16Encode(currentQuery)}\`, \`${b16Encode(data.response)}\`)">📜 Saved</button>
+                        <button class="action-btn" onclick="shareContent(\`${b16Encode(data.response)}\`)">📤 Share</button>
+                    `;
+                    wrapperBox.appendChild(actionsDiv);
                 } else {
                     aiMsgBox.innerText = "Error: " + (data.error || "Something went wrong.");
                 }
             } catch (err) {
-                document.getElementById(loadingId).innerText = "Network error occurred.";
+                document.getElementById(uniqueId).innerText = "Network error occurred.";
             } finally {
                 sendBtn.classList.remove('loading');
             }
             window.scrollTo(0, document.body.scrollHeight);
         }
 
+        // Helper functions for safe string encoding/decoding
+        function b16Encode(str) {
+            return btoa(encodeURIComponent(str));
+        }
+        function b16Decode(str) {
+            return decodeURIComponent(atob(str));
+        }
+
+        function handleLike(btn) {
+            btn.style.color = '#2e7d32';
+            btn.style.fontWeight = 'bold';
+            btn.innerText = '👍 Liked';
+        }
+
+        function handleDislike(btn) {
+            btn.style.color = '#c62828';
+            btn.style.fontWeight = 'bold';
+            btn.innerText = '👎 Disliked';
+        }
+
+        function toggleSave(id, encQuery, encAns) {
+            const queryText = b16Decode(encQuery);
+            const ansText = b16Decode(encAns);
+            let savedList = JSON.parse(localStorage.getItem('tibyan_saved') || '[]');
+            
+            const existingIndex = savedList.findIndex(item => item.query === queryText && item.answer === ansText);
+            const btn = document.getElementById(`save-btn-${id}`);
+
+            if (existingIndex > -1) {
+                savedList.splice(existingIndex, 1);
+                if(btn) {
+                    btn.classList.remove('saved-active');
+                    btn.innerHTML = '📜 Saved';
+                }
+            } else {
+                savedList.push({ query: queryText, answer: ansText, date: new Date().toLocaleString() });
+                if(btn) {
+                    btn.classList.add('saved-active');
+                    btn.innerHTML = '✅ Saved';
+                }
+            }
+            localStorage.setItem('tibyan_saved', JSON.stringify(savedList));
+        }
+
+        function renderSavedChats() {
+            const container = document.getElementById('saved-container');
+            let savedList = JSON.parse(localStorage.getItem('tibyan_saved') || '[]');
+            
+            if (savedList.length === 0) {
+                container.innerHTML = `<p>No saved responses yet. Click 'Saved 📜' under any AI response to save it here permanently.</p>`;
+                return;
+            }
+
+            let html = '';
+            savedList.forEach((item, index) => {
+                html += `
+                    <div class="saved-item">
+                        <div class="saved-q">Q: ${item.query}</div>
+                        <div class="saved-a">${item.answer}</div>
+                        <button class="unsave-btn" onclick="removeSaved(${index})">Delete</button>
+                        <div style="clear:both;"></div>
+                    </div>
+                `;
+            });
+            container.innerHTML = html;
+        }
+
+        function removeSaved(index) {
+            let savedList = JSON.parse(localStorage.getItem('tibyan_saved') || '[]');
+            savedList.splice(index, 1);
+            localStorage.setItem('tibyan_saved', JSON.stringify(savedList));
+            renderSavedChats();
+        }
+
+        function shareContent(encAns) {
+            const ansText = b16Decode(encAns);
+            if (navigator.share) {
+                navigator.share({
+                    title: 'Tibyan AI Response',
+                    text: ansText
+                }).catch(console.error);
+            } else {
+                navigator.clipboard.writeText(ansText);
+                alert('Answer copied to clipboard!');
+            }
+        }
+
         function sendPrompt(text) {
             document.getElementById('userInput').value = text;
+            autoExpand(document.getElementById('userInput'));
             submitQuery();
         }
     </script>
