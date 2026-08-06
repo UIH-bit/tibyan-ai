@@ -1,9 +1,15 @@
 from flask import Flask, request, jsonify, render_template_string
-import urllib.request
-import json
+import google.generativeai as genai
 import os
 
 app = Flask(__name__)
+
+# Configure Gemini API using the environment variable
+api_key = os.environ.get("GEMINI_API_KEY")
+genai.configure(api_key=api_key)
+
+# Using the standard stable model
+model = genai.GenerativeModel('gemini-1.5-flash')
 
 HTML_TEMPLATE = """
 <!DOCTYPE html>
@@ -165,26 +171,10 @@ def home():
 def generate():
     data = request.json
     prompt = data.get('prompt', '')
-    api_key = os.environ.get("GEMINI_API_KEY")
-    
-    # Updated correct endpoint for Gemini API
-    url = f"https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key={api_key}"
-    
-    payload = {
-        "contents": [{"parts": [{"text": prompt}]}]
-    }
-    
-    req = urllib.request.Request(
-        url,
-        data=json.dumps(payload).encode('utf-8'),
-        headers={'Content-Type': 'application/json'}
-    )
     
     try:
-        with urllib.request.urlopen(req) as response:
-            res_data = json.loads(response.read().decode('utf-8'))
-            text = res_data['candidates'][0]['content']['parts'][0]['text']
-            return jsonify({'response': text})
+        response = model.generate_content(prompt)
+        return jsonify({'response': response.text})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
