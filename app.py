@@ -29,6 +29,9 @@ def call_groq_api(prompt_text, image_base64=None):
         'Content-Type': 'application/json'
     }
     
+    # If image is uploaded, use vision model, otherwise text model
+    model_name = "llama-3.2-90b-vision-preview" if image_base64 else "llama-3.3-70b-versatile"
+    
     content_list = [{"type": "text", "text": prompt_text}]
     if image_base64:
         content_list.append({
@@ -39,7 +42,7 @@ def call_groq_api(prompt_text, image_base64=None):
         })
 
     payload = {
-        "model": "llama-3.2-11b-vision-preview",
+        "model": model_name,
         "messages": [
             {
                 "role": "system", 
@@ -47,13 +50,13 @@ def call_groq_api(prompt_text, image_base64=None):
             },
             {
                 "role": "user", 
-                "content": content_list
+                "content": content_list if image_base64 else prompt_text
             }
         ],
         "temperature": 0.7
     }
     try:
-        response = requests.post(url, headers=headers, json=payload, timeout=20)
+        response = requests.post(url, headers=headers, json=payload, timeout=25)
         if response.status_code == 200:
             res_data = response.json()
             return res_data['choices'][0]['message']['content']
@@ -73,13 +76,11 @@ HTML_TEMPLATE = """
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
         body { background-color: #ffffff; color: #111; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
         
-        /* Header & Sidebar Styles */
         header { display: flex; align-items: center; justify-content: space-between; padding: 15px 20px; border-bottom: 1px solid #eaeaea; background: #fff; z-index: 10; }
         .header-left { display: flex; align-items: center; gap: 15px; }
         .menu-btn { background: none; border: none; font-size: 22px; cursor: pointer; color: #1e3d2f; }
         .logo { font-size: 20px; font-weight: bold; color: #1e3d2f; }
         
-        /* Sidebar Drawer */
         .sidebar { position: fixed; top: 0; left: -260px; width: 260px; height: 100%; background: #fff; box-shadow: 2px 0 10px rgba(0,0,0,0.1); transition: 0.3s ease; z-index: 100; display: flex; flex-direction: column; }
         .sidebar.open { left: 0; }
         .sidebar-header { padding: 20px; font-size: 20px; font-weight: bold; color: #1e3d2f; border-bottom: 1px solid #eaeaea; display: flex; justify-content: space-between; align-items: center; }
@@ -91,12 +92,10 @@ HTML_TEMPLATE = """
         .overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.4); display: none; z-index: 90; }
         .overlay.active { display: block; }
 
-        /* Main Content Views */
         .main-content { flex: 1; display: flex; flex-direction: column; overflow: hidden; position: relative; }
         .view-section { display: none; flex: 1; overflow-y: auto; padding: 20px; max-width: 800px; width: 100%; margin: 0 auto; }
         .view-section.active-view { display: flex; flex-direction: column; }
 
-        /* Chat UI */
         .chat-container { justify-content: space-between; }
         .welcome-section { display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; margin: auto 0; width: 100%; }
         .arabic-greeting { font-size: 36px; color: #1e3d2f; font-weight: bold; margin-bottom: 15px; font-family: serif; }
@@ -113,21 +112,18 @@ HTML_TEMPLATE = """
         .user-msg { background: #f0f4f1; color: #1e3d2f; align-self: flex-end; margin-left: auto; }
         .ai-msg { background: #ffffff; border: 1px solid #e0e0e0; color: #222; align-self: flex-start; }
         
-        /* Input Area & Custom Send Button with Spinner */
         .input-area { display: flex; align-items: flex-end; padding: 12px 15px; border-top: 1px solid #eaeaea; background: #fff; gap: 10px; max-width: 800px; width: 100%; margin: 0 auto; }
         .text-input { flex: 1; border: 1px solid #e0e0e0; border-radius: 20px; padding: 10px 18px; font-size: 15px; outline: none; background: #f9f9f9; resize: none; }
         
         .upload-btn { background: none; border: none; font-size: 22px; cursor: pointer; color: #555; padding-bottom: 8px; }
         .upload-btn:hover { color: #1e3d2f; }
 
-        /* Send Button like Gemini */
         .send-btn { 
             background: #1e3d2f; border: none; border-radius: 50%; width: 42px; height: 42px; min-width: 42px; 
             display: flex; align-items: center; justify-content: center; cursor: pointer; color: white; position: relative; 
         }
         .send-btn svg { width: 18px; height: 18px; fill: white; transition: transform 0.2s; }
         
-        /* 360 Rotating Circle Effect on Load */
         .send-btn.loading::after {
             content: ''; position: absolute; top: -3px; left: -3px; right: -3px; bottom: -3px;
             border: 2px solid transparent; border-top-color: #4CAF50; border-radius: 50%;
@@ -135,12 +131,10 @@ HTML_TEMPLATE = """
         }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
-        /* Preview Thumbnail */
         #imagePreviewContainer { display: none; padding: 5px 15px; align-items: center; gap: 10px; background: #f9f9f9; max-width: 800px; margin: 0 auto; border-top: 1px solid #eaeaea; }
         #imagePreviewContainer img { width: 45px; height: 45px; object-fit: cover; border-radius: 6px; border: 1px solid #ccc; }
         .remove-img { background: #ff4d4d; color: white; border: none; border-radius: 50%; width: 20px; height: 20px; font-size: 12px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
 
-        /* Dynamic Views Styling */
         .view-title { font-size: 24px; color: #1e3d2f; margin-bottom: 15px; font-weight: bold; }
         .view-body { font-size: 15px; color: #444; line-height: 1.6; }
     </style>
@@ -153,7 +147,6 @@ HTML_TEMPLATE = """
         </div>
     </header>
 
-    <!-- Sidebar Drawer -->
     <div class="overlay" id="overlay" onclick="toggleSidebar()"></div>
     <div class="sidebar" id="sidebar">
         <div class="sidebar-header">
@@ -170,7 +163,6 @@ HTML_TEMPLATE = """
     </div>
 
     <div class="main-content">
-        <!-- HOME / CHAT VIEW -->
         <div id="home-view" class="view-section active-view chat-container">
             <div id="chat-box" style="width: 100%;">
                 <div class="welcome-section" id="welcome-screen">
@@ -189,7 +181,6 @@ HTML_TEMPLATE = """
             </div>
         </div>
 
-        <!-- LIBRARY VIEW -->
         <div id="library-view" class="view-section">
             <div class="view-title">Islamic Library 📚</div>
             <div class="view-body">
@@ -197,7 +188,6 @@ HTML_TEMPLATE = """
             </div>
         </div>
 
-        <!-- SAVED VIEW -->
         <div id="saved-view" class="view-section">
             <div class="view-title">Saved Chats & Bookmarks 📜</div>
             <div class="view-body">
@@ -205,7 +195,6 @@ HTML_TEMPLATE = """
             </div>
         </div>
 
-        <!-- PROFILE VIEW -->
         <div id="profile-view" class="view-section">
             <div class="view-title">User Profile 👤</div>
             <div class="view-body">
@@ -215,7 +204,6 @@ HTML_TEMPLATE = """
             </div>
         </div>
 
-        <!-- ABOUT VIEW -->
         <div id="about-view" class="view-section">
             <div class="view-title">About Tibyan AI ❕️</div>
             <div class="view-body">
@@ -224,7 +212,6 @@ HTML_TEMPLATE = """
         </div>
     </div>
 
-    <!-- Image Preview Bar -->
     <div id="imagePreviewContainer">
         <img id="previewImg" src="" alt="preview">
         <span id="fileName" style="font-size: 13px; color: #555; flex: 1;"></span>
@@ -279,7 +266,6 @@ HTML_TEMPLATE = """
             const query = inputField.value.trim();
             if (!query && !selectedBase64Image) return;
 
-            // Switch to home view if currently on other tabs
             document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active-view'));
             document.getElementById('home-view').classList.add('active-view');
             
