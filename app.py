@@ -22,8 +22,7 @@ def fetch_quran_api(query):
     return None
 
 def call_gemini_api(prompt_text):
-    # Using gemini-1.5-flash-latest to permanently bypass the 404 error
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key={api_key}"
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={api_key}"
     headers = {'Content-Type': 'application/json'}
     payload = {
         "contents": [{
@@ -53,15 +52,21 @@ HTML_TEMPLATE = """
         header { display: flex; align-items: center; padding: 15px 20px; border-bottom: 1px solid #eaeaea; background: #fff; }
         .logo { font-size: 20px; font-weight: bold; color: #1e3d2f; }
         .chat-container { flex: 1; display: flex; flex-direction: column; justify-content: space-between; max-width: 800px; width: 100%; margin: 0 auto; padding: 20px; overflow-y: auto; }
-        .welcome-section { display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; margin: auto 0; }
+        .welcome-section { display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; margin: auto 0; width: 100%; }
         .arabic-greeting { font-size: 38px; color: #1e3d2f; font-weight: bold; margin-bottom: 15px; font-family: serif; }
         .sub-text { font-size: 16px; color: #555; margin-bottom: 30px; }
-        .suggestions { width: 100%; display: flex; flex-direction: column; gap: 12px; max-width: 500px; }
-        .suggestion-chip { background: #fff; border: 1px solid #e0e0e0; border-radius: 30px; padding: 14px 20px; text-align: left; font-size: 15px; color: #333; cursor: pointer; }
+        
+        .suggestions { width: 100%; display: flex; flex-direction: column; align-items: center; gap: 12px; max-width: 500px; margin: 0 auto; }
+        .suggestions-row { display: flex; justify-content: center; gap: 12px; width: 100%; }
+        .suggestion-chip { background: #fff; border: 1px solid #e0e0e0; border-radius: 30px; padding: 12px 18px; font-size: 14px; color: #333; cursor: pointer; text-align: center; box-shadow: 0 2px 5px rgba(0,0,0,0.02); transition: 0.2s; flex: 1; }
+        .suggestion-chip:hover { border-color: #1e3d2f; background: #f9fbf9; }
+        .suggestion-center { max-width: 260px; width: 100%; }
+
         #chat-history { width: 100%; display: flex; flex-direction: column; gap: 15px; margin-bottom: 20px; }
         .message { padding: 14px 18px; border-radius: 12px; max-width: 85%; line-height: 1.6; font-size: 15px; white-space: pre-wrap; }
         .user-msg { background: #f0f4f1; color: #1e3d2f; align-self: flex-end; margin-left: auto; }
         .ai-msg { background: #ffffff; border: 1px solid #e0e0e0; color: #222; align-self: flex-start; }
+        
         .input-area { display: flex; align-items: flex-end; padding: 12px 15px; border-top: 1px solid #eaeaea; background: #fff; gap: 10px; max-width: 800px; width: 100%; margin: 0 auto; }
         .text-input { flex: 1; border: 1px solid #e0e0e0; border-radius: 20px; padding: 10px 18px; font-size: 15px; outline: none; background: #f9f9f9; resize: none; }
         .send-btn { background: #1e3d2f; border: none; border-radius: 50%; width: 42px; height: 42px; min-width: 42px; display: flex; align-items: center; justify-content: center; cursor: pointer; color: white; }
@@ -76,8 +81,13 @@ HTML_TEMPLATE = """
             <div class="welcome-section" id="welcome-screen">
                 <div class="arabic-greeting">بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ</div>
                 <div class="sub-text">Ask authentic Islamic questions backed by Quran API</div>
+                
                 <div class="suggestions">
-                    <div class="suggestion-chip" onclick="sendPrompt('What does the Quran say about patience (Sabr)?')">What does the Quran say about patience (Sabr)?</div>
+                    <div class="suggestions-row">
+                        <div class="suggestion-chip" onclick="sendPrompt('What does the Quran say about patience (Sabr)?')">What does the Quran say about patience (Sabr)?</div>
+                        <div class="suggestion-chip" onclick="sendPrompt('Authentic Hadiths on honesty')">Authentic Hadiths on honesty</div>
+                    </div>
+                    <div class="suggestion-chip suggestion-center" onclick="sendPrompt('Who is Adam alai issalam?')">Who is Adam alai issalam?</div>
                 </div>
             </div>
             <div id="chat-history"></div>
@@ -92,22 +102,38 @@ HTML_TEMPLATE = """
             const inputField = document.getElementById('userInput');
             const query = inputField.value.trim();
             if (!query) return;
-            document.getElementById('welcome-screen').style.display = 'none';
+            
+            const welcomeScreen = document.getElementById('welcome-screen');
+            if (welcomeScreen) {
+                welcomeScreen.style.display = 'none';
+            }
+
             const historyBox = document.getElementById('chat-history');
             historyBox.innerHTML += `<div class="message user-msg">${query}</div>`;
             inputField.value = '';
             
             const loadingId = 'loading-' + Date.now();
-            historyBox.innerHTML += `<div class="message ai-msg" id="${loadingId}">Fetching...</div>`;
+            historyBox.innerHTML += `<div class="message ai-msg" id="${loadingId}">Fetching from Quran & Sunnah databases...</div>`;
 
-            const response =บาด fetch('/generate', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ prompt: query })
-            });
-            const data = await response.json();
-            document.getElementById(loadingId).innerText = data.response || data.error;
+            try {
+                const response = await fetch('/generate', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ prompt: query })
+                });
+                const data = await response.json();
+                const aiMsgBox = document.getElementById(loadingId);
+                if (data.response) {
+                    aiMsgBox.innerText = data.response;
+                } else {
+                    aiMsgBox.innerText = "Error: " + (data.error || "Something went wrong.");
+                }
+            } catch (err) {
+                document.getElementById(loadingId).innerText = "Network error occurred.";
+            }
+            window.scrollTo(0, document.body.scrollHeight);
         }
+
         function sendPrompt(text) {
             document.getElementById('userInput').value = text;
             submitQuery();
