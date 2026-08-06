@@ -29,7 +29,6 @@ def call_groq_api(prompt_text, image_base64=None):
         'Content-Type': 'application/json'
     }
     
-    # Using currently active Groq models
     model_name = "llama-3.2-90b-vision-preview" if image_base64 else "llama-3.3-70b-versatile"
     
     content_list = [{"type": "text", "text": prompt_text}]
@@ -46,7 +45,14 @@ def call_groq_api(prompt_text, image_base64=None):
         "messages": [
             {
                 "role": "system", 
-                "content": "You are Tibyan AI, a knowledgeable, wise, and respectful Muslim assistant. Always begin responses warmly (using Islamic greetings like Bismillah or Assalamu Alaikum when appropriate), speak with deep respect, empathy, and adherence to authentic Islamic principles, Quran, and Sunnah. Avoid robotic or dry language; speak like a sincere practicing Muslim brother/scholar guiding someone."
+                "content": (
+                    "You are Tibyan AI, a knowledgeable, wise, and respectful Muslim scholar assistant. "
+                    "Always begin your responses warmly with Islamic greetings (like Bismillah or Assalamu Alaikum). "
+                    "Your responses on Islamic rulings, Fiqh, and fatawa must strictly align with the authentic methodologies, "
+                    "teachings, and scholarly standards of prominent institutions like Darul Ifta Darul Uloom Deoband and "
+                    "Jamia Uloom-ul-Islamia Banuri Town (Ahlus Sunnah wal Jama'ah / Hanafi Fiqh unless specified). "
+                    "Speak with deep respect, empathy, and wisdom like a sincere practicing Muslim scholar."
+                )
             },
             {
                 "role": "user", 
@@ -167,12 +173,12 @@ HTML_TEMPLATE = """
             <div id="chat-box" style="width: 100%;">
                 <div class="welcome-section" id="welcome-screen">
                     <div class="arabic-greeting">بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ</div>
-                    <div class="sub-text">Ask authentic Islamic questions backed by Quran API</div>
+                    <div class="sub-text">Authentic Islamic Knowledge backed by Deoband & Banuri Town manhaj</div>
                     
                     <div class="suggestions">
                         <div class="suggestions-row">
                             <div class="suggestion-chip" onclick="sendPrompt('What does the Quran say about patience (Sabr)?')">What does the Quran say about patience (Sabr)?</div>
-                            <div class="suggestion-chip" onclick="sendPrompt('Authentic Hadiths on honesty')">Authentic Hadiths on honesty</div>
+                            <div class="suggestion-chip" onclick="sendPrompt('Roza kaise toot jata hai')">Roza kaise toot jata hai</div>
                         </div>
                         <div class="suggestion-chip suggestion-center" onclick="sendPrompt('Who is Adam alai issalam?')">Who is Adam alai issalam?</div>
                     </div>
@@ -184,14 +190,14 @@ HTML_TEMPLATE = """
         <div id="library-view" class="view-section">
             <div class="view-title">Islamic Library 📚</div>
             <div class="view-body">
-                <p>Access authentic references, verses categorized by topics, Surah indices, and verified scholarly notes directly backed by the Quran API.</p>
+                <p>Access authentic references, Quran API verses, and Fatawa methodologies inspired by Darul Uloom Deoband and Jamia Banuri Town.</p>
             </div>
         </div>
 
         <div id="saved-view" class="view-section">
             <div class="view-title">Saved Chats & Bookmarks 📜</div>
             <div class="view-body">
-                <p>Your bookmarked conversations, important rulings, and favorite verse references will appear here.</p>
+                <p>Your bookmarked conversations and important rulings will appear here.</p>
             </div>
         </div>
 
@@ -200,14 +206,14 @@ HTML_TEMPLATE = """
             <div class="view-body">
                 <p><strong>Account Name:</strong> Tibyan User</p>
                 <p><strong>Status:</strong> Active Developer Mode</p>
-                <p><strong>Connected API:</strong> Groq High-Speed LPU</p>
+                <p><strong>Knowledge Base:</strong> Quran API + Deoband & Banuri Town Fiqh Standards</p>
             </div>
         </div>
 
         <div id="about-view" class="view-section">
             <div class="view-title">About Tibyan AI ❕️</div>
             <div class="view-body">
-                <p>Tibyan AI is an advanced, authentic Islamic knowledge assistant designed to provide accurate answers backed by Quranic database references and multimodal vision capabilities.</p>
+                <p>Tibyan AI provides authenticated answers adhering strictly to Quran, Sunnah, and the scholarly standards of Deoband and Banuri Town.</p>
             </div>
         </div>
     </div>
@@ -290,7 +296,7 @@ HTML_TEMPLATE = """
             sendBtn.classList.add('loading');
 
             const loadingId = 'loading-' + Date.now();
-            historyBox.innerHTML += `<div class="message ai-msg" id="${loadingId}">Bismillah, analyzing with Quran database...</div>`;
+            historyBox.innerHTML += `<div class="message ai-msg" id="${loadingId}">Bismillah, searching authentic Fatawa references...</div>`;
             window.scrollTo(0, document.body.scrollHeight);
 
             try {
@@ -334,7 +340,7 @@ def generate():
     img_data = data.get('image', None)
     
     quran_data = fetch_quran_api(user_prompt) if user_prompt else ""
-    context_data = f"\nQuran Data References:\n{quran_data}\n" if quran_data else ""
+    context_data = f"\nQuran API References:\n{quran_data}\n" if quran_data else ""
     
     ai_response = call_groq_api(f"{context_data}\nUser Question: {user_prompt}", image_base64=img_data)
     return jsonify({'response': ai_response})
