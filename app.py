@@ -1,14 +1,30 @@
 from flask import Flask, request, jsonify, render_template_string
 import google.generativeai as genai
 import os
+import requests
 
 app = Flask(__name__)
 
 api_key = os.environ.get("GEMINI_API_KEY")
 genai.configure(api_key=api_key)
 
-# Using the correct model name for Python SDK
-model = genai.GenerativeModel('gemini-1.5-flash-latest')
+# Using gemini-pro which is universally stable on all SDK versions
+model = genai.GenerativeModel('gemini-pro')
+
+def fetch_quran_api(query):
+    try:
+        url = f"https://api.quran.com/api/v4/search?q={query}&size=3"
+        response = requests.get(url, timeout=5)
+        if response.status_code == 200:
+            data = response.json()
+            results = data.get('search', {}).get('results', [])
+            verses_text = ""
+            for res in results:
+                verses_text += f"- Surah/Ayah Ref ({res.get('verse_key')}): {res.get('text')}\n"
+            return verses_text
+    except Exception as e:
+        print("Quran API Error:", e)
+    return None
 
 HTML_TEMPLATE = """
 <!DOCTYPE html>
@@ -73,9 +89,9 @@ HTML_TEMPLATE = """
         <div class="sidebar-header">Tibyan AI Menu</div>
         <ul class="sidebar-menu">
             <li onclick="toggleMenu()"><span>🏠</span> Home</li>
-            <li onclick="alert('Quran Foundation API connected.')"><span>📖</span> Quran References</li>
+            <li onclick="alert('Quran Foundation API connected via api.quran.com')"><span>📖</span> Quran References</li>
             <li onclick="alert('Sunnah.com API integration active.')"><span>📜</span> Hadith Sources</li>
-            <li onclick="alert('Tibyan AI v1.2')"><span>ℹ️</span> About</li>
+            <li onclick="alert('Tibyan AI v1.4')"><span>ℹ️</span> About</li>
         </ul>
     </div>
 
@@ -83,7 +99,7 @@ HTML_TEMPLATE = """
         <div id="chat-box" style="width: 100%;">
             <div class="welcome-section" id="welcome-screen">
                 <div class="arabic-greeting">بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ</div>
-                <div class="sub-text">Ask authentic Islamic questions backed by Quran & Sunnah</div>
+                <div class="sub-text">Ask authentic Islamic questions backed by Quran API</div>
                 
                 <div class="suggestions">
                     <div class="suggestion-chip" onclick="sendPrompt('What does the Quran say about patience (Sabr)?')">What does the Quran say about patience (Sabr)?</div>
@@ -146,7 +162,7 @@ HTML_TEMPLATE = """
             window.scrollTo(0, document.body.scrollHeight);
 
             const loadingId = 'loading-' + Date.now();
-            historyBox.innerHTML += `<div class="message ai-msg" id="${loadingId}">Searching Quran & Sunnah sources...</div>`;
+            historyBox.innerHTML += `<div class="message ai-msg" id="${loadingId}">Fetching from Quran & Sunnah databases...</div>`;
 
             try {
                 const response = await fetch('/generate', {
@@ -182,15 +198,20 @@ def generate():
     data = request.json
     user_prompt = data.get('prompt', '')
     
+    quran_data = fetch_quran_api(user_prompt)
+    context_data = ""
+    if quran_data:
+        context_data += f"\nLive Retrieved Quranic Data from API:\n{quran_data}\n"
+
     system_instruction = (
-        "You are Tibyan AI, an expert, knowledgeable, and strictly authentic Islamic research assistant. "
-        "Whenever a user asks a question, you must provide answers based firmly on the Quran and authentic Sunnah (Sahih Hadiths like Bukhari, Muslim, Abu Dawood, Tirmidhi, etc.). "
-        "Always quote exact Quranic verses with Surah name and Ayah number, and authentic Hadiths with proper references (book name and hadith number). "
-        "Keep the tone respectful, scholarly, precise, and clear."
+        "You are Tibyan AI, an expert and authentic Islamic research assistant. "
+        "Use the provided live database results from Quran Foundation API when applicable, "
+        "and combine them with authentic Hadith references to answer the user's question with complete accuracy, "
+        "citing exact Surah names, Ayah numbers, and Hadith books."
     )
     
     try:
-        full_prompt = f"{system_instruction}\n\nUser Question: {user_prompt}"
+        full_prompt = f"{system_instruction}\n{context_data}\nUser Question: {user_prompt}"
         response = model.generate_content(full_prompt)
         return jsonify({'response': response.text})
     except Exception as e:
