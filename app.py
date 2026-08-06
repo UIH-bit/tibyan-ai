@@ -8,18 +8,8 @@ app = Flask(__name__)
 api_key = os.environ.get("GEMINI_API_KEY")
 genai.configure(api_key=api_key)
 
-# Automatically find a working model that supports generateContent
-def get_working_model():
-    try:
-        for m in genai.list_models():
-            if 'generateContent' in m.supported_generation_methods:
-                return genai.GenerativeModel(m.name)
-    except Exception as e:
-        print("Error listing models:", e)
-    # Fallback to standard modern model name if list fails
-    return genai.GenerativeModel('gemini-1.5-flash')
-
-model = get_working_model()
+# Directly initialize the standard current model name
+model = genai.GenerativeModel('gemini-1.5-flash')
 
 def fetch_quran_api(query):
     try:
@@ -101,7 +91,7 @@ HTML_TEMPLATE = """
             <li onclick="toggleMenu()"><span>🏠</span> Home</li>
             <li onclick="alert('Quran Foundation API connected via api.quran.com')"><span>📖</span> Quran References</li>
             <li onclick="alert('Sunnah.com API integration active.')"><span>📜</span> Hadith Sources</li>
-            <li onclick="alert('Tibyan AI v1.7 - Dynamic Model Resolver')"><span>ℹ️</span> About</li>
+            <li onclick="alert('Tibyan AI v1.8')"><span>ℹ️</span> About</li>
         </ul>
     </div>
 
