@@ -1,15 +1,10 @@
 from flask import Flask, request, jsonify, render_template_string
-import google.generativeai as genai
 import os
 import requests
 
 app = Flask(__name__)
 
 api_key = os.environ.get("GEMINI_API_KEY")
-genai.configure(api_key=api_key)
-
-# Using gemini-pro which is fully stable on standard API versions without 404 errors
-model = genai.GenerativeModel('gemini-pro')
 
 def fetch_quran_api(query):
     try:
@@ -25,6 +20,25 @@ def fetch_quran_api(query):
     except Exception as e:
         print("Quran API Error:", e)
     return None
+
+def call_gemini_api(prompt_text):
+    # Using direct REST API URL for gemini-1.5-flash which avoids all python SDK 404 bugs
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={api_key}"
+    headers = {'Content-Type': 'application/json'}
+    payload = {
+        "contents": [{
+            "parts": [{"text": prompt_text}]
+        }]
+    }
+    try:
+        response = requests.post(url, headers=headers, json=payload, timeout=15)
+        if response.status_code == 200:
+            res_data = response.json()
+            return res_data['candidates'][0]['content']['parts'][0]['text']
+        else:
+            return f"API Error ({response.status_code}): {response.text}"
+    except Exception as e:
+        return f"Request Exception: {str(e)}"
 
 HTML_TEMPLATE = """
 <!DOCTYPE html>
@@ -91,7 +105,7 @@ HTML_TEMPLATE = """
             <li onclick="toggleMenu()"><span>🏠</span> Home</li>
             <li onclick="alert('Quran Foundation API connected via api.quran.com')"><span>📖</span> Quran References</li>
             <li onclick="alert('Sunnah.com API integration active.')"><span>📜</span> Hadith Sources</li>
-            <li onclick="alert('Tibyan AI v2.1')"><span>ℹ️</span> About</li>
+            <li onclick="alert('Tibyan AI v3.0 REST API')"><span>ℹ️</span> About</li>
         </ul>
     </div>
 
@@ -210,12 +224,10 @@ def generate():
         "citing exact Surah names, Ayah numbers, and Hadith books."
     )
     
-    try:
-        full_prompt = f"{system_instruction}\n{context_data}\nUser Question: {user_prompt}"
-        response = model.generate_content(full_prompt)
-        return jsonify({'response': response.text})
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
+    full_prompt = f"{system_instruction}\n{context_data}\nUser Question: {user_prompt}"
+    ai_response = call_gemini_api(full_prompt)
+    
+    return jsonify({'response': ai_response})
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)
