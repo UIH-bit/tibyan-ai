@@ -22,8 +22,8 @@ def fetch_quran_api(query):
     return None
 
 def call_gemini_api(prompt_text):
-    # Using gemini-2.5-flash which is standard now
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={api_key}"
+    # Using gemini-1.5-flash-latest to permanently bypass the 404 error
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key={api_key}"
     headers = {'Content-Type': 'application/json'}
     payload = {
         "contents": [{
@@ -100,7 +100,7 @@ HTML_TEMPLATE = """
             const loadingId = 'loading-' + Date.now();
             historyBox.innerHTML += `<div class="message ai-msg" id="${loadingId}">Fetching...</div>`;
 
-            const response = await fetch('/generate', {
+            const response =บาด fetch('/generate', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ prompt: query })
