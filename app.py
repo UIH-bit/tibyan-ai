@@ -47,6 +47,7 @@ def call_groq_api(prompt_text, image_base64=None):
                 "content": (
                     "You are Tibyan AI, a knowledgeable, wise, and respectful Muslim scholar assistant. "
                     "Always begin your responses warmly with Islamic greetings (like Bismillah or Assalamu Alaikum). "
+                    "Strictly avoid modern or non-Islamic vocabulary such as 'mahatvpoorn'. Instead, use authentic, respectful Islamic and Urdu/Arabic terminology like 'zaroori', 'aham', 'fazilat', 'masla', 'hukm', etc. "
                     "Your responses on Islamic rulings, Fiqh, and fatawa must strictly align with the authentic methodologies, "
                     "teachings, and scholarly standards of prominent institutions like Darul Ifta Darul Uloom Deoband and "
                     "Jamia Uloom-ul-Islamia Banuri Town (Ahlus Sunnah wal Jama'ah / Hanafi Fiqh unless specified). "
@@ -108,7 +109,7 @@ HTML_TEMPLATE = """
         .overlay.active { display: block; }
 
         .main-content { flex: 1; display: flex; flex-direction: column; overflow: hidden; position: relative; }
-        .view-section { display: none; flex: 1; overflow-y: auto; padding: 20px; max-width: 800px; width: 100%; margin: 0 auto; scroll-behavior: smooth; }
+        .view-section { display: none; flex: 1; overflow-y: auto; padding: 20px 20px 100px 20px; max-width: 800px; width: 100%; margin: 0 auto; scroll-behavior: smooth; }
         .view-section.active-view { display: flex; flex-direction: column; }
 
         .chat-container { justify-content: space-between; }
@@ -122,16 +123,23 @@ HTML_TEMPLATE = """
         .suggestion-chip:hover { border-color: #1e3d2f; background: #f9fbf9; }
         .suggestion-center { max-width: 280px; width: 100%; }
 
-        #chat-history { width: 100%; display: flex; flex-direction: column; gap: 18px; padding-bottom: 20px; }
+        #chat-history { width: 100%; display: flex; flex-direction: column; gap: 18px; padding-bottom: 30px; }
         .message-wrapper { display: flex; flex-direction: column; width: 100%; margin-bottom: 12px; }
         .message { padding: 16px 20px; border-radius: 14px; max-width: 85%; line-height: 1.6; font-size: 17px; white-space: pre-wrap; }
         .user-msg { background: #f0f4f1; color: #1e3d2f; align-self: flex-end; margin-left: auto; }
         .ai-msg { background: #ffffff; border: 1px solid #e0e0e0; color: #222; align-self: flex-start; }
         
-        .ai-actions { display: flex; gap: 14px; margin-top: 8px; align-self: flex-start; padding-left: 6px; }
-        .action-btn { background: none; border: none; font-size: 15px; color: #666; cursor: pointer; display: flex; align-items: center; gap: 5px; padding: 5px 10px; border-radius: 7px; transition: 0.2s; }
+        .ai-actions { display: flex; gap: 10px; margin-top: 8px; align-self: flex-start; padding-left: 6px; align-items: center; position: relative; }
+        .action-btn { background: none; border: none; font-size: 15px; color: #666; cursor: pointer; display: flex; align-items: center; gap: 5px; padding: 6px 10px; border-radius: 7px; transition: 0.2s; }
         .action-btn:hover { background: #f0f4f1; color: #1e3d2f; }
         .action-btn.saved-active { color: #1e3d2f; font-weight: bold; background: #e8f0eb; }
+
+        /* Popover Menu for More Options (•••) */
+        .more-menu-container { position: relative; display: inline-block; }
+        .more-dropdown { display: none; position: absolute; bottom: 100%; left: 0; background: #fff; border: 1px solid #ccc; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 50; min-width: 130px; overflow: hidden; margin-bottom: 5px; }
+        .more-dropdown.show { display: block; }
+        .more-dropdown button { width: 100%; text-align: left; background: none; border: none; padding: 10px 15px; font-size: 15px; cursor: pointer; color: #333; }
+        .more-dropdown button:hover { background: #f0f4f1; color: #1e3d2f; }
 
         .search-box-container { margin-bottom: 15px; display: flex; gap: 10px; }
         .search-input-field { flex: 1; padding: 10px 15px; border: 1px solid #ccc; border-radius: 8px; font-size: 16px; outline: none; }
@@ -141,11 +149,12 @@ HTML_TEMPLATE = """
         .saved-a { color: #333; font-size: 17px; line-height: 1.6; white-space: pre-wrap; }
         .unsave-btn { background: #ff4d4d; color: white; border: none; padding: 6px 12px; border-radius: 6px; font-size: 14px; cursor: pointer; margin-top: 12px; float: right; }
 
-        .input-area { display: flex; align-items: flex-end; padding: 14px 18px; border-top: 1px solid #eaeaea; background: #fff; gap: 12px; max-width: 800px; width: 100%; margin: 0 auto; flex-shrink: 0; }
+        /* Input Area lifted up to avoid mobile navigation bar overlay */
+        .input-area { display: flex; align-items: flex-end; padding: 14px 18px 22px 18px; border-top: 1px solid #eaeaea; background: #fff; gap: 12px; max-width: 800px; width: 100%; margin: 0 auto; flex-shrink: 0; position: sticky; bottom: 0; z-index: 20; box-shadow: 0 -2px 10px rgba(0,0,0,0.03); }
         .text-input { flex: 1; border: 1px solid #e0e0e0; border-radius: 24px; padding: 14px 20px; font-size: 17px; outline: none; background: #f9f9f9; resize: none; max-height: 180px; overflow-y: auto; line-height: 1.5; }
         
-        .upload-btn { background: none; border: none; font-size: 26px; cursor: pointer; color: #555; padding-bottom: 10px; }
-        .upload-btn:hover { color: #1e3d2f; }
+        .upload-btn { background: none; border: none; font-size: 26px; cursor: pointer; color: #555; padding-bottom: 8px; display: flex; align-items: center; justify-content: center; width: 36px; height: 36px; border-radius: 50%; transition: 0.2s; }
+        .upload-btn:hover { background: #f0f4f1; color: #1e3d2f; }
 
         .send-btn { 
             background: #1e3d2f; border: none; border-radius: 50%; width: 48px; height: 48px; min-width: 48px; 
@@ -184,6 +193,9 @@ HTML_TEMPLATE = """
         </div>
         <ul class="sidebar-menu">
             <li onclick="startNewChat()">New Chat ➕️</li>
+            <li onclick="switchView('home')">Home 🏡</li>
+            <li onclick="switchView('saved')">Saved 📜</li>
+            <li onclick="switchView('profile')">Profile 👤</li>
             <li onclick="switchView('history')">History</li>
             <li onclick="switchView('search')">Search Chats</li>
             <li onclick="switchView('setting')">Setting</li>
@@ -208,6 +220,24 @@ HTML_TEMPLATE = """
                     </div>
                 </div>
                 <div id="chat-history"></div>
+            </div>
+        </div>
+
+        <!-- Saved View -->
+        <div id="saved-view" class="view-section">
+            <div class="view-title">Saved Chats 📜</div>
+            <div class="view-body" id="saved-container">
+                <p>No saved responses yet. Click 'Saved 📜' under any AI response to bookmark it here.</p>
+            </div>
+        </div>
+
+        <!-- Profile View -->
+        <div id="profile-view" class="view-section">
+            <div class="view-title">Profile 👤</div>
+            <div class="view-body">
+                <p><strong>Account Name:</strong> Tibyan User</p>
+                <p style="margin-top: 10px;"><strong>Manhaj:</strong> Ahlus Sunnah wal Jama'ah (Deoband & Banuri Town)</p>
+                <p style="margin-top: 10px;"><strong>Status:</strong> Active Scholar Assistant</p>
             </div>
         </div>
 
@@ -246,7 +276,7 @@ HTML_TEMPLATE = """
             <div class="view-body">
                 <p><strong>How to use Tibyan AI:</strong></p>
                 <p style="margin-top: 10px;">• Type any Islamic question in the box below or click on the suggestion chips.</p>
-                <p style="margin-top: 5px;">• Upload any scanned Fatawa or image using the paperclip 📎 icon to get insights.</p>
+                <p style="margin-top: 5px;">• Upload any scanned Fatawa or image using the '+' icon to get insights.</p>
                 <p style="margin-top: 5px;">• Every answer follows a rigorous scholarly breakdown format including Quranic verses, Hadith evidence, and scholarly references.</p>
             </div>
         </div>
@@ -260,7 +290,7 @@ HTML_TEMPLATE = """
 
     <div class="input-area">
         <input type="file" id="imageInput" accept="image/*" style="display: none;" onchange="handleImageSelect(event)">
-        <button class="upload-btn" onclick="document.getElementById('imageInput').click()" title="Upload Image">📎</button>
+        <button class="upload-btn" onclick="document.getElementById('imageInput').click()" title="Upload Image">+</button>
         <textarea id="userInput" class="text-input" rows="1" placeholder="Ask a question or upload an image..." oninput="autoExpand(this)"></textarea>
         <button class="send-btn" id="sendBtn" onclick="submitQuery()">
             <svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"></path></svg>
@@ -285,6 +315,8 @@ HTML_TEMPLATE = """
             document.getElementById(viewName + '-view').classList.add('active-view');
             if (viewName === 'history') {
                 renderHistory();
+            } else if (viewName === 'saved') {
+                renderSavedChats();
             }
             toggleSidebar();
         }
@@ -376,7 +408,6 @@ HTML_TEMPLATE = """
                 if (data.response) {
                     aiMsgBox.innerText = data.response;
                     
-                    // Save to local storage history
                     saveChatHistory(currentQuery, data.response);
 
                     const actionsDiv = document.createElement('div');
@@ -384,7 +415,14 @@ HTML_TEMPLATE = """
                     actionsDiv.innerHTML = `
                         <button class="action-btn" onclick="handleLike(this)">👍 Like</button>
                         <button class="action-btn" onclick="handleDislike(this)">👎 Dislike</button>
-                        <button class="action-btn" onclick="shareContent(\`${b16Encode(data.response)}\`)">📤 Share</button>
+                        <button class="action-btn" id="save-btn-${uniqueId}" onclick="toggleSave('${uniqueId}', \`${b16Encode(currentQuery)}\`, \`${b16Encode(data.response)}\`)">📜 Save</button>
+                        <div class="more-menu-container">
+                            <button class="action-btn" onclick="toggleMoreMenu(event, '${uniqueId}')">•••</button>
+                            <div class="more-dropdown" id="dropdown-${uniqueId}">
+                                <button onclick="copyContent(\`${b16Encode(data.response)}\`, '${uniqueId}')">📋 Copy</button>
+                                <button onclick="shareContent(\`${b16Encode(data.response)}\`, '${uniqueId}')">📤 Share</button>
+                            </div>
+                        </div>
                     `;
                     wrapperBox.appendChild(actionsDiv);
                 } else {
@@ -415,6 +453,77 @@ HTML_TEMPLATE = """
             btn.style.color = '#c62828';
             btn.style.fontWeight = 'bold';
             btn.innerText = '👎 Disliked';
+        }
+
+        function toggleMoreMenu(event, id) {
+            event.stopPropagation();
+            // Close any other open dropdowns
+            document.querySelectorAll('.more-dropdown').forEach(el => {
+                if(el.id !== `dropdown-${id}`) el.classList.remove('show');
+            });
+            const dropdown = document.getElementById(`dropdown-${id}`);
+            dropdown.classList.toggle('show');
+        }
+
+        // Close dropdown when clicking outside
+        window.onclick = function(event) {
+            if (!event.target.matches('.action-btn')) {
+                document.querySelectorAll('.more-dropdown').forEach(el => el.classList.remove('show'));
+            }
+        }
+
+        function toggleSave(id, encQuery, encAns) {
+            const queryText = b16Decode(encQuery);
+            const ansText = b16Decode(encAns);
+            let savedList = JSON.parse(localStorage.getItem('tibyan_saved') || '[]');
+            
+            const existingIndex = savedList.findIndex(item => item.query === queryText && item.answer === ansText);
+            const btn = document.getElementById(`save-btn-${id}`);
+
+            if (existingIndex > -1) {
+                savedList.splice(existingIndex, 1);
+                if(btn) {
+                    btn.classList.remove('saved-active');
+                    btn.innerHTML = '📜 Save';
+                }
+            } else {
+                savedList.push({ query: queryText, answer: ansText, date: new Date().toLocaleString() });
+                if(btn) {
+                    btn.classList.add('saved-active');
+                    btn.innerHTML = '✅ Saved';
+                }
+            }
+            localStorage.setItem('tibyan_saved', JSON.stringify(savedList));
+        }
+
+        function renderSavedChats() {
+            const container = document.getElementById('saved-container');
+            let savedList = JSON.parse(localStorage.getItem('tibyan_saved') || '[]');
+            
+            if (savedList.length === 0) {
+                container.innerHTML = `<p>No saved responses yet. Click 'Save 📜' under any AI response to bookmark it here.</p>`;
+                return;
+            }
+
+            let html = '';
+            savedList.forEach((item, index) => {
+                html += `
+                    <div class="saved-item">
+                        <div class="saved-q">Q: ${item.query}</div>
+                        <div class="saved-a">${item.answer}</div>
+                        <button class="unsave-btn" onclick="removeSaved(${index})">Delete</button>
+                        <div style="clear:both;"></div>
+                    </div>
+                `;
+            });
+            container.innerHTML = html;
+        }
+
+        function removeSaved(index) {
+            let savedList = JSON.parse(localStorage.getItem('tibyan_saved') || '[]');
+            savedList.splice(index, 1);
+            localStorage.setItem('tibyan_saved', JSON.stringify(savedList));
+            renderSavedChats();
         }
 
         function saveChatHistory(query, answer) {
@@ -478,12 +587,20 @@ HTML_TEMPLATE = """
         function clearAllData() {
             if (confirm("Are you sure you want to clear all chat data?")) {
                 localStorage.removeItem('tibyan_history');
+                localStorage.removeItem('tibyan_saved');
                 alert("All data cleared successfully.");
                 renderHistory();
             }
         }
 
-        function shareContent(encAns) {
+        function copyContent(encAns, id) {
+            const ansText = b16Decode(encAns);
+            navigator.clipboard.writeText(ansText);
+            alert('Answer copied to clipboard!');
+            document.getElementById(`dropdown-${id}`).classList.remove('show');
+        }
+
+        function shareContent(encAns, id) {
             const ansText = b16Decode(encAns);
             if (navigator.share) {
                 navigator.share({
@@ -494,6 +611,7 @@ HTML_TEMPLATE = """
                 navigator.clipboard.writeText(ansText);
                 alert('Answer copied to clipboard!');
             }
+            document.getElementById(`dropdown-${id}`).classList.remove('show');
         }
 
         function sendPrompt(text) {
