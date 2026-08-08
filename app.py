@@ -79,14 +79,16 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         .view-section.active-view { display: flex; flex-direction: column; }
 
         .chat-container { justify-content: flex-start; }
-        .welcome-section { display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; margin: auto 0; width: 100%; padding: 10px 0; }
-        .arabic-greeting { font-size: 36px; color: #1e3d2f; font-weight: bold; margin-bottom: 12px; font-family: serif; }
-        .sub-text { font-size: 16px; color: #555; margin-bottom: 25px; line-height: 1.5; padding: 0 10px; }
+        
+        /* Gemini Style Welcome Screen Matching Theme */
+        .welcome-section { display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; margin: auto 0; width: 100%; padding: 20px; background: linear-gradient(180deg, rgba(240,244,241,0.6) 0%, rgba(255,255,255,1) 100%); border-radius: 24px; border: 1px solid #e2ece4; }
+        .gemini-star-icon { font-size: 42px; margin-bottom: 15px; background: linear-gradient(135deg, #1e3d2f 0%, #4e8a6f 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .welcome-title { font-size: 34px; color: #1e3d2f; font-weight: bold; margin-bottom: 25px; line-height: 1.3; }
         
         .suggestions { width: 100%; display: flex; flex-direction: column; align-items: center; gap: 10px; max-width: 550px; margin: 0 auto; }
         .suggestions-row { display: flex; justify-content: center; gap: 10px; width: 100%; }
-        .suggestion-chip { background: #fff; border: 1px solid #e0e0e0; border-radius: 30px; padding: 12px 18px; font-size: 15px; color: #333; cursor: pointer; text-align: center; box-shadow: 0 2px 5px rgba(0,0,0,0.02); transition: 0.2s; flex: 1; }
-        .suggestion-chip:hover { border-color: #1e3d2f; background: #f9fbf9; }
+        .suggestion-chip { background: #fff; border: 1px solid #d0ded4; border-radius: 30px; padding: 12px 18px; font-size: 15px; color: #1e3d2f; cursor: pointer; text-align: center; box-shadow: 0 2px 5px rgba(30,61,47,0.03); transition: 0.2s; flex: 1; }
+        .suggestion-chip:hover { border-color: #1e3d2f; background: #f0f4f1; }
         .suggestion-center { max-width: 320px; width: 100%; }
 
         #chat-history { width: 100%; display: flex; flex-direction: column; gap: 18px; padding-bottom: 40px; }
@@ -170,8 +172,8 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         <div id="home-view" class="view-section active-view chat-container">
             <div id="chat-box" style="width: 100%;">
                 <div class="welcome-section" id="welcome-screen">
-                    <div class="arabic-greeting">بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ</div>
-                    <div class="sub-text">Authentic Islamic Knowledge backed by Deoband & Banuri Town manhaj</div>
+                    <div class="gemini-star-icon">✦</div>
+                    <div class="welcome-title" id="welcomeTitle">What's next, User?</div>
                     <div class="suggestions">
                         <div class="suggestions-row">
                             <div class="suggestion-chip" onclick="sendPrompt('What does the Quran say about patience (Sabr)?')">What does the Quran say about patience (Sabr)?</div>
@@ -283,6 +285,11 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             const dob = document.getElementById('profileDob').value;
             const profileData = { name: name, dob: dob, pic: uploadedImageBase64 };
             localStorage.setItem('tibyan_user_profile', JSON.stringify(profileData));
+            
+            // Update welcome title dynamically immediately
+            if(name.trim() !== "") {
+                document.getElementById('welcomeTitle').innerText = "What's next, " + name.trim() + "?";
+            }
             alert('Profile saved successfully! ✅');
         }
 
@@ -310,7 +317,12 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             if (saved) {
                 try {
                     const data = JSON.parse(saved);
-                    if(data.name) document.getElementById('profileName').value = data.name;
+                    if(data.name) {
+                        document.getElementById('profileName').value = data.name;
+                        if(data.name.trim() !== "") {
+                            document.getElementById('welcomeTitle').innerText = "What's next, " + data.name.trim() + "?";
+                        }
+                    }
                     if(data.dob) document.getElementById('profileDob').value = data.dob;
                     if(data.pic) {
                         uploadedImageBase64 = data.pic;
