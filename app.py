@@ -129,9 +129,8 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         .action-icon-btn { background: none; border: none; cursor: pointer; font-size: 22px; color: #1e3d2f; display: flex; align-items: center; justify-content: center; padding: 8px; transition: 0.2s; }
         .action-icon-btn:hover { opacity: 0.7; }
         
-        .send-btn { background: #1e3d2f; border: none; border-radius: 50%; width: 48px; height: 48px; min-width: 48px; display: flex; align-items: center; justify-content: center; cursor: pointer; color: white; transition: 0.2s; box-shadow: 0 2px 6px rgba(0,0,0,0.15); }
+        .send-btn { background: #1e3d2f; border: none; border-radius: 50%; width: 48px; height: 48px; min-width: 48px; display: flex; align-items: center; justify-content: center; cursor: pointer; color: white; transition: 0.2s; box-shadow: 0 2px 6px rgba(0,0,0,0.15); font-size: 26px; font-weight: bold; }
         .send-btn:hover { background: #152b21; }
-        .send-btn svg { width: 22px; height: 22px; fill: white; transform: rotate(90deg); }
 
         .image-preview-bar { display: none; align-items: center; gap: 10px; padding: 6px 12px; background: #f0f4f1; border-radius: 8px; width: fit-content; }
         .image-preview-bar img { width: 40px; height: 40px; border-radius: 6px; object-fit: cover; }
@@ -242,9 +241,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                 <input type="file" id="chatImageInput" accept="image/*" style="display:none;" onchange="handleChatImageUpload(event)">
             </label>
             <textarea id="userInput" class="text-input" rows="1" placeholder="Ask a question or upload image..." oninput="this.style.height='inherit';this.style.height=this.scrollHeight+'px';"></textarea>
-            <button class="send-btn" id="sendBtn" onclick="submitQuery()" title="Send">
-                <svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"></path></svg>
-            </button>
+            <button class="send-btn" id="sendBtn" onclick="submitQuery()" title="Send">↑</button>
         </div>
     </div>
 
