@@ -15,7 +15,7 @@ def call_groq_api(prompt_text, image_data=None):
     messages = [
         {
             "role": "system", 
-            "content": "You are Tibyan AI, a knowledgeable and respectful Muslim scholar assistant adhering to Hanafi Fiqh (Deoband/Banuri Town manhaj). Structure responses cleanly."
+            "content": "You are Tibyan AI, a knowledgeable and respectful Muslim scholar assistant adhering to Hanafi Fiqh (Deoband/Banuri Town manhaj). Use clear markdown headings with double asterisks like **Heading** for main sections."
         }
     ]
     
@@ -53,6 +53,8 @@ HTML_TEMPLATE = """<!DOCTYPE html>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Tibyan AI - Authentic Islamic Knowledge</title>
+    <!-- Include Marked.js for clean Markdown parsing -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
         body { background-color: #ffffff; color: #111; display: flex; flex-direction: column; height: 100vh; overflow: hidden; font-size: 17px; }
@@ -80,7 +82,6 @@ HTML_TEMPLATE = """<!DOCTYPE html>
 
         .chat-container { justify-content: flex-start; }
         
-        /* Gemini Style Welcome Screen Matching Theme */
         .welcome-section { display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; margin: auto 0; width: 100%; padding: 20px; background: linear-gradient(180deg, rgba(240,244,241,0.6) 0%, rgba(255,255,255,1) 100%); border-radius: 24px; border: 1px solid #e2ece4; }
         .gemini-star-icon { font-size: 42px; margin-bottom: 15px; background: linear-gradient(135deg, #1e3d2f 0%, #4e8a6f 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
         .welcome-title { font-size: 34px; color: #1e3d2f; font-weight: bold; margin-bottom: 25px; line-height: 1.3; }
@@ -93,9 +94,15 @@ HTML_TEMPLATE = """<!DOCTYPE html>
 
         #chat-history { width: 100%; display: flex; flex-direction: column; gap: 18px; padding-bottom: 40px; }
         .message-wrapper { display: flex; flex-direction: column; width: 100%; margin-bottom: 12px; position: relative; }
-        .message { padding: 16px 20px; border-radius: 14px; max-width: 85%; line-height: 1.6; font-size: 17px; white-space: pre-wrap; text-align: left; unicode-bidi: plaintext; }
-        .user-msg { background: #f0f4f1; color: #1e3d2f; align-self: flex-end; margin-left: auto; text-align: left; }
+        .message { padding: 16px 20px; border-radius: 14px; max-width: 85%; line-height: 1.6; font-size: 17px; text-align: left; unicode-bidi: plaintext; }
+        .user-msg { background: #f0f4f1; color: #1e3d2f; align-self: flex-end; margin-left: auto; text-align: left; white-space: pre-wrap; }
+        
+        /* AI Response Markdown Custom Styling for Headings & Text */
         .ai-msg { background: #ffffff; border: 1px solid #e0e0e0; color: #222; align-self: flex-start; width: 100%; max-width: 100%; }
+        .ai-msg strong, .ai-msg b { font-weight: 800; color: #1e3d2f; font-size: 18.5px; display: block; margin-top: 14px; margin-bottom: 6px; letter-spacing: 0.2px; }
+        .ai-msg p { margin-bottom: 10px; line-height: 1.7; }
+        .ai-msg ul, .ai-msg ol { padding-left: 20px; margin-bottom: 10px; }
+        .ai-msg li { margin-bottom: 6px; line-height: 1.6; }
         
         .ai-actions { display: flex; gap: 10px; margin-top: 8px; align-self: flex-start; padding-left: 4px; align-items: center; }
         .action-btn { background: #f9f9f9; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; color: #444; cursor: pointer; padding: 6px 12px; display: flex; align-items: center; gap: 5px; transition: 0.2s; }
@@ -286,7 +293,6 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             const profileData = { name: name, dob: dob, pic: uploadedImageBase64 };
             localStorage.setItem('tibyan_user_profile', JSON.stringify(profileData));
             
-            // Update welcome title dynamically immediately
             if(name.trim() !== "") {
                 document.getElementById('welcomeTitle').innerText = "What's next, " + name.trim() + "?";
             }
@@ -429,7 +435,11 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                     body: JSON.stringify({ prompt: query, image: currentImg })
                 });
                 const data = await res.json();
-                document.getElementById(uniqueId).innerText = data.response || "Error";
+                
+                // Parse markdown to clean HTML headings and bold texts without showing asterisks
+                const rawMarkdown = data.response || "Error";
+                document.getElementById(uniqueId).innerHTML = marked.parse(rawMarkdown);
+                
                 document.getElementById(uniqueActionsId).style.display = "flex";
                 window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
             } catch(e) {
