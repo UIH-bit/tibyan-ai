@@ -5,25 +5,41 @@ import requests
 app = Flask(__name__)
 api_key = os.environ.get("GROQ_API_KEY") or os.environ.get("GEMINI_API_KEY")
 
-def call_groq_api(prompt_text):
+def call_groq_api(prompt_text, image_data=None):
     url = "https://api.groq.com/openai/v1/chat/completions"
     headers = {
         'Authorization': f'Bearer {api_key}',
         'Content-Type': 'application/json'
     }
+    
+    messages = [
+        {
+            "role": "system", 
+            "content": "You are Tibyan AI, a knowledgeable and respectful Muslim scholar assistant adhering to Hanafi Fiqh (Deoband/Banuri Town manhaj). Structure responses cleanly in Urdu script or clear English as requested."
+        }
+    ]
+    
+    if image_data:
+        messages.append({
+            "role": "user",
+            "content": [
+                {"type": "text", "text": prompt_text if prompt_text else "Explain this image from an Islamic perspective."},
+                {"type": "image_url", "image_url": {"url": image_data}}
+            ]
+        })
+        model_name = "llama-3.2-11b-vision-preview"
+    else:
+        messages.append({"role": "user", "content": prompt_text})
+        model_name = "llama-3.3-70b-versatile"
+
     payload = {
-        "model": "llama-3.3-70b-versatile",
-        "messages": [
-            {
-                "role": "system", 
-                "content": "You are Tibyan AI, a knowledgeable and respectful Muslim scholar assistant adhering to Hanafi Fiqh (Deoband/Banuri Town manhaj). Structure responses cleanly."
-            },
-            {"role": "user", "content": prompt_text}
-        ],
+        "model": model_name,
+        "messages": messages,
         "temperature": 0.7
     }
+    
     try:
-        response = requests.post(url, headers=headers, json=payload, timeout=25)
+        response = requests.post(url, headers=headers, json=payload, timeout=30)
         if response.status_code == 200:
             return response.json()['choices'][0]['message']['content']
         else:
@@ -40,7 +56,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
         body { background-color: #ffffff; color: #111; display: flex; flex-direction: column; height: 100vh; overflow: hidden; font-size: 17px; }
-        header { display: flex; align-items: center; justify-content: space-between; padding: 15px 20px; border-bottom: 1px solid #eaeaea; background: #fff; z-index: 10; flex-shrink: 0; }
+        header { display: flex; align-items: center; justify-content: space-between; padding: 12px 20px; border-bottom: 1px solid #eaeaea; background: #fff; z-index: 10; flex-shrink: 0; }
         .header-left { display: flex; align-items: center; gap: 15px; }
         .menu-btn { background: none; border: none; font-size: 24px; cursor: pointer; color: #1e3d2f; }
         .logo { font-size: 22px; font-weight: bold; color: #1e3d2f; }
@@ -62,20 +78,20 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         .view-section { display: none; flex: 1; overflow-y: auto; padding: 20px; max-width: 800px; width: 100%; margin: 0 auto; scroll-behavior: smooth; }
         .view-section.active-view { display: flex; flex-direction: column; }
 
-        .chat-container { justify-content: space-between; }
-        .welcome-section { display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; margin: auto 0; width: 100%; padding: 20px 0; }
-        .arabic-greeting { font-size: 40px; color: #1e3d2f; font-weight: bold; margin-bottom: 15px; font-family: serif; }
-        .sub-text { font-size: 18px; color: #555; margin-bottom: 30px; line-height: 1.5; }
+        .chat-container { justify-content: flex-start; }
+        .welcome-section { display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; margin: auto 0; width: 100%; padding: 10px 0; }
+        .arabic-greeting { font-size: 36px; color: #1e3d2f; font-weight: bold; margin-bottom: 12px; font-family: serif; }
+        .sub-text { font-size: 16px; color: #555; margin-bottom: 25px; line-height: 1.5; padding: 0 10px; }
         
-        .suggestions { width: 100%; display: flex; flex-direction: column; align-items: center; gap: 12px; max-width: 550px; margin: 0 auto; }
-        .suggestions-row { display: flex; justify-content: center; gap: 12px; width: 100%; }
-        .suggestion-chip { background: #fff; border: 1px solid #e0e0e0; border-radius: 30px; padding: 14px 20px; font-size: 16px; color: #333; cursor: pointer; text-align: center; box-shadow: 0 2px 5px rgba(0,0,0,0.02); transition: 0.2s; flex: 1; }
+        .suggestions { width: 100%; display: flex; flex-direction: column; align-items: center; gap: 10px; max-width: 550px; margin: 0 auto; }
+        .suggestions-row { display: flex; justify-content: center; gap: 10px; width: 100%; }
+        .suggestion-chip { background: #fff; border: 1px solid #e0e0e0; border-radius: 30px; padding: 12px 18px; font-size: 15px; color: #333; cursor: pointer; text-align: center; box-shadow: 0 2px 5px rgba(0,0,0,0.02); transition: 0.2s; flex: 1; }
         .suggestion-chip:hover { border-color: #1e3d2f; background: #f9fbf9; }
         .suggestion-center { max-width: 320px; width: 100%; }
 
-        #chat-history { width: 100%; display: flex; flex-direction: column; gap: 18px; padding-bottom: 20px; }
+        #chat-history { width: 100%; display: flex; flex-direction: column; gap: 18px; padding-bottom: 10px; }
         .message-wrapper { display: flex; flex-direction: column; width: 100%; margin-bottom: 12px; position: relative; }
-        .message { padding: 16px 20px; border-radius: 14px; max-width: 85%; line-height: 1.6; font-size: 17px; white-space: pre-wrap; }
+        .message { padding: 16px 20px; border-radius: 14px; max-width: 85%; line-height: 1.6; font-size: 17px; white-space: pre-wrap; direction: rtl; text-align: right; }
         .user-msg { background: #f0f4f1; color: #1e3d2f; align-self: flex-end; margin-left: auto; }
         .ai-msg { background: #ffffff; border: 1px solid #e0e0e0; color: #222; align-self: flex-start; width: 100%; max-width: 100%; }
         
@@ -93,7 +109,6 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         .library-card { background: #fff; border: 1px solid #e0e0e0; border-radius: 10px; padding: 16px 20px; font-size: 18px; font-weight: 500; color: #1e3d2f; cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.02); transition: 0.2s; display: flex; align-items: center; justify-content: space-between; }
         .library-card:hover { background: #f0f4f1; border-color: #1e3d2f; }
 
-        /* Profile Styles */
         .profile-container { background: #fff; border: 1px solid #e0e0e0; border-radius: 12px; padding: 24px; max-width: 500px; margin: 10px auto; box-shadow: 0 2px 8px rgba(0,0,0,0.02); }
         .profile-pic-wrapper { display: flex; flex-direction: column; align-items: center; margin-bottom: 20px; }
         .profile-preview { width: 90px; height: 90px; border-radius: 50%; object-fit: cover; border: 2px solid #1e3d2f; background: #f0f4f1; display: flex; align-items: center; justify-content: center; font-size: 36px; color: #1e3d2f; margin-bottom: 10px; overflow: hidden; }
@@ -107,10 +122,19 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         .save-profile-btn { background: #1e3d2f; color: white; border: none; border-radius: 8px; padding: 12px; width: 100%; font-size: 16px; font-weight: bold; cursor: pointer; transition: 0.2s; margin-top: 10px; }
         .save-profile-btn:hover { background: #152b21; }
 
-        .input-area { display: flex; align-items: flex-end; padding: 14px 18px; border-top: 1px solid #eaeaea; background: #fff; gap: 12px; max-width: 800px; width: 100%; margin: 0 auto; flex-shrink: 0; }
-        .text-input { flex: 1; border: 1px solid #e0e0e0; border-radius: 24px; padding: 14px 20px; font-size: 17px; outline: none; background: #f9f9f9; resize: none; max-height: 180px; overflow-y: auto; line-height: 1.5; }
-        .send-btn { background: #1e3d2f; border: none; border-radius: 50%; width: 48px; height: 48px; min-width: 48px; display: flex; align-items: center; justify-content: center; cursor: pointer; color: white; position: relative; margin-bottom: 3px; }
-        .send-btn svg { width: 20px; height: 20px; fill: white; }
+        .input-area { display: flex; flex-direction: column; padding: 10px 16px; border-top: 1px solid #eaeaea; background: #fff; max-width: 800px; width: 100%; margin: 0 auto; flex-shrink: 0; gap: 8px; z-index: 20; }
+        .input-top-row { display: flex; align-items: flex-end; gap: 10px; width: 100%; }
+        .text-input { flex: 1; border: 1px solid #e0e0e0; border-radius: 24px; padding: 12px 18px; font-size: 16px; outline: none; background: #f9f9f9; resize: none; max-height: 150px; overflow-y: auto; line-height: 1.5; direction: rtl; text-align: right; }
+        
+        .action-icon-btn { background: none; border: none; cursor: pointer; font-size: 22px; color: #1e3d2f; display: flex; align-items: center; justify-content: center; padding: 8px; transition: 0.2s; }
+        .action-icon-btn:hover { opacity: 0.7; }
+        
+        .send-btn { background: #1e3d2f; border: none; border-radius: 50%; width: 46px; height: 46px; min-width: 46px; display: flex; align-items: center; justify-content: center; cursor: pointer; color: white; position: relative; margin-bottom: 2px; }
+        .send-btn svg { width: 18px; height: 18px; fill: white; }
+
+        .image-preview-bar { display: none; align-items: center; gap: 10px; padding: 6px 12px; background: #f0f4f1; border-radius: 8px; width: fit-content; }
+        .image-preview-bar img { width: 40px; height: 40px; border-radius: 6px; object-fit: cover; }
+        .remove-img-btn { background: none; border: none; color: #d9534f; font-weight: bold; cursor: pointer; font-size: 16px; }
     </style>
 </head>
 <body>
@@ -188,7 +212,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                 <div class="profile-pic-wrapper">
                     <div class="profile-preview" id="profilePicPreview">👤</div>
                     <label class="file-input-label" for="profilePicInput">Choose Profile Picture</label>
-                    <input type="file" id="profilePicInput" accept="image/*" style="display:none;" onchange="previewImage(event)">
+                    <input type="file" id="profilePicInput" accept="image/*" style="display:none;" onchange="previewProfileImage(event)">
                 </div>
                 <div class="form-group">
                     <label class="form-label">Enter Name</label>
@@ -206,14 +230,26 @@ HTML_TEMPLATE = """<!DOCTYPE html>
     </div>
 
     <div class="input-area">
-        <textarea id="userInput" class="text-input" rows="1" placeholder="Ask a question..." oninput="this.style.height='inherit';this.style.height=this.scrollHeight+'px';"></textarea>
-        <button class="send-btn" id="sendBtn" onclick="submitQuery()">
-            <svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"></path></svg>
-        </button>
+        <div class="image-preview-bar" id="imagePreviewBar">
+            <img id="thumbPreview" src="" alt="preview">
+            <span id="thumbName" style="font-size: 14px; color: #333;">Image attached</span>
+            <button class="remove-img-btn" onclick="removeAttachedImage()">×</button>
+        </div>
+        <div class="input-top-row">
+            <label class="action-icon-btn" title="Upload Image" style="margin-bottom:6px;">
+                📎
+                <input type="file" id="chatImageInput" accept="image/*" style="display:none;" onchange="handleChatImageUpload(event)">
+            </label>
+            <textarea id="userInput" class="text-input" rows="1" placeholder="Ask a question or upload image..." oninput="this.style.height='inherit';this.style.height=this.scrollHeight+'px';"></textarea>
+            <button class="send-btn" id="sendBtn" onclick="submitQuery()">
+                <svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"></path></svg>
+            </button>
+        </div>
     </div>
 
     <script>
         let uploadedImageBase64 = "";
+        let chatImageBase64 = null;
 
         function toggleSidebar() {
             document.getElementById('sidebar').classList.toggle('open');
@@ -232,7 +268,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         }
         function filterChats(q) { console.log(q); }
 
-        function previewImage(event) {
+        function previewProfileImage(event) {
             const file = event.target.files[0];
             if (file) {
                 const reader = new FileReader();
@@ -252,6 +288,25 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             alert('Profile saved successfully! ✅');
         }
 
+        function handleChatImageUpload(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    chatImageBase64 = e.target.result;
+                    document.getElementById('thumbPreview').src = chatImageBase64;
+                    document.getElementById('imagePreviewBar').style.display = 'flex';
+                }
+                reader.readAsDataURL(file);
+            }
+        }
+
+        function removeAttachedImage() {
+            chatImageBase64 = null;
+            document.getElementById('imagePreviewBar').style.display = 'none';
+            document.getElementById('chatImageInput').value = '';
+        }
+
         window.onload = function() {
             const saved = localStorage.getItem('tibyan_user_profile');
             if (saved) {
@@ -269,7 +324,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
 
         function likeMsg(id) {}
         function dislikeMsg(id) {}
-        function saveMsg(id) { alert('Response saved successfully! 📜'); }
+        function saveMsg(id) {}
         
         function copyMsg(id) {
             const text = document.getElementById(id).innerText;
@@ -308,15 +363,31 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         async function submitQuery() {
             const inputField = document.getElementById('userInput');
             const query = inputField.value.trim();
-            if(!query) return;
+            const currentImg = chatImageBase64;
+            
+            if(!query && !currentImg) return;
+
             document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active-view'));
             document.getElementById('home-view').classList.add('active-view');
             const ws = document.getElementById('welcome-screen');
             if(ws) ws.style.display = 'none';
+            
             const historyBox = document.getElementById('chat-history');
-            historyBox.innerHTML += `<div class="message-wrapper"><div class="message user-msg">${query}</div></div>`;
+            
+            let userHtml = `<div class="message-wrapper"><div class="message user-msg">`;
+            if(currentImg) {
+                userHtml += `<img src="${currentImg}" style="max-width:150px; border-radius:8px; display:block; margin-bottom:8px; margin-left:auto;">`;
+            }
+            if(query) {
+                userHtml += `<div>${query}</div>`;
+            }
+            userHtml += `</div></div>`;
+            
+            historyBox.innerHTML += userHtml;
+            
             inputField.value = '';
             inputField.style.height = 'inherit';
+            removeAttachedImage();
             
             const uniqueId = 'msg-' + Date.now();
             const uniqueActionsId = 'actions-' + Date.now();
@@ -324,7 +395,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             
             historyBox.innerHTML += `
                 <div class="message-wrapper">
-                    <div class="message ai-msg" id="${uniqueId}">Bismillah, searching...</div>
+                    <div class="message ai-msg" id="${uniqueId}">Bismillah, analyzing...</div>
                     <div class="ai-actions" id="${uniqueActionsId}" style="display:none;">
                         <button class="action-btn" onclick="likeMsg('${uniqueId}')">👍 Like</button>
                         <button class="action-btn" onclick="dislikeMsg('${uniqueId}')">👎 Dislike</button>
@@ -343,7 +414,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                 const res = await fetch('/generate', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ prompt: query })
+                    body: JSON.stringify({ prompt: query, image: currentImg })
                 });
                 const data = await res.json();
                 document.getElementById(uniqueId).innerText = data.response || "Error";
@@ -370,7 +441,8 @@ def home():
 def generate():
     data = request.json
     user_prompt = data.get('prompt', '')
-    ai_response = call_groq_api(user_prompt)
+    image_data = data.get('image', None)
+    ai_response = call_groq_api(user_prompt, image_data)
     return jsonify({'response': ai_response})
 
 if __name__ == '__main__':
