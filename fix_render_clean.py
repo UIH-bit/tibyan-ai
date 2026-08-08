@@ -1,4 +1,10 @@
-<!DOCTYPE html>
+import re
+
+# 1. Clean HTML file create karein templates folder mein
+import os
+os.makedirs('templates', exist_ok=True)
+
+html_code = """<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -155,4 +161,20 @@
         }
     </script>
 </body>
-</html>
+</html>"""
+
+with open('templates/index.html', 'w', encoding='utf-8') as f:
+    f.write(html_code)
+
+# 2. app.py ko clean karke render_template('index.html') use karne ke liye fix karein
+with open('app.py', 'r', encoding='utf-8') as f:
+    app_code = f.read()
+
+# Render template string ko normal render_template mein badalna
+app_code = app_code.replace('render_template_string(HTML_TEMPLATE)', "render_template('index.html')")
+app_code = re.sub(r'HTML_TEMPLATE\s*=.*?(?=\n[a-zA-Z@_]|\Z)', '', app_code, flags=re.DOTALL)
+
+with open('app.py', 'w', encoding='utf-8') as f:
+    f.write(app_code)
+
+print("SUCCESS: Clean template setup completed!")
