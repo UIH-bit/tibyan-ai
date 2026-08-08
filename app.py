@@ -15,7 +15,7 @@ def call_groq_api(prompt_text, image_data=None):
     messages = [
         {
             "role": "system", 
-            "content": "You are Tibyan AI, a knowledgeable and respectful Muslim scholar assistant adhering to Hanafi Fiqh (Deoband/Banuri Town manhaj). Structure responses cleanly in Urdu script or clear English as requested."
+            "content": "You are Tibyan AI, a knowledgeable and respectful Muslim scholar assistant adhering to Hanafi Fiqh (Deoband/Banuri Town manhaj). Structure responses cleanly."
         }
     ]
     
@@ -89,9 +89,9 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         .suggestion-chip:hover { border-color: #1e3d2f; background: #f9fbf9; }
         .suggestion-center { max-width: 320px; width: 100%; }
 
-        #chat-history { width: 100%; display: flex; flex-direction: column; gap: 18px; padding-bottom: 10px; }
+        #chat-history { width: 100%; display: flex; flex-direction: column; gap: 18px; padding-bottom: 20px; }
         .message-wrapper { display: flex; flex-direction: column; width: 100%; margin-bottom: 12px; position: relative; }
-        .message { padding: 16px 20px; border-radius: 14px; max-width: 85%; line-height: 1.6; font-size: 17px; white-space: pre-wrap; direction: rtl; text-align: right; }
+        .message { padding: 16px 20px; border-radius: 14px; max-width: 85%; line-height: 1.6; font-size: 17px; white-space: pre-wrap; }
         .user-msg { background: #f0f4f1; color: #1e3d2f; align-self: flex-end; margin-left: auto; }
         .ai-msg { background: #ffffff; border: 1px solid #e0e0e0; color: #222; align-self: flex-start; width: 100%; max-width: 100%; }
         
@@ -122,9 +122,9 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         .save-profile-btn { background: #1e3d2f; color: white; border: none; border-radius: 8px; padding: 12px; width: 100%; font-size: 16px; font-weight: bold; cursor: pointer; transition: 0.2s; margin-top: 10px; }
         .save-profile-btn:hover { background: #152b21; }
 
-        .input-area { display: flex; flex-direction: column; padding: 10px 16px; border-top: 1px solid #eaeaea; background: #fff; max-width: 800px; width: 100%; margin: 0 auto; flex-shrink: 0; gap: 8px; z-index: 20; }
+        .input-area { display: flex; flex-direction: column; padding: 10px 16px 16px 16px; border-top: 1px solid #eaeaea; background: #fff; max-width: 800px; width: 100%; margin: 0 auto; flex-shrink: 0; gap: 8px; z-index: 20; }
         .input-top-row { display: flex; align-items: flex-end; gap: 10px; width: 100%; }
-        .text-input { flex: 1; border: 1px solid #e0e0e0; border-radius: 24px; padding: 12px 18px; font-size: 16px; outline: none; background: #f9f9f9; resize: none; max-height: 150px; overflow-y: auto; line-height: 1.5; direction: rtl; text-align: right; }
+        .text-input { flex: 1; border: 1px solid #e0e0e0; border-radius: 24px; padding: 12px 18px; font-size: 16px; outline: none; background: #f9f9f9; resize: none; max-height: 150px; overflow-y: auto; line-height: 1.5; }
         
         .action-icon-btn { background: none; border: none; cursor: pointer; font-size: 22px; color: #1e3d2f; display: flex; align-items: center; justify-content: center; padding: 8px; transition: 0.2s; }
         .action-icon-btn:hover { opacity: 0.7; }
@@ -374,9 +374,9 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             
             const historyBox = document.getElementById('chat-history');
             
-            let userHtml = `<div class="message-wrapper"><div class="message user-msg">`;
+            let userHtml = `<div class="message-wrapper"><div class="message user-msg" dir="auto">`;
             if(currentImg) {
-                userHtml += `<img src="${currentImg}" style="max-width:150px; border-radius:8px; display:block; margin-bottom:8px; margin-left:auto;">`;
+                userHtml += `<img src="${currentImg}" style="max-width:150px; border-radius:8px; display:block; margin-bottom:8px;">`;
             }
             if(query) {
                 userHtml += `<div>${query}</div>`;
@@ -395,7 +395,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             
             historyBox.innerHTML += `
                 <div class="message-wrapper">
-                    <div class="message ai-msg" id="${uniqueId}">Bismillah, analyzing...</div>
+                    <div class="message ai-msg" id="${uniqueId}" dir="auto">Bismillah, analyzing...</div>
                     <div class="ai-actions" id="${uniqueActionsId}" style="display:none;">
                         <button class="action-btn" onclick="likeMsg('${uniqueId}')">👍 Like</button>
                         <button class="action-btn" onclick="dislikeMsg('${uniqueId}')">👎 Dislike</button>
