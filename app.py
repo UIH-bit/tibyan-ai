@@ -68,9 +68,15 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         .close-sidebar { background: none; border: none; font-size: 20px; cursor: pointer; color: #555; }
         .sidebar-search-box { padding: 12px 16px; border-bottom: 1px solid #eaeaea; }
         .sidebar-search { width: 100%; padding: 10px 14px; border: 1px solid #ddd; border-radius: 8px; font-size: 15px; outline: none; background: #f9f9f9; }
-        .sidebar-menu { list-style: none; padding: 10px 0; overflow-y: auto; flex: 1; }
+        
+        .sidebar-menu { list-style: none; padding: 10px 0; overflow-y: auto; flex: 1; border-bottom: 1px solid #eaeaea; }
         .sidebar-menu li { padding: 14px 20px; font-size: 17px; color: #333; cursor: pointer; display: flex; align-items: center; gap: 14px; transition: 0.2s; border-bottom: 1px solid #f7f7f7; }
         .sidebar-menu li:hover { background: #f0f4f1; color: #1e3d2f; font-weight: 500; }
+
+        .chat-history-section { padding: 15px; overflow-y: auto; flex: 1; max-height: 45vh; }
+        .history-title { font-size: 13px; text-transform: uppercase; color: #777; font-weight: bold; margin-bottom: 10px; letter-spacing: 0.5px; }
+        .history-item { padding: 10px 12px; font-size: 15px; color: #333; background: #f9f9f9; border-radius: 8px; margin-bottom: 8px; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; border: 1px solid #eee; transition: 0.2s; }
+        .history-item:hover { background: #f0f4f1; border-color: #d0ded4; color: #1e3d2f; }
         
         .overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.4); display: none; z-index: 90; }
         .overlay.active { display: block; }
@@ -83,8 +89,8 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         
         .welcome-section { display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; margin: auto 0; width: 100%; padding: 25px 20px; background: linear-gradient(180deg, rgba(240,244,241,0.6) 0%, rgba(255,255,255,1) 100%); border-radius: 24px; border: 1px solid #e2ece4; }
         
-        /* Custom Tibyan Arabic Logo Styling */
-        .tibyan-logo-img { width: 75px; height: 75px; object-fit: contain; margin-bottom: 12px; }
+        /* Logo styling with background blend match */
+        .tibyan-logo-img { width: 75px; height: 75px; object-fit: contain; margin-bottom: 12px; mix-blend-mode: multiply; }
         
         .welcome-title { font-size: 32px; color: #1e3d2f; font-weight: bold; margin-bottom: 25px; line-height: 1.3; }
         
@@ -174,6 +180,13 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             <li onclick="switchView('profile')">👤 Profile</li>
             <li onclick="switchView('about')">❕️ About</li>
         </ul>
+
+        <div class="chat-history-section">
+            <div class="history-title">Recent Chats</div>
+            <div id="sidebarHistoryList">
+                <div style="font-size: 14px; color: #888;">No past chats yet.</div>
+            </div>
+        </div>
     </div>
 
     <div class="main-content">
@@ -258,6 +271,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
     <script>
         let uploadedImageBase64 = "";
         let chatImageBase64 = null;
+        let currentChatId = 'chat_' + Date.now();
 
         function toggleSidebar() {
             document.getElementById('sidebar').classList.toggle('open');
@@ -269,12 +283,54 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             toggleSidebar();
         }
         function startNewChat() {
+            currentChatId = 'chat_' + Date.now();
             document.getElementById('chat-history').innerHTML = '';
             const ws = document.getElementById('welcome-screen');
             if(ws) ws.style.display = 'flex';
             switchView('home');
         }
-        function filterChats(q) { console.log(q); }
+
+        function saveChatToHistory(title, historyHtml) {
+            let chats = JSON.parse(localStorage.getItem('tibyan_past_chats') || '{}');
+            chats[currentChatId] = { title: title, html: historyHtml, time: Date.now() };
+            localStorage.setItem('tibyan_past_chats', JSON.stringify(chats));
+            loadSidebarHistory();
+        }
+
+        function loadSidebarHistory(filterQuery = '') {
+            const listContainer = document.getElementById('sidebarHistoryList');
+            let chats = JSON.parse(localStorage.getItem('tibyan_past_chats') || '{}');
+            let keys = Object.keys(chats).sort((a,b) => chats[b].time - chats[a].time);
+            
+            if(keys.length === 0) {
+                listContainer.innerHTML = '<div style="font-size: 14px; color: #888;">No past chats yet.</div>';
+                return;
+            }
+
+            let html = '';
+            keys.forEach(k => {
+                let chat = chats[k];
+                if(!filterQuery || chat.title.toLowerCase().includes(filterQuery.toLowerCase())) {
+                    html += `<div class="history-item" onclick="loadSpecificChat('${k}')">${chat.title}</div>`;
+                }
+            });
+            listContainer.innerHTML = html || '<div style="font-size: 14px; color: #888;">No matching chats.</div>';
+        }
+
+        function loadSpecificChat(chatId) {
+            let chats = JSON.parse(localStorage.getItem('tibyan_past_chats') || '{}');
+            if(chats[chatId]) {
+                currentChatId = chatId;
+                document.getElementById('chat-history').innerHTML = chats[chatId].html;
+                const ws = document.getElementById('welcome-screen');
+                if(ws) ws.style.display = 'none';
+                switchView('home');
+            }
+        }
+
+        function filterChats(q) {
+            loadSidebarHistory(q);
+        }
 
         function previewProfileImage(event) {
             const file = event.target.files[0];
@@ -337,6 +393,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                     }
                 } catch(e) {}
             }
+            loadSidebarHistory();
         };
 
         function likeMsg(id) {}
@@ -442,6 +499,8 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                 
                 document.getElementById(uniqueActionsId).style.display = "flex";
                 window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+
+                saveChatToHistory(query.substring(0, 30) || "Image Query", historyBox.innerHTML);
             } catch(e) {
                 document.getElementById(uniqueId).innerText = "Network error.";
                 document.getElementById(uniqueActionsId).style.display = "flex";
