@@ -67,20 +67,27 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         .arabic-greeting { font-size: 40px; color: #1e3d2f; font-weight: bold; margin-bottom: 15px; font-family: serif; }
         .sub-text { font-size: 18px; color: #555; margin-bottom: 30px; line-height: 1.5; }
         
-        .suggestions { width: 100%; display: flex; flex-direction: column; align-items: center; gap: 14px; max-width: 550px; margin: 0 auto; }
-        .suggestions-row { display: flex; justify-content: center; gap: 14px; width: 100%; }
+        .suggestions { width: 100%; display: flex; flex-direction: column; align-items: center; gap: 12px; max-width: 550px; margin: 0 auto; }
+        .suggestions-row { display: flex; justify-content: center; gap: 12px; width: 100%; }
         .suggestion-chip { background: #fff; border: 1px solid #e0e0e0; border-radius: 30px; padding: 14px 20px; font-size: 16px; color: #333; cursor: pointer; text-align: center; box-shadow: 0 2px 5px rgba(0,0,0,0.02); transition: 0.2s; flex: 1; }
         .suggestion-chip:hover { border-color: #1e3d2f; background: #f9fbf9; }
+        .suggestion-center { max-width: 320px; width: 100%; }
 
         #chat-history { width: 100%; display: flex; flex-direction: column; gap: 18px; padding-bottom: 20px; }
-        .message-wrapper { display: flex; flex-direction: column; width: 100%; margin-bottom: 12px; }
+        .message-wrapper { display: flex; flex-direction: column; width: 100%; margin-bottom: 12px; position: relative; }
         .message { padding: 16px 20px; border-radius: 14px; max-width: 85%; line-height: 1.6; font-size: 17px; white-space: pre-wrap; }
         .user-msg { background: #f0f4f1; color: #1e3d2f; align-self: flex-end; margin-left: auto; }
         .ai-msg { background: #ffffff; border: 1px solid #e0e0e0; color: #222; align-self: flex-start; width: 100%; max-width: 100%; }
         
-        .ai-actions { display: flex; gap: 10px; margin-top: 8px; align-self: flex-start; padding-left: 4px; }
+        .ai-actions { display: flex; gap: 10px; margin-top: 8px; align-self: flex-start; padding-left: 4px; align-items: center; }
         .action-btn { background: #f9f9f9; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; color: #444; cursor: pointer; padding: 6px 12px; display: flex; align-items: center; gap: 5px; transition: 0.2s; }
         .action-btn:hover { background: #f0f4f1; color: #1e3d2f; border-color: #1e3d2f; }
+        
+        .dropdown-container { position: relative; display: inline-block; }
+        .dropdown-menu { display: none; position: absolute; bottom: 100%; left: 0; background: #fff; border: 1px solid #ddd; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 50; min-width: 120px; overflow: hidden; margin-bottom: 5px; }
+        .dropdown-menu.show { display: block; }
+        .dropdown-item { padding: 10px 16px; font-size: 14px; color: #333; cursor: pointer; display: block; text-align: left; transition: 0.2s; }
+        .dropdown-item:hover { background: #f0f4f1; color: #1e3d2f; }
 
         .library-grid { display: grid; grid-template-columns: 1fr; gap: 12px; padding-bottom: 20px; }
         .library-card { background: #fff; border: 1px solid #e0e0e0; border-radius: 10px; padding: 16px 20px; font-size: 18px; font-weight: 500; color: #1e3d2f; cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.02); transition: 0.2s; display: flex; align-items: center; justify-content: space-between; }
@@ -131,6 +138,9 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                         <div class="suggestions-row">
                             <div class="suggestion-chip" onclick="sendPrompt('What does the Quran say about patience (Sabr)?')">What does the Quran say about patience (Sabr)?</div>
                             <div class="suggestion-chip" onclick="sendPrompt('Roza kaise toot jata hai')">Roza kaise toot jata hai</div>
+                        </div>
+                        <div class="suggestions-row">
+                            <div class="suggestion-chip suggestion-center" onclick="sendPrompt('Hanafi fiqh ke mutabiq namaz ka tareeqa')">Hanafi fiqh ke mutabiq namaz ka tareeqa</div>
                         </div>
                     </div>
                 </div>
@@ -186,14 +196,42 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         }
         function filterChats(q) { console.log(q); }
 
-        function likeMsg(id) { alert('Thank you for your feedback! 👍'); }
-        function dislikeMsg(id) { alert('Feedback recorded. 👎'); }
+        function likeMsg(id) { /* silent feedback */ }
+        function dislikeMsg(id) { /* silent feedback */ }
         function saveMsg(id) { alert('Response saved successfully! 📜'); }
+        
         function copyMsg(id) {
             const text = document.getElementById(id).innerText;
-            navigator.clipboard.writeText(text).then(() => {
-                alert('Copied to clipboard! 📋');
-            });
+            navigator.clipboard.writeText(text);
+            closeAllDropdowns();
+        }
+
+        function shareMsg(id) {
+            const text = document.getElementById(id).innerText;
+            if (navigator.share) {
+                navigator.share({ title: 'Tibyan AI Response', text: text }).catch(() => {});
+            } else {
+                copyMsg(id);
+            }
+            closeAllDropdowns();
+        }
+
+        function toggleDropdown(menuId, event) {
+            event.stopPropagation();
+            const menu = document.getElementById(menuId);
+            const isOpen = menu.classList.contains('show');
+            closeAllDropdowns();
+            if (!isOpen) {
+                menu.classList.add('show');
+            }
+        }
+
+        function closeAllDropdowns() {
+            document.querySelectorAll('.dropdown-menu').forEach(m => m.classList.remove('show'));
+        }
+
+        window.onclick = function() {
+            closeAllDropdowns();
         }
 
         async function submitQuery() {
@@ -211,6 +249,8 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             
             const uniqueId = 'msg-' + Date.now();
             const uniqueActionsId = 'actions-' + Date.now();
+            const menuId = 'menu-' + Date.now();
+            
             historyBox.innerHTML += `
                 <div class="message-wrapper">
                     <div class="message ai-msg" id="${uniqueId}">Bismillah, searching...</div>
@@ -218,7 +258,13 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                         <button class="action-btn" onclick="likeMsg('${uniqueId}')">👍 Like</button>
                         <button class="action-btn" onclick="dislikeMsg('${uniqueId}')">👎 Dislike</button>
                         <button class="action-btn" onclick="saveMsg('${uniqueId}')">📜 Save</button>
-                        <button class="action-btn" onclick="copyMsg('${uniqueId}')">📋 Copy</button>
+                        <div class="dropdown-container">
+                            <button class="action-btn" onclick="toggleDropdown('${menuId}', event)">•••</button>
+                            <div class="dropdown-menu" id="${menuId}">
+                                <div class="dropdown-item" onclick="copyMsg('${uniqueId}')">📋 Copy</div>
+                                <div class="dropdown-item" onclick="shareMsg('${uniqueId}')">🔗 Share</div>
+                            </div>
+                        </div>
                     </div>
                 </div>`;
             
