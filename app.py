@@ -53,27 +53,33 @@ HTML_TEMPLATE = """<!DOCTYPE html>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Tibyan AI - Authentic Islamic Knowledge</title>
-    <!-- Include Marked.js for clean Markdown parsing -->
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
         body { background-color: #ffffff; color: #111; display: flex; flex-direction: column; height: 100vh; overflow: hidden; font-size: 17px; }
-        header { display: flex; align-items: center; justify-content: space-between; padding: 12px 20px; border-bottom: 1px solid #eaeaea; background: #fff; z-index: 10; flex-shrink: 0; }
+        
+        header { display: flex; align-items: center; justify-content: space-between; padding: 12px 20px; border-bottom: 1px solid #eaeaea; background: #fff; z-index: 1000; flex-shrink: 0; position: relative; }
         .header-left { display: flex; align-items: center; gap: 15px; }
-        .menu-btn { background: none; border: none; font-size: 24px; cursor: pointer; color: #1e3d2f; }
+        .menu-btn { background: none; border: none; font-size: 26px; cursor: pointer; color: #1e3d2f; z-index: 1001; padding: 4px 8px; }
         .logo { font-size: 22px; font-weight: bold; color: #1e3d2f; }
         
-        .sidebar { position: fixed; top: 0; left: -280px; width: 280px; height: 100%; background: #fff; box-shadow: 2px 0 10px rgba(0,0,0,0.1); transition: 0.3s ease; z-index: 100; display: flex; flex-direction: column; }
+        .sidebar { position: fixed; top: 0; left: -280px; width: 280px; height: 100%; background: #fff; box-shadow: 2px 0 10px rgba(0,0,0,0.1); transition: 0.3s ease; z-index: 9999; display: flex; flex-direction: column; }
         .sidebar.open { left: 0; }
         .sidebar-header { padding: 20px; font-size: 20px; font-weight: bold; color: #1e3d2f; border-bottom: 1px solid #eaeaea; display: flex; justify-content: space-between; align-items: center; }
         .close-sidebar { background: none; border: none; font-size: 20px; cursor: pointer; color: #555; }
         .sidebar-search-box { padding: 12px 16px; border-bottom: 1px solid #eaeaea; }
         .sidebar-search { width: 100%; padding: 10px 14px; border: 1px solid #ddd; border-radius: 8px; font-size: 15px; outline: none; background: #f9f9f9; }
-        .sidebar-menu { list-style: none; padding: 10px 0; overflow-y: auto; flex: 1; }
+        
+        .sidebar-menu { list-style: none; padding: 10px 0; overflow-y: auto; flex: 1; border-bottom: 1px solid #eaeaea; }
         .sidebar-menu li { padding: 14px 20px; font-size: 17px; color: #333; cursor: pointer; display: flex; align-items: center; gap: 14px; transition: 0.2s; border-bottom: 1px solid #f7f7f7; }
         .sidebar-menu li:hover { background: #f0f4f1; color: #1e3d2f; font-weight: 500; }
+
+        .chat-history-section { padding: 15px; overflow-y: auto; flex: 1; max-height: 45vh; }
+        .history-title { font-size: 13px; text-transform: uppercase; color: #777; font-weight: bold; margin-bottom: 10px; letter-spacing: 0.5px; }
+        .history-item { padding: 10px 12px; font-size: 15px; color: #333; background: #f9f9f9; border-radius: 8px; margin-bottom: 8px; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; border: 1px solid #eee; transition: 0.2s; }
+        .history-item:hover { background: #f0f4f1; border-color: #d0ded4; color: #1e3d2f; }
         
-        .overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.4); display: none; z-index: 90; }
+        .overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.4); display: none; z-index: 998; }
         .overlay.active { display: block; }
 
         .main-content { flex: 1; display: flex; flex-direction: column; overflow: hidden; position: relative; }
@@ -82,9 +88,10 @@ HTML_TEMPLATE = """<!DOCTYPE html>
 
         .chat-container { justify-content: flex-start; }
         
-        .welcome-section { display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; margin: auto 0; width: 100%; padding: 20px; background: linear-gradient(180deg, rgba(240,244,241,0.6) 0%, rgba(255,255,255,1) 100%); border-radius: 24px; border: 1px solid #e2ece4; }
-        .gemini-star-icon { font-size: 42px; margin-bottom: 15px; background: linear-gradient(135deg, #1e3d2f 0%, #4e8a6f 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-        .welcome-title { font-size: 34px; color: #1e3d2f; font-weight: bold; margin-bottom: 25px; line-height: 1.3; }
+        .welcome-section { display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; margin: auto 0; width: 100%; padding: 25px 20px; background: linear-gradient(180deg, rgba(240,244,241,0.6) 0%, rgba(255,255,255,1) 100%); border-radius: 24px; border: 1px solid #e2ece4; }
+        
+        .tibyan-logo-img { width: 75px; height: 75px; object-fit: contain; margin-bottom: 12px; mix-blend-mode: multiply; }
+        .welcome-title { font-size: 32px; color: #1e3d2f; font-weight: bold; margin-bottom: 25px; line-height: 1.3; }
         
         .suggestions { width: 100%; display: flex; flex-direction: column; align-items: center; gap: 10px; max-width: 550px; margin: 0 auto; }
         .suggestions-row { display: flex; justify-content: center; gap: 10px; width: 100%; }
@@ -97,9 +104,8 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         .message { padding: 16px 20px; border-radius: 14px; max-width: 85%; line-height: 1.6; font-size: 17px; text-align: left; unicode-bidi: plaintext; }
         .user-msg { background: #f0f4f1; color: #1e3d2f; align-self: flex-end; margin-left: auto; text-align: left; white-space: pre-wrap; }
         
-        /* AI Response Markdown Custom Styling for Headings & Text */
         .ai-msg { background: #ffffff; border: 1px solid #e0e0e0; color: #222; align-self: flex-start; width: 100%; max-width: 100%; }
-        .ai-msg strong, .ai-msg b { font-weight: 800; color: #1e3d2f; font-size: 18.5px; display: block; margin-top: 14px; margin-bottom: 6px; letter-spacing: 0.2px; }
+        .ai-msg strong, .ai-msg b { font-weight: 800; color: #1e3d2f; font-size: 19px; display: block; margin-top: 16px; margin-bottom: 8px; letter-spacing: 0.3px; border-left: 3px solid #1e3d2f; padding-left: 8px; }
         .ai-msg p { margin-bottom: 10px; line-height: 1.7; }
         .ai-msg ul, .ai-msg ol { padding-left: 20px; margin-bottom: 10px; }
         .ai-msg li { margin-bottom: 6px; line-height: 1.6; }
@@ -173,13 +179,20 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             <li onclick="switchView('profile')">👤 Profile</li>
             <li onclick="switchView('about')">❕️ About</li>
         </ul>
+
+        <div class="chat-history-section">
+            <div class="history-title">Recent Chats</div>
+            <div id="sidebarHistoryList">
+                <div style="font-size: 14px; color: #888;">No past chats yet.</div>
+            </div>
+        </div>
     </div>
 
     <div class="main-content">
         <div id="home-view" class="view-section active-view chat-container">
             <div id="chat-box" style="width: 100%;">
                 <div class="welcome-section" id="welcome-screen">
-                    <div class="gemini-star-icon">✦</div>
+                    <img src="/logo.png" class="tibyan-logo-img" alt="Tibyan Logo" onerror="this.onerror=null; this.src='https://raw.githubusercontent.com/UIH-bit/tibyan-ai/main/logo.png';">
                     <div class="welcome-title" id="welcomeTitle">What's next, User?</div>
                     <div class="suggestions">
                         <div class="suggestions-row">
@@ -249,7 +262,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                 📎
                 <input type="file" id="chatImageInput" accept="image/*" style="display:none;" onchange="handleChatImageUpload(event)">
             </label>
-            <textarea id="userInput" class="text-input" rows="1" placeholder="Ask a question or upload image..." oninput="this.style.height='inherit';this.style.height=this.scrollHeight+'px';"></textarea>
+            <textarea id="userInput" class="text-input" rows="1" placeholder="Ask Tibyan..." oninput="this.style.height='inherit';this.style.height=this.scrollHeight+'px';"></textarea>
             <button class="send-btn" id="sendBtn" onclick="submitQuery()" title="Send">↑</button>
         </div>
     </div>
@@ -257,6 +270,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
     <script>
         let uploadedImageBase64 = "";
         let chatImageBase64 = null;
+        let currentChatId = 'chat_' + Date.now();
 
         function toggleSidebar() {
             document.getElementById('sidebar').classList.toggle('open');
@@ -268,12 +282,54 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             toggleSidebar();
         }
         function startNewChat() {
+            currentChatId = 'chat_' + Date.now();
             document.getElementById('chat-history').innerHTML = '';
             const ws = document.getElementById('welcome-screen');
             if(ws) ws.style.display = 'flex';
             switchView('home');
         }
-        function filterChats(q) { console.log(q); }
+
+        function saveChatToHistory(title, historyHtml) {
+            let chats = JSON.parse(localStorage.getItem('tibyan_past_chats') || '{}');
+            chats[currentChatId] = { title: title, html: historyHtml, time: Date.now() };
+            localStorage.setItem('tibyan_past_chats', JSON.stringify(chats));
+            loadSidebarHistory();
+        }
+
+        function loadSidebarHistory(filterQuery = '') {
+            const listContainer = document.getElementById('sidebarHistoryList');
+            let chats = JSON.parse(localStorage.getItem('tibyan_past_chats') || '{}');
+            let keys = Object.keys(chats).sort((a,b) => chats[b].time - chats[a].time);
+            
+            if(keys.length === 0) {
+                listContainer.innerHTML = '<div style="font-size: 14px; color: #888;">No past chats yet.</div>';
+                return;
+            }
+
+            let html = '';
+            keys.forEach(k => {
+                let chat = chats[k];
+                if(!filterQuery || chat.title.toLowerCase().includes(filterQuery.toLowerCase())) {
+                    html += `<div class="history-item" onclick="loadSpecificChat('${k}')">${chat.title}</div>`;
+                }
+            });
+            listContainer.innerHTML = html || '<div style="font-size: 14px; color: #888;">No matching chats.</div>';
+        }
+
+        function loadSpecificChat(chatId) {
+            let chats = JSON.parse(localStorage.getItem('tibyan_past_chats') || '{}');
+            if(chats[chatId]) {
+                currentChatId = chatId;
+                document.getElementById('chat-history').innerHTML = chats[chatId].html;
+                const ws = document.getElementById('welcome-screen');
+                if(ws) ws.style.display = 'none';
+                switchView('home');
+            }
+        }
+
+        function filterChats(q) {
+            loadSidebarHistory(q);
+        }
 
         function previewProfileImage(event) {
             const file = event.target.files[0];
@@ -336,6 +392,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                     }
                 } catch(e) {}
             }
+            loadSidebarHistory();
         };
 
         function likeMsg(id) {}
@@ -407,7 +464,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             
             const uniqueId = 'msg-' + Date.now();
             const uniqueActionsId = 'actions-' + Date.now();
-            const menuId = 'menu-' + Date.now();
+            const logoMenuId = 'menu-' + Date.now();
             
             historyBox.innerHTML += `
                 <div class="message-wrapper">
@@ -417,8 +474,8 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                         <button class="action-btn" onclick="dislikeMsg('${uniqueId}')">👎 Dislike</button>
                         <button class="action-btn" onclick="saveMsg('${uniqueId}')">📜 Save</button>
                         <div class="dropdown-container">
-                            <button class="action-btn" onclick="toggleDropdown('${menuId}', event)">•••</button>
-                            <div class="dropdown-menu" id="${menuId}">
+                            <button class="action-btn" onclick="toggleDropdown('${logoMenuId}', event)">•••</button>
+                            <div class="dropdown-menu" id="${logoMenuId}">
                                 <div class="dropdown-item" onclick="copyMsg('${uniqueId}')">📋 Copy</div>
                                 <div class="dropdown-item" onclick="shareMsg('${uniqueId}')">🔗 Share</div>
                             </div>
@@ -436,12 +493,13 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                 });
                 const data = await res.json();
                 
-                // Parse markdown to clean HTML headings and bold texts without showing asterisks
                 const rawMarkdown = data.response || "Error";
                 document.getElementById(uniqueId).innerHTML = marked.parse(rawMarkdown);
                 
                 document.getElementById(uniqueActionsId).style.display = "flex";
                 window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+
+                saveChatToHistory(query.substring(0, 30) || "Image Query", historyBox.innerHTML);
             } catch(e) {
                 document.getElementById(uniqueId).innerText = "Network error.";
                 document.getElementById(uniqueActionsId).style.display = "flex";
@@ -459,6 +517,13 @@ HTML_TEMPLATE = """<!DOCTYPE html>
 @app.route('/')
 def home():
     return render_template_string(HTML_TEMPLATE)
+
+@app.route('/logo.png')
+def serve_logo():
+    if os.path.exists('logo.png'):
+        from flask import send_file
+        return send_file('logo.png', mimetype='image/png')
+    return "", 404
 
 @app.route('/generate', methods=['POST'])
 def generate():
