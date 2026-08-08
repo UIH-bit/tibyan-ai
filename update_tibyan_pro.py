@@ -1,4 +1,7 @@
+import os
 
+# 1. Update templates/index.html with Search Sorting, Professional Profile & Help/Support
+index_html = """
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -170,3 +173,10 @@
     </script>
 </body>
 </html>
+"""
+
+os.makedirs('templates', exist_ok=True)
+with open('templates/index.html', 'w', encoding='utf-8') as f:
+    f.write(index_html)
+
+print("SUCCESS: Templates updated with profile management, search-to-top sorting, and email support!")
