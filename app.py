@@ -122,7 +122,8 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         .save-profile-btn { background: #1e3d2f; color: white; border: none; border-radius: 8px; padding: 12px; width: 100%; font-size: 16px; font-weight: bold; cursor: pointer; transition: 0.2s; margin-top: 10px; }
         .save-profile-btn:hover { background: #152b21; }
 
-        .input-area { display: flex; flex-direction: column; padding: 10px 16px 20px 16px; border-top: 1px solid #eaeaea; background: #fff; max-width: 800px; width: 100%; margin: 0 auto; flex-shrink: 0; gap: 8px; z-index: 20; }
+        .input-area { display: flex; flex-direction: column; padding: 10px 16px 20px 16px; border-top: 1px solid #eaeaea; background: #fff; max-width: 800px; width: 100%; margin: 0 auto; flex-shrink: 0; gap: 8px; z-index: 20;position: relative; bottom: 55px;
+ }
         .input-top-row { display: flex; align-items: flex-end; gap: 10px; width: 100%; }
         .text-input { flex: 1; border: 1px solid #e0e0e0; border-radius: 24px; padding: 12px 18px; font-size: 16px; outline: none; background: #f9f9f9; resize: none; max-height: 150px; overflow-y: auto; line-height: 1.5; direction: rtl; text-align: right; }
         
