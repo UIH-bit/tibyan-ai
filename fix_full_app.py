@@ -1,4 +1,6 @@
 import os
+
+app_code = '''import os
 import re
 from flask import Flask, request, jsonify, render_template_string
 
@@ -232,3 +234,9 @@ def home():
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
+'''
+
+with open('app.py', 'w', encoding='utf-8') as f:
+    f.write(app_code)
+
+print("SUCCESS: Full app restored!")
