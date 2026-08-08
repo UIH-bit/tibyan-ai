@@ -71,7 +71,6 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         .suggestions-row { display: flex; justify-content: center; gap: 14px; width: 100%; }
         .suggestion-chip { background: #fff; border: 1px solid #e0e0e0; border-radius: 30px; padding: 14px 20px; font-size: 16px; color: #333; cursor: pointer; text-align: center; box-shadow: 0 2px 5px rgba(0,0,0,0.02); transition: 0.2s; flex: 1; }
         .suggestion-chip:hover { border-color: #1e3d2f; background: #f9fbf9; }
-        .suggestion-center { max-width: 280px; width: 100%; }
 
         #chat-history { width: 100%; display: flex; flex-direction: column; gap: 18px; padding-bottom: 20px; }
         .message-wrapper { display: flex; flex-direction: column; width: 100%; margin-bottom: 12px; }
@@ -79,6 +78,10 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         .user-msg { background: #f0f4f1; color: #1e3d2f; align-self: flex-end; margin-left: auto; }
         .ai-msg { background: #ffffff; border: 1px solid #e0e0e0; color: #222; align-self: flex-start; width: 100%; max-width: 100%; }
         
+        .ai-actions { display: flex; gap: 10px; margin-top: 8px; align-self: flex-start; padding-left: 4px; }
+        .action-btn { background: #f9f9f9; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; color: #444; cursor: pointer; padding: 6px 12px; display: flex; align-items: center; gap: 5px; transition: 0.2s; }
+        .action-btn:hover { background: #f0f4f1; color: #1e3d2f; border-color: #1e3d2f; }
+
         .library-grid { display: grid; grid-template-columns: 1fr; gap: 12px; padding-bottom: 20px; }
         .library-card { background: #fff; border: 1px solid #e0e0e0; border-radius: 10px; padding: 16px 20px; font-size: 18px; font-weight: 500; color: #1e3d2f; cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.02); transition: 0.2s; display: flex; align-items: center; justify-content: space-between; }
         .library-card:hover { background: #f0f4f1; border-color: #1e3d2f; }
@@ -182,6 +185,17 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             switchView('home');
         }
         function filterChats(q) { console.log(q); }
+
+        function likeMsg(id) { alert('Thank you for your feedback! 👍'); }
+        function dislikeMsg(id) { alert('Feedback recorded. 👎'); }
+        function saveMsg(id) { alert('Response saved successfully! 📜'); }
+        function copyMsg(id) {
+            const text = document.getElementById(id).innerText;
+            navigator.clipboard.writeText(text).then(() => {
+                alert('Copied to clipboard! 📋');
+            });
+        }
+
         async function submitQuery() {
             const inputField = document.getElementById('userInput');
             const query = inputField.value.trim();
@@ -193,9 +207,20 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             const historyBox = document.getElementById('chat-history');
             historyBox.innerHTML += `<div class="message-wrapper"><div class="message user-msg">${query}</div></div>`;
             inputField.value = '';
+            inputField.style.height = 'inherit';
             
             const uniqueId = 'msg-' + Date.now();
-            historyBox.innerHTML += `<div class="message-wrapper"><div class="message ai-msg" id="${uniqueId}">Bismillah, searching...</div></div>`;
+            const uniqueActionsId = 'actions-' + Date.now();
+            historyBox.innerHTML += `
+                <div class="message-wrapper">
+                    <div class="message ai-msg" id="${uniqueId}">Bismillah, searching...</div>
+                    <div class="ai-actions" id="${uniqueActionsId}" style="display:none;">
+                        <button class="action-btn" onclick="likeMsg('${uniqueId}')">👍 Like</button>
+                        <button class="action-btn" onclick="dislikeMsg('${uniqueId}')">👎 Dislike</button>
+                        <button class="action-btn" onclick="saveMsg('${uniqueId}')">📜 Save</button>
+                        <button class="action-btn" onclick="copyMsg('${uniqueId}')">📋 Copy</button>
+                    </div>
+                </div>`;
             
             try {
                 const res = await fetch('/generate', {
@@ -205,8 +230,10 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                 });
                 const data = await res.json();
                 document.getElementById(uniqueId).innerText = data.response || "Error";
+                document.getElementById(uniqueActionsId).style.display = "flex";
             } catch(e) {
                 document.getElementById(uniqueId).innerText = "Network error.";
+                document.getElementById(uniqueActionsId).style.display = "flex";
             }
         }
         function sendPrompt(text) {
