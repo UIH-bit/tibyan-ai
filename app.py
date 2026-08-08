@@ -75,7 +75,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         .overlay.active { display: block; }
 
         .main-content { flex: 1; display: flex; flex-direction: column; overflow: hidden; position: relative; }
-        .view-section { display: none; flex: 1; overflow-y: auto; padding: 20px 20px 80px 20px; max-width: 800px; width: 100%; margin: 0 auto; scroll-behavior: smooth; }
+        .view-section { display: none; flex: 1; overflow-y: auto; padding: 20px 20px 100px 20px; max-width: 800px; width: 100%; margin: 0 auto; scroll-behavior: smooth; }
         .view-section.active-view { display: flex; flex-direction: column; }
 
         .chat-container { justify-content: flex-start; }
@@ -91,8 +91,8 @@ HTML_TEMPLATE = """<!DOCTYPE html>
 
         #chat-history { width: 100%; display: flex; flex-direction: column; gap: 18px; padding-bottom: 40px; }
         .message-wrapper { display: flex; flex-direction: column; width: 100%; margin-bottom: 12px; position: relative; }
-        .message { padding: 16px 20px; border-radius: 14px; max-width: 85%; line-height: 1.6; font-size: 17px; white-space: pre-wrap; direction: rtl; text-align: right; }
-        .user-msg { background: #f0f4f1; color: #1e3d2f; align-self: flex-end; margin-left: auto; }
+        .message { padding: 16px 20px; border-radius: 14px; max-width: 85%; line-height: 1.6; font-size: 17px; white-space: pre-wrap; text-align: left; unicode-bidi: plaintext; }
+        .user-msg { background: #f0f4f1; color: #1e3d2f; align-self: flex-end; margin-left: auto; text-align: left; }
         .ai-msg { background: #ffffff; border: 1px solid #e0e0e0; color: #222; align-self: flex-start; width: 100%; max-width: 100%; }
         
         .ai-actions { display: flex; gap: 10px; margin-top: 8px; align-self: flex-start; padding-left: 4px; align-items: center; }
@@ -122,16 +122,16 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         .save-profile-btn { background: #1e3d2f; color: white; border: none; border-radius: 8px; padding: 12px; width: 100%; font-size: 16px; font-weight: bold; cursor: pointer; transition: 0.2s; margin-top: 10px; }
         .save-profile-btn:hover { background: #152b21; }
 
-        .input-area { display: flex; flex-direction: column; padding: 10px 16px 20px 16px; border-top: 1px solid #eaeaea; background: #fff; max-width: 800px; width: 100%; margin: 0 auto; flex-shrink: 0; gap: 8px; z-index: 20;position: relative; bottom: 55px;
- }
-        .input-top-row { display: flex; align-items: flex-end; gap: 10px; width: 100%; }
-        .text-input { flex: 1; border: 1px solid #e0e0e0; border-radius: 24px; padding: 12px 18px; font-size: 16px; outline: none; background: #f9f9f9; resize: none; max-height: 150px; overflow-y: auto; line-height: 1.5; direction: rtl; text-align: right; }
+        .input-area { display: flex; flex-direction: column; padding: 10px 16px calc(20px + env(safe-area-inset-bottom, 25px)) 16px; border-top: 1px solid #eaeaea; background: #fff; max-width: 800px; width: 100%; margin: 0 auto; flex-shrink: 0; gap: 8px; z-index: 20; position: relative; bottom: 45px; box-shadow: 0 -4px 10px rgba(0,0,0,0.03); }
+        .input-top-row { display: flex; align-items: center; gap: 10px; width: 100%; }
+        .text-input { flex: 1; border: 1px solid #e0e0e0; border-radius: 24px; padding: 12px 18px; font-size: 16px; outline: none; background: #f9f9f9; resize: none; max-height: 150px; overflow-y: auto; line-height: 1.5; text-align: left; unicode-bidi: plaintext; }
         
         .action-icon-btn { background: none; border: none; cursor: pointer; font-size: 22px; color: #1e3d2f; display: flex; align-items: center; justify-content: center; padding: 8px; transition: 0.2s; }
         .action-icon-btn:hover { opacity: 0.7; }
         
-        .send-btn { background: #1e3d2f; border: none; border-radius: 50%; width: 46px; height: 46px; min-width: 46px; display: flex; align-items: center; justify-content: center; cursor: pointer; color: white; position: relative; margin-bottom: 2px; }
-        .send-btn svg { width: 18px; height: 18px; fill: white; }
+        .send-btn { background: #1e3d2f; border: none; border-radius: 50%; width: 48px; height: 48px; min-width: 48px; display: flex; align-items: center; justify-content: center; cursor: pointer; color: white; transition: 0.2s; box-shadow: 0 2px 6px rgba(0,0,0,0.15); }
+        .send-btn:hover { background: #152b21; }
+        .send-btn svg { width: 22px; height: 22px; fill: white; transform: rotate(90deg); }
 
         .image-preview-bar { display: none; align-items: center; gap: 10px; padding: 6px 12px; background: #f0f4f1; border-radius: 8px; width: fit-content; }
         .image-preview-bar img { width: 40px; height: 40px; border-radius: 6px; object-fit: cover; }
@@ -237,12 +237,12 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             <button class="remove-img-btn" onclick="removeAttachedImage()">×</button>
         </div>
         <div class="input-top-row">
-            <label class="action-icon-btn" title="Upload Image" style="margin-bottom:6px;">
+            <label class="action-icon-btn" title="Upload Image">
                 📎
                 <input type="file" id="chatImageInput" accept="image/*" style="display:none;" onchange="handleChatImageUpload(event)">
             </label>
             <textarea id="userInput" class="text-input" rows="1" placeholder="Ask a question or upload image..." oninput="this.style.height='inherit';this.style.height=this.scrollHeight+'px';"></textarea>
-            <button class="send-btn" id="sendBtn" onclick="submitQuery()">
+            <button class="send-btn" id="sendBtn" onclick="submitQuery()" title="Send">
                 <svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"></path></svg>
             </button>
         </div>
@@ -377,7 +377,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             
             let userHtml = `<div class="message-wrapper"><div class="message user-msg">`;
             if(currentImg) {
-                userHtml += `<img src="${currentImg}" style="max-width:150px; border-radius:8px; display:block; margin-bottom:8px; margin-left:auto;">`;
+                userHtml += `<img src="${currentImg}" style="max-width:150px; border-radius:8px; display:block; margin-bottom:8px;">`;
             }
             if(query) {
                 userHtml += `<div>${query}</div>`;
