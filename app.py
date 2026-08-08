@@ -93,6 +93,20 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         .library-card { background: #fff; border: 1px solid #e0e0e0; border-radius: 10px; padding: 16px 20px; font-size: 18px; font-weight: 500; color: #1e3d2f; cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.02); transition: 0.2s; display: flex; align-items: center; justify-content: space-between; }
         .library-card:hover { background: #f0f4f1; border-color: #1e3d2f; }
 
+        /* Profile Styles */
+        .profile-container { background: #fff; border: 1px solid #e0e0e0; border-radius: 12px; padding: 24px; max-width: 500px; margin: 10px auto; box-shadow: 0 2px 8px rgba(0,0,0,0.02); }
+        .profile-pic-wrapper { display: flex; flex-direction: column; align-items: center; margin-bottom: 20px; }
+        .profile-preview { width: 90px; height: 90px; border-radius: 50%; object-fit: cover; border: 2px solid #1e3d2f; background: #f0f4f1; display: flex; align-items: center; justify-content: center; font-size: 36px; color: #1e3d2f; margin-bottom: 10px; overflow: hidden; }
+        .profile-preview img { width: 100%; height: 100%; object-fit: cover; }
+        .file-input-label { background: #f0f4f1; color: #1e3d2f; padding: 8px 16px; border-radius: 20px; font-size: 14px; cursor: pointer; font-weight: 500; border: 1px solid #d0ded4; transition: 0.2s; }
+        .file-input-label:hover { background: #e2ece4; }
+        .form-group { margin-bottom: 16px; }
+        .form-label { display: block; font-size: 15px; font-weight: 500; color: #333; margin-bottom: 6px; }
+        .form-control { width: 100%; padding: 12px 16px; border: 1px solid #ddd; border-radius: 8px; font-size: 16px; outline: none; background: #f9f9f9; }
+        .form-control:focus { border-color: #1e3d2f; background: #fff; }
+        .save-profile-btn { background: #1e3d2f; color: white; border: none; border-radius: 8px; padding: 12px; width: 100%; font-size: 16px; font-weight: bold; cursor: pointer; transition: 0.2s; margin-top: 10px; }
+        .save-profile-btn:hover { background: #152b21; }
+
         .input-area { display: flex; align-items: flex-end; padding: 14px 18px; border-top: 1px solid #eaeaea; background: #fff; gap: 12px; max-width: 800px; width: 100%; margin: 0 auto; flex-shrink: 0; }
         .text-input { flex: 1; border: 1px solid #e0e0e0; border-radius: 24px; padding: 14px 20px; font-size: 17px; outline: none; background: #f9f9f9; resize: none; max-height: 180px; overflow-y: auto; line-height: 1.5; }
         .send-btn { background: #1e3d2f; border: none; border-radius: 50%; width: 48px; height: 48px; min-width: 48px; display: flex; align-items: center; justify-content: center; cursor: pointer; color: white; position: relative; margin-bottom: 3px; }
@@ -167,7 +181,27 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         </div>
 
         <div id="saved-view" class="view-section"><div style="font-size:28px; color:#1e3d2f; margin-bottom:20px; font-weight:bold;">Saved Chats 📜</div><p>No saved responses yet.</p></div>
-        <div id="profile-view" class="view-section"><div style="font-size:28px; color:#1e3d2f; margin-bottom:20px; font-weight:bold;">Profile 👤</div><p>Active Developer Mode</p></div>
+        
+        <div id="profile-view" class="view-section">
+            <div style="font-size:28px; color:#1e3d2f; margin-bottom:15px; font-weight:bold;">Profile 👤</div>
+            <div class="profile-container">
+                <div class="profile-pic-wrapper">
+                    <div class="profile-preview" id="profilePicPreview">👤</div>
+                    <label class="file-input-label" for="profilePicInput">Choose Profile Picture</label>
+                    <input type="file" id="profilePicInput" accept="image/*" style="display:none;" onchange="previewImage(event)">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Enter Name</label>
+                    <input type="text" id="profileName" class="form-control" placeholder="Aapka naam...">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Date of Birth (D.O.B)</label>
+                    <input type="date" id="profileDob" class="form-control">
+                </div>
+                <button class="save-profile-btn" onclick="saveProfileData()">Save Profile</button>
+            </div>
+        </div>
+
         <div id="about-view" class="view-section"><div style="font-size:28px; color:#1e3d2f; margin-bottom:20px; font-weight:bold;">About ❕️</div><p>Tibyan AI authentic scholar assistant.</p></div>
     </div>
 
@@ -179,6 +213,8 @@ HTML_TEMPLATE = """<!DOCTYPE html>
     </div>
 
     <script>
+        let uploadedImageBase64 = "";
+
         function toggleSidebar() {
             document.getElementById('sidebar').classList.toggle('open');
             document.getElementById('overlay').classList.toggle('active');
@@ -196,8 +232,43 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         }
         function filterChats(q) { console.log(q); }
 
-        function likeMsg(id) { /* silent feedback */ }
-        function dislikeMsg(id) { /* silent feedback */ }
+        function previewImage(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    uploadedImageBase64 = e.target.result;
+                    document.getElementById('profilePicPreview').innerHTML = `<img src="${uploadedImageBase64}" alt="Profile">`;
+                }
+                reader.readAsDataURL(file);
+            }
+        }
+
+        function saveProfileData() {
+            const name = document.getElementById('profileName').value;
+            const dob = document.getElementById('profileDob').value;
+            const profileData = { name: name, dob: dob, pic: uploadedImageBase64 };
+            localStorage.setItem('tibyan_user_profile', JSON.stringify(profileData));
+            alert('Profile saved successfully! ✅');
+        }
+
+        window.onload = function() {
+            const saved = localStorage.getItem('tibyan_user_profile');
+            if (saved) {
+                try {
+                    const data = JSON.parse(saved);
+                    if(data.name) document.getElementById('profileName').value = data.name;
+                    if(data.dob) document.getElementById('profileDob').value = data.dob;
+                    if(data.pic) {
+                        uploadedImageBase64 = data.pic;
+                        document.getElementById('profilePicPreview').innerHTML = `<img src="${uploadedImageBase64}" alt="Profile">`;
+                    }
+                } catch(e) {}
+            }
+        };
+
+        function likeMsg(id) {}
+        function dislikeMsg(id) {}
         function saveMsg(id) { alert('Response saved successfully! 📜'); }
         
         function copyMsg(id) {
