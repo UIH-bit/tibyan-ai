@@ -53,7 +53,6 @@ HTML_TEMPLATE = """<!DOCTYPE html>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Tibyan AI - Authentic Islamic Knowledge</title>
-    <!-- Include Marked.js for clean Markdown parsing -->
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
@@ -82,9 +81,12 @@ HTML_TEMPLATE = """<!DOCTYPE html>
 
         .chat-container { justify-content: flex-start; }
         
-        .welcome-section { display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; margin: auto 0; width: 100%; padding: 20px; background: linear-gradient(180deg, rgba(240,244,241,0.6) 0%, rgba(255,255,255,1) 100%); border-radius: 24px; border: 1px solid #e2ece4; }
-        .gemini-star-icon { font-size: 42px; margin-bottom: 15px; background: linear-gradient(135deg, #1e3d2f 0%, #4e8a6f 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-        .welcome-title { font-size: 34px; color: #1e3d2f; font-weight: bold; margin-bottom: 25px; line-height: 1.3; }
+        .welcome-section { display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; margin: auto 0; width: 100%; padding: 25px 20px; background: linear-gradient(180deg, rgba(240,244,241,0.6) 0%, rgba(255,255,255,1) 100%); border-radius: 24px; border: 1px solid #e2ece4; }
+        
+        /* Custom Tibyan Arabic Logo Styling */
+        .tibyan-logo-img { width: 75px; height: 75px; object-fit: contain; margin-bottom: 12px; }
+        
+        .welcome-title { font-size: 32px; color: #1e3d2f; font-weight: bold; margin-bottom: 25px; line-height: 1.3; }
         
         .suggestions { width: 100%; display: flex; flex-direction: column; align-items: center; gap: 10px; max-width: 550px; margin: 0 auto; }
         .suggestions-row { display: flex; justify-content: center; gap: 10px; width: 100%; }
@@ -97,9 +99,8 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         .message { padding: 16px 20px; border-radius: 14px; max-width: 85%; line-height: 1.6; font-size: 17px; text-align: left; unicode-bidi: plaintext; }
         .user-msg { background: #f0f4f1; color: #1e3d2f; align-self: flex-end; margin-left: auto; text-align: left; white-space: pre-wrap; }
         
-        /* AI Response Markdown Custom Styling for Headings & Text */
         .ai-msg { background: #ffffff; border: 1px solid #e0e0e0; color: #222; align-self: flex-start; width: 100%; max-width: 100%; }
-        .ai-msg strong, .ai-msg b { font-weight: 800; color: #1e3d2f; font-size: 18.5px; display: block; margin-top: 14px; margin-bottom: 6px; letter-spacing: 0.2px; }
+        .ai-msg strong, .ai-msg b { font-weight: 800; color: #1e3d2f; font-size: 19px; display: block; margin-top: 16px; margin-bottom: 8px; letter-spacing: 0.3px; border-left: 3px solid #1e3d2f; padding-left: 8px; }
         .ai-msg p { margin-bottom: 10px; line-height: 1.7; }
         .ai-msg ul, .ai-msg ol { padding-left: 20px; margin-bottom: 10px; }
         .ai-msg li { margin-bottom: 6px; line-height: 1.6; }
@@ -179,7 +180,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         <div id="home-view" class="view-section active-view chat-container">
             <div id="chat-box" style="width: 100%;">
                 <div class="welcome-section" id="welcome-screen">
-                    <div class="gemini-star-icon">✦</div>
+                    <img src="/logo.png" class="tibyan-logo-img" alt="Tibyan Logo" onerror="this.onerror=null; this.src='https://raw.githubusercontent.com/UIH-bit/tibyan-ai/main/logo.png';">
                     <div class="welcome-title" id="welcomeTitle">What's next, User?</div>
                     <div class="suggestions">
                         <div class="suggestions-row">
@@ -249,7 +250,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                 📎
                 <input type="file" id="chatImageInput" accept="image/*" style="display:none;" onchange="handleChatImageUpload(event)">
             </label>
-            <textarea id="userInput" class="text-input" rows="1" placeholder="Ask a question or upload image..." oninput="this.style.height='inherit';this.style.height=this.scrollHeight+'px';"></textarea>
+            <textarea id="userInput" class="text-input" rows="1" placeholder="Ask Tibyan..." oninput="this.style.height='inherit';this.style.height=this.scrollHeight+'px';"></textarea>
             <button class="send-btn" id="sendBtn" onclick="submitQuery()" title="Send">↑</button>
         </div>
     </div>
@@ -407,7 +408,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             
             const uniqueId = 'msg-' + Date.now();
             const uniqueActionsId = 'actions-' + Date.now();
-            const menuId = 'menu-' + Date.now();
+            const logoMenuId = 'menu-' + Date.now();
             
             historyBox.innerHTML += `
                 <div class="message-wrapper">
@@ -417,8 +418,8 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                         <button class="action-btn" onclick="dislikeMsg('${uniqueId}')">👎 Dislike</button>
                         <button class="action-btn" onclick="saveMsg('${uniqueId}')">📜 Save</button>
                         <div class="dropdown-container">
-                            <button class="action-btn" onclick="toggleDropdown('${menuId}', event)">•••</button>
-                            <div class="dropdown-menu" id="${menuId}">
+                            <button class="action-btn" onclick="toggleDropdown('${logoMenuId}', event)">•••</button>
+                            <div class="dropdown-menu" id="${logoMenuId}">
                                 <div class="dropdown-item" onclick="copyMsg('${uniqueId}')">📋 Copy</div>
                                 <div class="dropdown-item" onclick="shareMsg('${uniqueId}')">🔗 Share</div>
                             </div>
@@ -436,7 +437,6 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                 });
                 const data = await res.json();
                 
-                // Parse markdown to clean HTML headings and bold texts without showing asterisks
                 const rawMarkdown = data.response || "Error";
                 document.getElementById(uniqueId).innerHTML = marked.parse(rawMarkdown);
                 
@@ -459,6 +459,13 @@ HTML_TEMPLATE = """<!DOCTYPE html>
 @app.route('/')
 def home():
     return render_template_string(HTML_TEMPLATE)
+
+@app.route('/logo.png')
+def serve_logo():
+    if os.path.exists('logo.png'):
+        from flask import send_file
+        return send_file('logo.png', mimetype='image/png')
+    return "", 404
 
 @app.route('/generate', methods=['POST'])
 def generate():
