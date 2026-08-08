@@ -90,7 +90,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         
         .welcome-section { display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; margin: auto 0; width: 100%; padding: 25px 20px; background: linear-gradient(180deg, rgba(240,244,241,0.6) 0%, rgba(255,255,255,1) 100%); border-radius: 24px; border: 1px solid #e2ece4; }
         
-        .tibyan-logo-icon { width: 75px; height: 75px; display: flex; align-items: center; justify-content: center; border-radius: 50%; border: 1px solid #d0ded4; margin-bottom: 10px; background: #f0f4f1; overflow: hidden; padding: 10px; }
+        .tibyan-logo-icon { width: 75px; height: 75px; display: flex; align-items: center; justify-content: center; margin-bottom: 10px; background: transparent; overflow: hidden; padding: 0; }
         .tibyan-logo-icon img { width: 100%; height: 100%; object-fit: contain; }
         
         .welcome-title { font-size: 32px; color: #1e3d2f; font-weight: bold; margin-bottom: 25px; line-height: 1.3; }
