@@ -286,6 +286,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         let uploadedImageBase64 = "";
         let chatImageBase64 = null;
         let currentChatId = 'chat_' + Date.now();
+        let currentChatTitle = "";
 
         function toggleSidebar() {
             document.getElementById('sidebar').classList.toggle('open');
@@ -298,15 +299,19 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         }
         function startNewChat() {
             currentChatId = 'chat_' + Date.now();
+            currentChatTitle = "";
             document.getElementById('chat-history').innerHTML = '';
             const ws = document.getElementById('welcome-screen');
             if(ws) ws.style.display = 'flex';
             switchView('home');
         }
 
-        function saveChatToHistory(title, historyHtml) {
+        function saveCurrentChat(title, historyHtml) {
             let chats = JSON.parse(localStorage.getItem('tibyan_past_chats') || '{}');
-            chats[currentChatId] = { title: title, html: historyHtml, time: Date.now() };
+            if(!currentChatTitle) {
+                currentChatTitle = title;
+            }
+            chats[currentChatId] = { title: currentChatTitle, html: historyHtml, time: Date.now() };
             localStorage.setItem('tibyan_past_chats', JSON.stringify(chats));
             loadSidebarHistory();
         }
@@ -383,7 +388,6 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                     navigator.share({ title: 'Tibyan Chat', text: chatText }).catch(()=>{});
                 } else {
                     navigator.clipboard.writeText(chatText);
-                    alert('Chat title copied to clipboard!');
                 }
             }
             closeAllContextMenus();
@@ -393,6 +397,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             let chats = JSON.parse(localStorage.getItem('tibyan_past_chats') || '{}');
             if(chats[chatId]) {
                 currentChatId = chatId;
+                currentChatTitle = chats[chatId].title;
                 document.getElementById('chat-history').innerHTML = chats[chatId].html;
                 const ws = document.getElementById('welcome-screen');
                 if(ws) ws.style.display = 'none';
@@ -406,12 +411,10 @@ HTML_TEMPLATE = """<!DOCTYPE html>
 
         function likeMsg(btn, id) {
             btn.classList.toggle('active');
-            alert('Response liked! 👍');
         }
 
         function dislikeMsg(btn, id) {
             btn.classList.toggle('active');
-            alert('Response feedback recorded. 👎');
         }
 
         function saveMsg(id) {
@@ -420,7 +423,6 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             savedList.push({ id: id, html: content, time: Date.now() });
             localStorage.setItem('tibyan_saved_messages', JSON.stringify(savedList));
             loadSavedMessagesView();
-            alert('Response saved successfully! 📜');
         }
 
         function loadSavedMessagesView() {
@@ -443,7 +445,6 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         function copyMsg(id) {
             const text = document.getElementById(id).innerText;
             navigator.clipboard.writeText(text);
-            alert('Copied to clipboard!');
             closeAllDropdowns();
         }
 
@@ -542,7 +543,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                 document.getElementById(uniqueActionsId).style.display = "flex";
                 window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
 
-                saveChatToHistory(query.substring(0, 30) || "Image Query", historyBox.innerHTML);
+                saveCurrentChat(query.substring(0, 30) || "Image Query", historyBox.innerHTML);
             } catch(e) {
                 document.getElementById(uniqueId).innerText = "Network error.";
                 document.getElementById(uniqueActionsId).style.display = "flex";
@@ -596,7 +597,6 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             if(name.trim() !== "") {
                 document.getElementById('welcomeTitle').innerText = "What's next, " + name.trim() + "?";
             }
-            alert('Profile saved successfully! ✅');
         }
 
         function handleChatImageUpload(event) {
