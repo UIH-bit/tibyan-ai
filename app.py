@@ -58,7 +58,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
         body { background-color: #ffffff; color: #111; display: flex; flex-direction: column; height: 100vh; overflow: hidden; font-size: 17px; }
         
-        header { display: flex; align-items: center; justify-content: space-between; padding: 12px 20px; border-bottom: 1px solid #eaeaea; background: #fff; z-index: 1000; flex-shrink: 0; position: relative; }
+        header { display: flex; align-items: center; justify-content: space-between; padding: 12px 20px; border-bottom: 1px solid #eaeaea; background: #fff; z-index: 1000; flex-shrink: 0; position: fixed; top: 0; left: 0; width: 100%; }
         .header-left { display: flex; align-items: center; gap: 15px; }
         .menu-btn { background: none; border: none; font-size: 26px; cursor: pointer; color: #1e3d2f; z-index: 1001; padding: 4px 8px; }
         .logo-img { height: 35px; width: auto; display: block; mix-blend-mode: multiply; }
@@ -77,11 +77,9 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         .chat-history-section { padding: 15px; overflow-y: auto; flex: 1; max-height: 45vh; }
         .history-title { font-size: 13px; text-transform: uppercase; color: #777; font-weight: bold; margin-bottom: 10px; letter-spacing: 0.5px; }
         
-        /* Chat items bold styling & relative positioning for long-press popup */
         .history-item { padding: 10px 12px; font-size: 15px; font-weight: 600; color: #222; background: #f9f9f9; border-radius: 8px; margin-bottom: 8px; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; border: 1px solid #eee; transition: 0.2s; position: relative; user-select: none; }
         .history-item:hover { background: #f0f4f1; border-color: #d0ded4; color: #1e3d2f; }
         
-        /* Chat Context Menu (Delete / Share) */
         .chat-context-menu { display: none; position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: #fff; border: 1px solid #ddd; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 100; overflow: hidden; }
         .chat-context-menu.show { display: flex; gap: 5px; padding: 4px; }
         .ctx-btn { background: #f0f4f1; border: none; border-radius: 4px; padding: 6px 10px; font-size: 13px; font-weight: bold; color: #1e3d2f; cursor: pointer; }
@@ -91,7 +89,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         .overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.4); display: none; z-index: 998; }
         .overlay.active { display: block; }
 
-        .main-content { flex: 1; display: flex; flex-direction: column; overflow: hidden; position: relative; }
+        .main-content { flex: 1; display: flex; flex-direction: column; overflow: hidden; position: relative; margin-top: 60px; }
         .view-section { display: none; flex: 1; overflow-y: auto; padding: 20px 20px 100px 20px; max-width: 800px; width: 100%; margin: 0 auto; scroll-behavior: smooth; }
         .view-section.active-view { display: flex; flex-direction: column; }
 
@@ -124,6 +122,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         .ai-actions { display: flex; gap: 10px; margin-top: 8px; align-self: flex-start; padding-left: 4px; align-items: center; }
         .action-btn { background: #f9f9f9; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; color: #444; cursor: pointer; padding: 6px 12px; display: flex; align-items: center; gap: 5px; transition: 0.2s; }
         .action-btn:hover { background: #f0f4f1; color: #1e3d2f; border-color: #1e3d2f; }
+        .action-btn.active { background: #f0f4f1; color: #1e3d2f; border-color: #1e3d2f; font-weight: bold; }
         
         .dropdown-container { position: relative; display: inline-block; }
         .dropdown-menu { display: none; position: absolute; bottom: 100%; left: 0; background: #fff; border: 1px solid #ddd; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 50; min-width: 120px; overflow: hidden; margin-bottom: 5px; }
@@ -239,7 +238,10 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             </div>
         </div>
 
-        <div id="saved-view" class="view-section"><div style="font-size:28px; color:#1e3d2f; margin-bottom:20px; font-weight:bold;">Saved Chats 📜</div><p>No saved responses yet.</p></div>
+        <div id="saved-view" class="view-section">
+            <div style="font-size:28px; color:#1e3d2f; margin-bottom:20px; font-weight:bold;">Saved Chats 📜</div>
+            <div id="saved-chats-list"><p style="color: #666; font-size: 15px;">No saved responses yet.</p></div>
+        </div>
         
         <div id="profile-view" class="view-section">
             <div style="font-size:28px; color:#1e3d2f; margin-bottom:15px; font-weight:bold;">Profile 👤</div>
@@ -341,7 +343,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             pressTimer = setTimeout(() => {
                 e.preventDefault();
                 openChatContext(chatId, e);
-            }, 600); // 600ms long press
+            }, 600);
         }
         function handleTouchEnd() {
             clearTimeout(pressTimer);
@@ -402,77 +404,46 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             loadSidebarHistory(q);
         }
 
-        function previewProfileImage(event) {
-            const file = event.target.files[0];
-            if (file) {
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    uploadedImageBase64 = e.target.result;
-                    document.getElementById('profilePicPreview').innerHTML = `<img src="${uploadedImageBase64}" alt="Profile">`;
-                }
-                reader.readAsDataURL(file);
-            }
+        function likeMsg(btn, id) {
+            btn.classList.toggle('active');
+            alert('Response liked! 👍');
         }
 
-        function saveProfileData() {
-            const name = document.getElementById('profileName').value;
-            const dob = document.getElementById('profileDob').value;
-            const profileData = { name: name, dob: dob, pic: uploadedImageBase64 };
-            localStorage.setItem('tibyan_user_profile', JSON.stringify(profileData));
-            
-            if(name.trim() !== "") {
-                document.getElementById('welcomeTitle').innerText = "What's next, " + name.trim() + "?";
-            }
-            alert('Profile saved successfully! ✅');
+        function dislikeMsg(btn, id) {
+            btn.classList.toggle('active');
+            alert('Response feedback recorded. 👎');
         }
 
-        function handleChatImageUpload(event) {
-            const file = event.target.files[0];
-            if (file) {
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    chatImageBase64 = e.target.result;
-                    document.getElementById('thumbPreview').src = chatImageBase64;
-                    document.getElementById('imagePreviewBar').style.display = 'flex';
-                }
-                reader.readAsDataURL(file);
-            }
+        function saveMsg(id) {
+            const content = document.getElementById(id).innerHTML;
+            let savedList = JSON.parse(localStorage.getItem('tibyan_saved_messages') || '[]');
+            savedList.push({ id: id, html: content, time: Date.now() });
+            localStorage.setItem('tibyan_saved_messages', JSON.stringify(savedList));
+            loadSavedMessagesView();
+            alert('Response saved successfully! 📜');
         }
 
-        function removeAttachedImage() {
-            chatImageBase64 = null;
-            document.getElementById('imagePreviewBar').style.display = 'none';
-            document.getElementById('chatImageInput').value = '';
-        }
-
-        window.onload = function() {
-            const saved = localStorage.getItem('tibyan_user_profile');
-            if (saved) {
-                try {
-                    const data = JSON.parse(saved);
-                    if(data.name) {
-                        document.getElementById('profileName').value = data.name;
-                        if(data.name.trim() !== "") {
-                            document.getElementById('welcomeTitle').innerText = "What's next, " + data.name.trim() + "?";
-                        }
-                    }
-                    if(data.dob) document.getElementById('profileDob').value = data.dob;
-                    if(data.pic) {
-                        uploadedImageBase64 = data.pic;
-                        document.getElementById('profilePicPreview').innerHTML = `<img src="${uploadedImageBase64}" alt="Profile">`;
-                    }
-                } catch(e) {}
+        function loadSavedMessagesView() {
+            let savedList = JSON.parse(localStorage.getItem('tibyan_saved_messages') || '[]');
+            const container = document.getElementById('saved-chats-list');
+            if(savedList.length === 0) {
+                container.innerHTML = '<p style="color: #666; font-size: 15px;">No saved responses yet.</p>';
+                return;
             }
-            loadSidebarHistory();
-        };
-
-        function likeMsg(id) {}
-        function dislikeMsg(id) {}
-        function saveMsg(id) {}
+            let html = '';
+            savedList.forEach((item, index) => {
+                html += `<div style="background:#fff; border:1px solid #e0e0e0; border-radius:10px; padding:15px; margin-bottom:12px;">
+                    <div style="font-size:14px; color:#888; margin-bottom:8px;">Saved Response #${index + 1}</div>
+                    <div style="font-size:16px; color:#222; line-height:1.6;">${item.html}</div>
+                </div>`;
+            });
+            container.innerHTML = html;
+        }
         
         function copyMsg(id) {
             const text = document.getElementById(id).innerText;
             navigator.clipboard.writeText(text);
+            alert('Copied to clipboard!');
             closeAllDropdowns();
         }
 
@@ -542,8 +513,8 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                 <div class="message-wrapper">
                     <div class="message ai-msg" id="${uniqueId}">Bismillah, analyzing...</div>
                     <div class="ai-actions" id="${uniqueActionsId}" style="display:none;">
-                        <button class="action-btn" onclick="likeMsg('${uniqueId}')">👍 Like</button>
-                        <button class="action-btn" onclick="dislikeMsg('${uniqueId}')">👎 Dislike</button>
+                        <button class="action-btn" onclick="likeMsg(this, '${uniqueId}')">👍 Like</button>
+                        <button class="action-btn" onclick="dislikeMsg(this, '${uniqueId}')">👎 Dislike</button>
                         <button class="action-btn" onclick="saveMsg('${uniqueId}')">📜 Save</button>
                         <div class="dropdown-container">
                             <button class="action-btn" onclick="toggleDropdown('${logoMenuId}', event)">•••</button>
@@ -580,6 +551,71 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         function sendPrompt(text) {
             document.getElementById('userInput').value = text;
             submitQuery();
+        }
+
+        window.onload = function() {
+            const saved = localStorage.getItem('tibyan_user_profile');
+            if (saved) {
+                try {
+                    const data = JSON.parse(saved);
+                    if(data.name) {
+                        document.getElementById('profileName').value = data.name;
+                        if(data.name.trim() !== "") {
+                            document.getElementById('welcomeTitle').innerText = "What's next, " + data.name.trim() + "?";
+                        }
+                    }
+                    if(data.dob) document.getElementById('profileDob').value = data.dob;
+                    if(data.pic) {
+                        uploadedImageBase64 = data.pic;
+                        document.getElementById('profilePicPreview').innerHTML = `<img src="${uploadedImageBase64}" alt="Profile">`;
+                    }
+                } catch(e) {}
+            }
+            loadSidebarHistory();
+            loadSavedMessagesView();
+        };
+
+        function previewProfileImage(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    uploadedImageBase64 = e.target.result;
+                    document.getElementById('profilePicPreview').innerHTML = `<img src="${uploadedImageBase64}" alt="Profile">`;
+                }
+                reader.readAsDataURL(file);
+            }
+        }
+
+        function saveProfileData() {
+            const name = document.getElementById('profileName').value;
+            const dob = document.getElementById('profileDob').value;
+            const profileData = { name: name, dob: dob, pic: uploadedImageBase64 };
+            localStorage.setItem('tibyan_user_profile', JSON.stringify(profileData));
+            
+            if(name.trim() !== "") {
+                document.getElementById('welcomeTitle').innerText = "What's next, " + name.trim() + "?";
+            }
+            alert('Profile saved successfully! ✅');
+        }
+
+        function handleChatImageUpload(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    chatImageBase64 = e.target.result;
+                    document.getElementById('thumbPreview').src = chatImageBase64;
+                    document.getElementById('imagePreviewBar').style.display = 'flex';
+                }
+                reader.readAsDataURL(file);
+            }
+        }
+
+        function removeAttachedImage() {
+            chatImageBase64 = null;
+            document.getElementById('imagePreviewBar').style.display = 'none';
+            document.getElementById('chatImageInput').value = '';
         }
     </script>
 </body>
