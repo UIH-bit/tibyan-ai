@@ -76,8 +76,17 @@ HTML_TEMPLATE = """<!DOCTYPE html>
 
         .chat-history-section { padding: 15px; overflow-y: auto; flex: 1; max-height: 45vh; }
         .history-title { font-size: 13px; text-transform: uppercase; color: #777; font-weight: bold; margin-bottom: 10px; letter-spacing: 0.5px; }
-        .history-item { padding: 10px 12px; font-size: 15px; color: #333; background: #f9f9f9; border-radius: 8px; margin-bottom: 8px; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; border: 1px solid #eee; transition: 0.2s; }
+        
+        /* Chat items bold styling & relative positioning for long-press popup */
+        .history-item { padding: 10px 12px; font-size: 15px; font-weight: 600; color: #222; background: #f9f9f9; border-radius: 8px; margin-bottom: 8px; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; border: 1px solid #eee; transition: 0.2s; position: relative; user-select: none; }
         .history-item:hover { background: #f0f4f1; border-color: #d0ded4; color: #1e3d2f; }
+        
+        /* Chat Context Menu (Delete / Share) */
+        .chat-context-menu { display: none; position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: #fff; border: 1px solid #ddd; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 100; overflow: hidden; }
+        .chat-context-menu.show { display: flex; gap: 5px; padding: 4px; }
+        .ctx-btn { background: #f0f4f1; border: none; border-radius: 4px; padding: 6px 10px; font-size: 13px; font-weight: bold; color: #1e3d2f; cursor: pointer; }
+        .ctx-btn:hover { background: #e2ece4; }
+        .ctx-btn.delete { color: #d9534f; }
         
         .overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.4); display: none; z-index: 998; }
         .overlay.active { display: block; }
@@ -314,10 +323,68 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             keys.forEach(k => {
                 let chat = chats[k];
                 if(!filterQuery || chat.title.toLowerCase().includes(filterQuery.toLowerCase())) {
-                    html += `<div class="history-item" onclick="loadSpecificChat('${k}')">${chat.title}</div>`;
+                    html += `
+                        <div class="history-item" onclick="loadSpecificChat('${k}')" oncontextmenu="openChatContext('${k}', event)" ontouchstart="handleTouchStart(event, '${k}')" ontouchend="handleTouchEnd()">
+                            <span class="chat-text-span">${chat.title}</span>
+                            <div class="chat-context-menu" id="ctx-${k}">
+                                <button class="ctx-btn" onclick="shareSpecificChat('${k}', event)">Share</button>
+                                <button class="ctx-btn delete" onclick="deleteSpecificChat('${k}', event)">Delete</button>
+                            </div>
+                        </div>`;
                 }
             });
             listContainer.innerHTML = html || '<div style="font-size: 14px; color: #888;">No matching chats.</div>';
+        }
+
+        let pressTimer = null;
+        function handleTouchStart(e, chatId) {
+            pressTimer = setTimeout(() => {
+                e.preventDefault();
+                openChatContext(chatId, e);
+            }, 600); // 600ms long press
+        }
+        function handleTouchEnd() {
+            clearTimeout(pressTimer);
+        }
+
+        function openChatContext(chatId, event) {
+            event.preventDefault();
+            event.stopPropagation();
+            closeAllContextMenus();
+            const menu = document.getElementById('ctx-' + chatId);
+            if(menu) {
+                menu.classList.add('show');
+            }
+        }
+
+        function closeAllContextMenus() {
+            document.querySelectorAll('.chat-context-menu').forEach(m => m.classList.remove('show'));
+        }
+
+        function deleteSpecificChat(chatId, event) {
+            event.stopPropagation();
+            let chats = JSON.parse(localStorage.getItem('tibyan_past_chats') || '{}');
+            delete chats[chatId];
+            localStorage.setItem('tibyan_past_chats', JSON.stringify(chats));
+            loadSidebarHistory();
+            if(currentChatId === chatId) {
+                startNewChat();
+            }
+        }
+
+        function shareSpecificChat(chatId, event) {
+            event.stopPropagation();
+            let chats = JSON.parse(localStorage.getItem('tibyan_past_chats') || '{}');
+            if(chats[chatId]) {
+                const chatText = chats[chatId].title;
+                if(navigator.share) {
+                    navigator.share({ title: 'Tibyan Chat', text: chatText }).catch(()=>{});
+                } else {
+                    navigator.clipboard.writeText(chatText);
+                    alert('Chat title copied to clipboard!');
+                }
+            }
+            closeAllContextMenus();
         }
 
         function loadSpecificChat(chatId) {
@@ -435,6 +502,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
 
         window.onclick = function() {
             closeAllDropdowns();
+            closeAllContextMenus();
         }
 
         async function submitQuery() {
