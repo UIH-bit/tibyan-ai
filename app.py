@@ -4,6 +4,7 @@ from flask_login import LoginManager, UserMixin, login_user, login_required, log
 from werkzeug.security import generate_password_hash, check_password_hash
 import os
 import requests
+import re
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'tibyan_secure_secret_key_2026'
@@ -289,7 +290,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                     <input type="file" id="profilePicInput" accept="image/*" style="display:none;" onchange="previewProfileImage(event)">
                 </div>
                 <div class="form-group">
-                    <label class="form-label">Enter Name</label>
+                    <label class="form-label">Full Name</label>
                     <input type="text" id="profileName" class="form-control" value="{{ user.name }}">
                 </div>
                 <div class="form-group">
@@ -660,8 +661,10 @@ AUTH_TEMPLATE = """<!DOCTYPE html>
         .auth-title { font-size: 26px; color: #1e3d2f; font-weight: bold; margin-bottom: 20px; text-align: center; }
         .form-group { margin-bottom: 16px; }
         .form-label { display: block; font-size: 14px; font-weight: 500; color: #333; margin-bottom: 6px; }
+        .input-wrapper { position: relative; display: flex; align-items: center; }
         .form-control { width: 100%; padding: 12px 16px; border: 1px solid #ddd; border-radius: 8px; font-size: 16px; outline: none; background: #f9f9f9; }
         .form-control:focus { border-color: #1e3d2f; background: #fff; }
+        .eye-btn { position: absolute; right: 12px; background: none; border: none; cursor: pointer; font-size: 18px; color: #666; }
         .auth-btn { background: #1e3d2f; color: white; border: none; border-radius: 8px; padding: 12px; width: 100%; font-size: 16px; font-weight: bold; cursor: pointer; transition: 0.2s; margin-top: 10px; }
         .auth-btn:hover { background: #152b21; }
         .auth-link { text-align: center; margin-top: 15px; font-size: 14px; color: #555; }
@@ -680,12 +683,12 @@ AUTH_TEMPLATE = """<!DOCTYPE html>
         <form method="POST">
             {% if is_signup %}
             <div class="form-group">
-                <label class="form-label">Full Name</label>
-                <input type="text" name="name" class="form-control" required placeholder="Aapka naam">
+                <label class="form-label">Name</label>
+                <input type="text" name="name" class="form-control" required placeholder="Enter name">
             </div>
             <div class="form-group">
                 <label class="form-label">Surname</label>
-                <input type="text" name="surname" class="form-control" placeholder="Aapka surname">
+                <input type="text" name="surname" class="form-control" placeholder="Enter surname">
             </div>
             {% endif %}
             <div class="form-group">
@@ -694,12 +697,18 @@ AUTH_TEMPLATE = """<!DOCTYPE html>
             </div>
             <div class="form-group">
                 <label class="form-label">Password</label>
-                <input type="password" name="password" class="form-control" required placeholder="********">
+                <div class="input-wrapper">
+                    <input type="password" name="password" id="password" class="form-control" required placeholder="********">
+                    <button type="button" class="eye-btn" onclick="togglePassword('password', this)">👁️</button>
+                </div>
             </div>
             {% if is_signup %}
             <div class="form-group">
                 <label class="form-label">Confirm Password</label>
-                <input type="password" name="confirm_password" class="form-control" required placeholder="********">
+                <div class="input-wrapper">
+                    <input type="password" name="confirm_password" id="confirm_password" class="form-control" required placeholder="********">
+                    <button type="button" class="eye-btn" onclick="togglePassword('confirm_password', this)">👁️</button>
+                </div>
             </div>
             {% endif %}
             <button type="submit" class="auth-btn">{{ title }}</button>
@@ -712,6 +721,18 @@ AUTH_TEMPLATE = """<!DOCTYPE html>
             {% endif %}
         </div>
     </div>
+    <script>
+        function togglePassword(fieldId, btn) {
+            const field = document.getElementById(fieldId);
+            if (field.type === "password") {
+                field.type = "text";
+                btn.style.opacity = "1";
+            } else {
+                field.type = "password";
+                btn.style.opacity = "0.6";
+            }
+        }
+    </script>
 </body>
 </html>
 """
@@ -739,6 +760,11 @@ def signup():
         
         if password != confirm_password:
             flash('Passwords do not match!')
+            return redirect(url_for('signup'))
+
+        # Password validation: must contain letters and digits/alphabets mixture
+        if not re.search(r'[A-Za-z]', password) or not re.search(r'\d', password):
+            flash('Password must contain a mix of letters and numbers!')
             return redirect(url_for('signup'))
 
         user_exists = User.query.filter_by(email=email).first()
@@ -826,5 +852,11 @@ def update_profile():
 if __name__ == '__main__':
     with app.app_context():
         db.create_all()
+        # Migration check for existing databases
+        try:
+            db.session.execute(db.text('ALTER TABLE user ADD COLUMN surname VARCHAR(100)'))
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
     app.run(host='0.0.0.0', port=5000)
 
