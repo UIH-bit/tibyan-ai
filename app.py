@@ -98,7 +98,7 @@ def call_groq_api(prompt_text, image_data=None):
         "temperature": 0.7
     }
     
-        try:
+            try:
         response = requests.post(url, headers=headers, json=payload)
         if response.status_code == 200:
             return response.json()['choices'][0]['message']['content']
