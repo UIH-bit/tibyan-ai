@@ -98,16 +98,17 @@ def call_groq_api(prompt_text, image_data=None):
         "temperature": 0.7
     }
     
-    try:
-        response = requests.post(url, headers=headers, json=payload, timeout=30)
+        try:
+        response = requests.post(url, headers=headers, json=payload)
         if response.status_code == 200:
             return response.json()['choices'][0]['message']['content']
         else:
-            return f"API Error ({response.status_code}): {response.text}"
-HTML_TEMPLATE = """    except Exception as e:
+            return f"API Error ({response.status_code})"
+    except Exception as e:
         return f"Exception occurred while contacting API: {str(e)}"
+
+HTML_TEMPLATE = """
 <!DOCTYPE html>
-<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
