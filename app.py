@@ -17,6 +17,7 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db = SQLAlchemy(app)
 login_manager = LoginManager()
+login_manager.login_message = None
 login_manager.init_app(app)
 login_manager.login_view = 'login'
 
@@ -520,10 +521,8 @@ def save_chat():
     db.session.commit()
     return jsonify({'status': 'success'})
 
-@app.route('/get_chats', methods=['GET'])
-@login_required
-def get_chats():
-    chats = ChatHistory.query.filter_by(user_id=current_user.id).all()
+    )
+
     return jsonify({c.chat_id: {'title': c.title, 'html': c.html_content, 'time': c.timestamp} for c in chats})
 
 @app.route('/update_profile', methods=['POST'])
@@ -536,6 +535,12 @@ def update_profile():
     current_user.pic = data.get('pic', current_user.pic)
     db.session.commit()
     return jsonify({'status': 'success'})
+@app.route('/forgot-password', methods=['GET', 'POST'])
+def forgot_password():
+    if request.method == 'POST':
+        email = request.form.get('email')
+        return "Password reset link has been sent to your email."
+    return render_template('forgot_password.html')
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
