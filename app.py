@@ -20,6 +20,7 @@ api_key = os.environ.get("GROQ_API_KEY") or os.environ.get("GEMINI_API_KEY")
 class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False)
+    surname = db.Column(db.String(100), nullable=True)
     email = db.Column(db.String(120), unique=True, nullable=False)
     password = db.Column(db.String(200), nullable=False)
     dob = db.Column(db.String(20), nullable=True)
@@ -290,6 +291,10 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                 <div class="form-group">
                     <label class="form-label">Enter Name</label>
                     <input type="text" id="profileName" class="form-control" value="{{ user.name }}">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Surname</label>
+                    <input type="text" id="profileSurname" class="form-control" value="{{ user.surname or '' }}">
                 </div>
                 <div class="form-group">
                     <label class="form-label">Email</label>
@@ -604,12 +609,13 @@ HTML_TEMPLATE = """<!DOCTYPE html>
 
         async function saveProfileData() {
             const name = document.getElementById('profileName').value;
+            const surname = document.getElementById('profileSurname').value;
             const dob = document.getElementById('profileDob').value;
             
             const res = await fetch('/update_profile', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ name: name, dob: dob, pic: uploadedImageBase64 })
+                body: JSON.stringify({ name: name, surname: surname, dob: dob, pic: uploadedImageBase64 })
             });
             if(res.ok) {
                 document.getElementById('welcomeTitle').innerText = "What's next, " + name.trim() + "?";
@@ -649,7 +655,7 @@ AUTH_TEMPLATE = """<!DOCTYPE html>
     <title>{{ title }} - Tibyan AI</title>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
-        body { background: #f0f4f1; display: flex; align-items: center; justify-content: center; height: 100vh; padding: 20px; }
+        body { background: #f0f4f1; display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 20px; }
         .auth-card { background: #fff; padding: 30px; border-radius: 16px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); width: 100%; max-width: 400px; border: 1px solid #d0ded4; }
         .auth-title { font-size: 26px; color: #1e3d2f; font-weight: bold; margin-bottom: 20px; text-align: center; }
         .form-group { margin-bottom: 16px; }
@@ -677,6 +683,10 @@ AUTH_TEMPLATE = """<!DOCTYPE html>
                 <label class="form-label">Full Name</label>
                 <input type="text" name="name" class="form-control" required placeholder="Aapka naam">
             </div>
+            <div class="form-group">
+                <label class="form-label">Surname</label>
+                <input type="text" name="surname" class="form-control" placeholder="Aapka surname">
+            </div>
             {% endif %}
             <div class="form-group">
                 <label class="form-label">Email Address</label>
@@ -686,6 +696,12 @@ AUTH_TEMPLATE = """<!DOCTYPE html>
                 <label class="form-label">Password</label>
                 <input type="password" name="password" class="form-control" required placeholder="********">
             </div>
+            {% if is_signup %}
+            <div class="form-group">
+                <label class="form-label">Confirm Password</label>
+                <input type="password" name="confirm_password" class="form-control" required placeholder="********">
+            </div>
+            {% endif %}
             <button type="submit" class="auth-btn">{{ title }}</button>
         </form>
         <div class="auth-link">
@@ -716,16 +732,22 @@ def login():
 def signup():
     if request.method == 'POST':
         name = request.form.get('name')
+        surname = request.form.get('surname')
         email = request.form.get('email')
         password = request.form.get('password')
+        confirm_password = request.form.get('confirm_password')
         
+        if password != confirm_password:
+            flash('Passwords do not match!')
+            return redirect(url_for('signup'))
+
         user_exists = User.query.filter_by(email=email).first()
         if user_exists:
             flash('Email address already registered!')
             return redirect(url_for('signup'))
             
         hashed_password = generate_password_hash(password, method='pbkdf2:sha256')
-        new_user = User(name=name, email=email, password=hashed_password)
+        new_user = User(name=name, surname=surname, email=email, password=hashed_password)
         db.session.add(new_user)
         db.session.commit()
         
@@ -795,6 +817,7 @@ def delete_chat(chat_id):
 def update_profile():
     data = request.json
     current_user.name = data.get('name', current_user.name)
+    current_user.surname = data.get('surname', current_user.surname)
     current_user.dob = data.get('dob', current_user.dob)
     current_user.pic = data.get('pic', current_user.pic)
     db.session.commit()
@@ -804,4 +827,4 @@ if __name__ == '__main__':
     with app.app_context():
         db.create_all()
     app.run(host='0.0.0.0', port=5000)
-	
+
