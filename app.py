@@ -1,9 +1,42 @@
-from flask import Flask, request, jsonify, render_template_string, url_for
+from flask import Flask, request, jsonify, render_template_string, url_for, redirect, flash
+from flask_sqlalchemy import SQLAlchemy
+from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
+from werkzeug.security import generate_password_hash, check_password_hash
 import os
 import requests
 
 app = Flask(__name__)
+app.config['SECRET_KEY'] = 'tibyan_secure_secret_key_2026'
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///tibyan.db'
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
+db = SQLAlchemy(app)
+login_manager = LoginManager()
+login_manager.init_app(app)
+login_manager.login_view = 'login'
+
 api_key = os.environ.get("GROQ_API_KEY") or os.environ.get("GEMINI_API_KEY")
+
+# Database Models
+class User(UserMixin, db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), nullable=False)
+    email = db.Column(db.String(120), unique=True, nullable=False)
+    password = db.Column(db.String(200), nullable=False)
+    dob = db.Column(db.String(20), nullable=True)
+    pic = db.Column(db.Text, nullable=True)
+
+class ChatHistory(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    chat_id = db.Column(db.String(100), nullable=False)
+    title = db.Column(db.String(200), nullable=False)
+    html_content = db.Column(db.Text, nullable=False)
+    timestamp = db.Column(db.Float, nullable=False)
+
+@login_manager.user_loader
+class load_user(user_id):
+    return db.session.get(User, int(user_id))
 
 def call_groq_api(prompt_text, image_data=None):
     url = "https://api.groq.com/openai/v1/chat/completions"
@@ -73,8 +106,9 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         .sidebar-menu { list-style: none; padding: 10px 0; overflow-y: auto; flex: 1; border-bottom: 1px solid #eaeaea; }
         .sidebar-menu li { padding: 14px 20px; font-size: 17px; color: #333; cursor: pointer; display: flex; align-items: center; gap: 14px; transition: 0.2s; border-bottom: 1px solid #f7f7f7; }
         .sidebar-menu li:hover { background: #f0f4f1; color: #1e3d2f; font-weight: 500; }
+        .sidebar-menu li a { text-decoration: none; color: inherit; width: 100%; display: flex; align-items: center; gap: 14px; }
 
-        .chat-history-section { padding: 15px; overflow-y: auto; flex: 1; max-height: 45vh; }
+        .chat-history-section { padding: 15px; overflow-y: auto; flex: 1; max-height: 40vh; }
         .history-title { font-size: 13px; text-transform: uppercase; color: #777; font-weight: bold; margin-bottom: 10px; letter-spacing: 0.5px; }
         
         .history-item { padding: 10px 12px; font-size: 15px; font-weight: 600; color: #222; background: #f9f9f9; border-radius: 8px; margin-bottom: 8px; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; border: 1px solid #eee; transition: 0.2s; position: relative; user-select: none; }
@@ -188,6 +222,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             <li onclick="switchView('saved')">📜 Saved</li>
             <li onclick="switchView('profile')">👤 Profile</li>
             <li onclick="switchView('about')">❕️ About</li>
+            <li><a href="/logout" style="color: #d9534f;">🚪 Logout</a></li>
         </ul>
 
         <div class="chat-history-section">
@@ -205,7 +240,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                     <div class="tibyan-logo-icon">
                         <img src="{{ url_for('static', filename='logo.png') }}" alt="Tibyan Logo">
                     </div>
-                    <div class="welcome-title" id="welcomeTitle">What's next, User?</div>
+                    <div class="welcome-title" id="welcomeTitle">What's next, {{ user.name }}?</div>
                     <div class="suggestions">
                         <div class="suggestions-row">
                             <div class="suggestion-chip" onclick="sendPrompt('What does the Quran say about patience (Sabr)?')">What does the Quran say about patience (Sabr)?</div>
@@ -247,17 +282,23 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             <div style="font-size:28px; color:#1e3d2f; margin-bottom:15px; font-weight:bold;">Profile 👤</div>
             <div class="profile-container">
                 <div class="profile-pic-wrapper">
-                    <div class="profile-preview" id="profilePicPreview">👤</div>
+                    <div class="profile-preview" id="profilePicPreview">
+                        {% if user.pic %}<img src="{{ user.pic }}" alt="Profile">{% else %}👤{% endif %}
+                    </div>
                     <label class="file-input-label" for="profilePicInput">Choose Profile Picture</label>
                     <input type="file" id="profilePicInput" accept="image/*" style="display:none;" onchange="previewProfileImage(event)">
                 </div>
                 <div class="form-group">
                     <label class="form-label">Enter Name</label>
-                    <input type="text" id="profileName" class="form-control" placeholder="Aapka naam...">
+                    <input type="text" id="profileName" class="form-control" value="{{ user.name }}">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Email</label>
+                    <input type="email" class="form-control" value="{{ user.email }}" disabled style="background:#eee;">
                 </div>
                 <div class="form-group">
                     <label class="form-label">Date of Birth (D.O.B)</label>
-                    <input type="date" id="profileDob" class="form-control">
+                    <input type="date" id="profileDob" class="form-control" value="{{ user.dob or '' }}">
                 </div>
                 <button class="save-profile-btn" onclick="saveProfileData()">Save Profile</button>
             </div>
@@ -283,8 +324,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
     </div>
 
     <script>
-        let uploadedImageBase64 = "";
-        let chatImageBase64 = null;
+        let uploadedImageBase64 = "{{ user.pic or '' }}";
         let currentChatId = 'chat_' + Date.now();
         let currentChatTitle = "";
 
@@ -306,19 +346,23 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             switchView('home');
         }
 
-        function saveCurrentChat(title, historyHtml) {
-            let chats = JSON.parse(localStorage.getItem('tibyan_past_chats') || '{}');
+        async function saveCurrentChat(title, historyHtml) {
             if(!currentChatTitle) {
                 currentChatTitle = title;
             }
-            chats[currentChatId] = { title: currentChatTitle, html: historyHtml, time: Date.now() };
-            localStorage.setItem('tibyan_past_chats', JSON.stringify(chats));
+            await fetch('/save_chat', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ chat_id: currentChatId, title: currentChatTitle, html: historyHtml })
+            });
             loadSidebarHistory();
         }
 
-        function loadSidebarHistory(filterQuery = '') {
+        async function loadSidebarHistory(filterQuery = '') {
+            const res = await fetch('/get_chats');
+            const chats = await res.json();
             const listContainer = document.getElementById('sidebarHistoryList');
-            let chats = JSON.parse(localStorage.getItem('tibyan_past_chats') || '{}');
+            
             let keys = Object.keys(chats).sort((a,b) => chats[b].time - chats[a].time);
             
             if(keys.length === 0) {
@@ -359,29 +403,26 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             event.stopPropagation();
             closeAllContextMenus();
             const menu = document.getElementById('ctx-' + chatId);
-            if(menu) {
-                menu.classList.add('show');
-            }
+            if(menu) menu.classList.add('show');
         }
 
         function closeAllContextMenus() {
             document.querySelectorAll('.chat-context-menu').forEach(m => m.classList.remove('show'));
         }
 
-        function deleteSpecificChat(chatId, event) {
+        async function deleteSpecificChat(chatId, event) {
             event.stopPropagation();
-            let chats = JSON.parse(localStorage.getItem('tibyan_past_chats') || '{}');
-            delete chats[chatId];
-            localStorage.setItem('tibyan_past_chats', JSON.stringify(chats));
+            await fetch('/delete_chat/' + chatId, { method: 'DELETE' });
             loadSidebarHistory();
             if(currentChatId === chatId) {
                 startNewChat();
             }
         }
 
-        function shareSpecificChat(chatId, event) {
+        async function shareSpecificChat(chatId, event) {
             event.stopPropagation();
-            let chats = JSON.parse(localStorage.getItem('tibyan_past_chats') || '{}');
+            const res = await fetch('/get_chats');
+            const chats = await res.json();
             if(chats[chatId]) {
                 const chatText = chats[chatId].title;
                 if(navigator.share) {
@@ -393,8 +434,9 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             closeAllContextMenus();
         }
 
-        function loadSpecificChat(chatId) {
-            let chats = JSON.parse(localStorage.getItem('tibyan_past_chats') || '{}');
+        async function loadSpecificChat(chatId) {
+            const res = await fetch('/get_chats');
+            const chats = await res.json();
             if(chats[chatId]) {
                 currentChatId = chatId;
                 currentChatTitle = chats[chatId].title;
@@ -409,24 +451,22 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             loadSidebarHistory(q);
         }
 
-        function likeMsg(btn, id) {
-            btn.classList.toggle('active');
-        }
+        function likeMsg(btn, id) { btn.classList.toggle('active'); }
+        function dislikeMsg(btn, id) { btn.classList.toggle('active'); }
 
-        function dislikeMsg(btn, id) {
-            btn.classList.toggle('active');
-        }
-
-        function saveMsg(id) {
+        async function saveMsg(id) {
             const content = document.getElementById(id).innerHTML;
-            let savedList = JSON.parse(localStorage.getItem('tibyan_saved_messages') || '[]');
-            savedList.push({ id: id, html: content, time: Date.now() });
-            localStorage.setItem('tibyan_saved_messages', JSON.stringify(savedList));
+            await fetch('/save_message', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id: id, html: content })
+            });
             loadSavedMessagesView();
         }
 
-        function loadSavedMessagesView() {
-            let savedList = JSON.parse(localStorage.getItem('tibyan_saved_messages') || '[]');
+        async function loadSavedMessagesView() {
+            const res = await fetch('/get_saved_messages');
+            const savedList = await res.json();
             const container = document.getElementById('saved-chats-list');
             if(savedList.length === 0) {
                 container.innerHTML = '<p style="color: #666; font-size: 15px;">No saved responses yet.</p>';
@@ -463,9 +503,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             const menu = document.getElementById(menuId);
             const isOpen = menu.classList.contains('show');
             closeAllDropdowns();
-            if (!isOpen) {
-                menu.classList.add('show');
-            }
+            if (!isOpen) menu.classList.add('show');
         }
 
         function closeAllDropdowns() {
@@ -492,16 +530,11 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             const historyBox = document.getElementById('chat-history');
             
             let userHtml = `<div class="message-wrapper"><div class="message user-msg">`;
-            if(currentImg) {
-                userHtml += `<img src="${currentImg}" style="max-width:150px; border-radius:8px; display:block; margin-bottom:8px;">`;
-            }
-            if(query) {
-                userHtml += `<div>${query}</div>`;
-            }
+            if(currentImg) userHtml += `<img src="${currentImg}" style="max-width:150px; border-radius:8px; display:block; margin-bottom:8px;">`;
+            if(query) userHtml += `<div>${query}</div>`;
             userHtml += `</div></div>`;
             
             historyBox.innerHTML += userHtml;
-            
             inputField.value = '';
             inputField.style.height = 'inherit';
             removeAttachedImage();
@@ -539,7 +572,6 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                 
                 const rawMarkdown = data.response || "Error";
                 document.getElementById(uniqueId).innerHTML = marked.parse(rawMarkdown);
-                
                 document.getElementById(uniqueActionsId).style.display = "flex";
                 window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
 
@@ -555,23 +587,6 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         }
 
         window.onload = function() {
-            const saved = localStorage.getItem('tibyan_user_profile');
-            if (saved) {
-                try {
-                    const data = JSON.parse(saved);
-                    if(data.name) {
-                        document.getElementById('profileName').value = data.name;
-                        if(data.name.trim() !== "") {
-                            document.getElementById('welcomeTitle').innerText = "What's next, " + data.name.trim() + "?";
-                        }
-                    }
-                    if(data.dob) document.getElementById('profileDob').value = data.dob;
-                    if(data.pic) {
-                        uploadedImageBase64 = data.pic;
-                        document.getElementById('profilePicPreview').innerHTML = `<img src="${uploadedImageBase64}" alt="Profile">`;
-                    }
-                } catch(e) {}
-            }
             loadSidebarHistory();
             loadSavedMessagesView();
         };
@@ -588,17 +603,22 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             }
         }
 
-        function saveProfileData() {
+        async function saveProfileData() {
             const name = document.getElementById('profileName').value;
             const dob = document.getElementById('profileDob').value;
-            const profileData = { name: name, dob: dob, pic: uploadedImageBase64 };
-            localStorage.setItem('tibyan_user_profile', JSON.stringify(profileData));
             
-            if(name.trim() !== "") {
+            const res = await fetch('/update_profile', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name: name, dob: dob, pic: uploadedImageBase64 })
+            });
+            if(res.ok) {
                 document.getElementById('welcomeTitle').innerText = "What's next, " + name.trim() + "?";
+                alert("Profile updated successfully!");
             }
         }
 
+        let chatImageBase64 = null;
         function handleChatImageUpload(event) {
             const file = event.target.files[0];
             if (file) {
@@ -622,11 +642,111 @@ HTML_TEMPLATE = """<!DOCTYPE html>
 </html>
 """
 
+AUTH_TEMPLATE = """<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ title }} - Tibyan AI</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+        body { background: #f0f4f1; display: flex; align-items: center; justify-content: center; height: 100vh; padding: 20px; }
+        .auth-card { background: #fff; padding: 30px; border-radius: 16px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); width: 100%; max-width: 400px; border: 1px solid #d0ded4; }
+        .auth-title { font-size: 26px; color: #1e3d2f; font-weight: bold; margin-bottom: 20px; text-align: center; }
+        .form-group { margin-bottom: 16px; }
+        .form-label { display: block; font-size: 14px; font-weight: 500; color: #333; margin-bottom: 6px; }
+        .form-control { width: 100%; padding: 12px 16px; border: 1px solid #ddd; border-radius: 8px; font-size: 16px; outline: none; background: #f9f9f9; }
+        .form-control:focus { border-color: #1e3d2f; background: #fff; }
+        .auth-btn { background: #1e3d2f; color: white; border: none; border-radius: 8px; padding: 12px; width: 100%; font-size: 16px; font-weight: bold; cursor: pointer; transition: 0.2s; margin-top: 10px; }
+        .auth-btn:hover { background: #152b21; }
+        .auth-link { text-align: center; margin-top: 15px; font-size: 14px; color: #555; }
+        .auth-link a { color: #1e3d2f; text-decoration: none; font-weight: bold; }
+        .flash-msg { background: #ffe6e6; color: #d9534f; padding: 10px; border-radius: 6px; margin-bottom: 15px; font-size: 14px; text-align: center; }
+    </style>
+</head>
+<body>
+    <div class="auth-card">
+        <div class="auth-title">{{ title }}</div>
+        {% with messages = get_flashed_messages() %}
+          {% if messages %}
+            <div class="flash-msg">{{ messages[0] }}</div>
+          {% endif %}
+        {% endwith %}
+        <form method="POST">
+            {% if is_signup %}
+            <div class="form-group">
+                <label class="form-label">Full Name</label>
+                <input type="text" name="name" class="form-control" required placeholder="Aapka naam">
+            </div>
+            {% endif %}
+            <div class="form-group">
+                <label class="form-label">Email Address</label>
+                <input type="email" name="email" class="form-control" required placeholder="email@example.com">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Password</label>
+                <input type="password" name="password" class="form-control" required placeholder="********">
+            </div>
+            <button type="submit" class="auth-btn">{{ title }}</button>
+        </form>
+        <div class="auth-link">
+            {% if is_signup %}
+                Already have an account? <a href="{{ url_for('login') }}">Login</a>
+            {% else %}
+                Don't have an account? <a href="{{ url_for('signup') }}">Sign Up</a>
+            {% endif %}
+        </div>
+    </div>
+</body>
+</html>
+"""
+
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if request.method == 'POST':
+        email = request.form.get('email')
+        password = request.form.get('password')
+        user = User.query.filter_by(email=email).first()
+        if user and check_password_hash(user.password, password):
+            login_user(user)
+            return redirect(url_for('home'))
+        flash('Invalid email or password!')
+    return render_template_string(AUTH_TEMPLATE, title='Login', is_signup=False)
+
+@app.route('/signup', methods=['GET', 'POST'])
+def signup():
+    if request.method == 'POST':
+        name = request.form.get('name')
+        email = request.form.get('email')
+        password = request.form.get('password')
+        
+        user_exists = User.query.filter_by(email=email).first()
+        if user_exists:
+            flash('Email address already registered!')
+            return redirect(url_for('signup'))
+            
+        hashed_password = generate_password_hash(password, method='pbkdf2:sha256')
+        new_user = User(name=name, email=email, password=hashed_password)
+        db.session.add(new_user)
+        db.session.commit()
+        
+        login_user(new_user)
+        return redirect(url_for('home'))
+    return render_template_string(AUTH_TEMPLATE, title='Sign Up', is_signup=True)
+
+@app.route('/logout')
+@login_required
+def logout():
+    logout_user()
+    return redirect(url_for('login'))
+
 @app.route('/')
+@login_required
 def home():
-    return render_template_string(HTML_TEMPLATE)
+    return render_template_string(HTML_TEMPLATE, user=current_user)
 
 @app.route('/generate', methods=['POST'])
+@login_required
 def generate():
     data = request.json
     user_prompt = data.get('prompt', '')
@@ -634,6 +754,55 @@ def generate():
     ai_response = call_groq_api(user_prompt, image_data)
     return jsonify({'response': ai_response})
 
+@app.route('/save_chat', methods=['POST'])
+@login_required
+def save_chat():
+    data = request.json
+    c_id = data.get('chat_id')
+    title = data.get('title')
+    html_content = data.get('html')
+    
+    chat = ChatHistory.query.filter_by(user_id=current_user.id, chat_id=c_id).first()
+    if chat:
+        chat.title = title
+        chat.html_content = html_content
+        chat.timestamp = db.func.now()
+    else:
+        new_chat = ChatHistory(user_id=current_user.id, chat_id=c_id, title=title, html_content=html_content, timestamp=os.times()[4])
+        db.session.add(new_chat)
+    db.session.commit()
+    return jsonify({'status': 'success'})
+
+@app.route('/get_chats', methods=['GET'])
+@login_required
+def get_chats():
+    chats = ChatHistory.query.filter_by(user_id=current_user.id).all()
+    result = {}
+    for c in chats:
+        result[c.chat_id] = {'title': c.title, 'html': c.html_content, 'time': c.timestamp}
+    return jsonify(result)
+
+@app.route('/delete_chat/<chat_id>', methods=['DELETE'])
+@login_required
+def delete_chat(chat_id):
+    chat = ChatHistory.query.filter_by(user_id=current_user.id, chat_id=chat_id).first()
+    if chat:
+        db.session.delete(chat)
+        db.session.commit()
+    return jsonify({'status': 'success'})
+
+@app.route('/update_profile', methods=['POST'])
+@login_required
+def update_profile():
+    data = request.json
+    current_user.name = data.get('name', current_user.name)
+    current_user.dob = data.get('dob', current_user.dob)
+    current_user.pic = data.get('pic', current_user.pic)
+    db.session.commit()
+    return jsonify({'status': 'success'})
+
 if __name__ == '__main__':
+    with app.app_context():
+        db.create_all()
     app.run(host='0.0.0.0', port=5000)
 
