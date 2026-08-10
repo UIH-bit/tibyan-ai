@@ -521,10 +521,6 @@ def save_chat():
     db.session.commit()
     return jsonify({'status': 'success'})
 
-    )
-
-    return jsonify({c.chat_id: {'title': c.title, 'html': c.html_content, 'time': c.timestamp} for c in chats})
-
 @app.route('/update_profile', methods=['POST'])
 @login_required
 def update_profile():
