@@ -83,7 +83,8 @@ def call_groq_api(prompt_text, image_data=None):
                 {"type": "image_url", "image_url": {"url": image_data}}
             ]
         })
-        model_name = "llama-3.2-11b-vision-preview"
+        model_name = "meta-llama/llama-3.2-11b-vision-instruct
+"
     else:
         messages.append({"role": "user", "content": prompt_text})
         model_name = "llama-3.3-70b-versatile"
@@ -117,7 +118,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         .menu-btn { background: none; border: none; font-size: 26px; cursor: pointer; color: #1e3d2f; z-index: 1001; padding: 4px 8px; }
         .logo-img { height: 35px; width: auto; display: block; mix-blend-mode: multiply; }
         .header-right { display: flex; align-items: center; }
-        .new-chat-icon-btn { background: none; border: none; font-size: 24px; cursor: pointer; color: #1e3d2f; display: flex; align-items: center; justify-content: center; padding: 6px 10px; border-radius: 50%; transition: 0.2s; }
+        .new-chat-icon-btn { background: none; border: none; font-size: 22px; cursor: pointer; color: #1e3d2f; display: flex; align-items: center; justify-content: center; padding: 6px 10px; border-radius: 50%; transition: 0.2s; }
         .new-chat-icon-btn:hover { background: #f0f4f1; }
         
         .sidebar { position: fixed; top: 0; left: -280px; width: 280px; height: 100%; background: #fff; box-shadow: 2px 0 10px rgba(0,0,0,0.1); transition: 0.3s ease; z-index: 9999; display: flex; flex-direction: column; }
@@ -136,8 +137,8 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         .history-item:hover { background: #f0f4f1; border-color: #d0ded4; color: #1e3d2f; }
         .overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.4); display: none; z-index: 998; }
         .overlay.active { display: block; }
-        .main-content { flex: 1; display: flex; flex-direction: column; overflow: hidden; position: relative; margin-top: 60px; }
-        .view-section { display: none; flex: 1; overflow-y: auto; padding: 20px 20px 100px 20px; max-width: 800px; width: 100%; margin: 0 auto; scroll-behavior: smooth; }
+        .main-content { flex: 1; display: flex; flex-direction: column; overflow-y: auto; position: relative; margin-top: 60px; scroll-behavior: smooth; }
+        .view-section { display: none; flex: 1; padding: 20px 20px 120px 20px; max-width: 800px; width: 100%; margin: 0 auto; }
         .view-section.active-view { display: flex; flex-direction: column; }
         .welcome-section { display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; margin: auto 0; width: 100%; padding: 25px 20px; background: linear-gradient(180deg, rgba(240,244,241,0.6) 0%, rgba(255,255,255,1) 100%); border-radius: 24px; border: 1px solid #e2ece4; }
         .tibyan-logo-icon { width: 85px; height: 85px; display: flex; align-items: center; justify-content: center; margin-bottom: 12px; }
@@ -164,7 +165,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         .form-label { display: block; font-size: 15px; font-weight: 500; color: #333; margin-bottom: 6px; }
         .form-control { width: 100%; padding: 12px 16px; border: 1px solid #ddd; border-radius: 8px; font-size: 16px; outline: none; background: #f9f9f9; }
         .save-profile-btn { background: #1e3d2f; color: white; border: none; border-radius: 8px; padding: 12px; width: 100%; font-size: 16px; font-weight: bold; cursor: pointer; margin-top: 10px; }
-        .input-area { display: flex; flex-direction: column; padding: 10px 16px calc(20px + env(safe-area-inset-bottom, 25px)) 16px; border-top: 1px solid #eaeaea; background: #fff; max-width: 800px; width: 100%; margin: 0 auto; flex-shrink: 0; gap: 8px; z-index: 20; position: relative; bottom: 45px; box-shadow: 0 -4px 10px rgba(0,0,0,0.03); }
+        .input-area { display: flex; flex-direction: column; padding: 10px 16px calc(20px + env(safe-area-inset-bottom, 25px)) 16px; border-top: 1px solid #eaeaea; background: #fff; max-width: 800px; width: 100%; margin: 0 auto; flex-shrink: 0; gap: 8px; z-index: 20; position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); box-shadow: 0 -4px 10px rgba(0,0,0,0.03); }
         .input-top-row { display: flex; align-items: center; gap: 10px; width: 100%; }
         .text-input { flex: 1; border: 1px solid #e0e0e0; border-radius: 24px; padding: 12px 18px; font-size: 16px; outline: none; background: #f9f9f9; resize: none; max-height: 150px; }
         .action-icon-btn { background: none; border: none; cursor: pointer; font-size: 22px; color: #1e3d2f; display: flex; align-items: center; justify-content: center; padding: 8px; }
@@ -181,7 +182,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             <img src="{{ url_for('static', filename='logo.png') }}" alt="Tibyan AI" class="logo-img">
         </div>
         <div class="header-right">
-            <button class="new-chat-icon-btn" onclick="startNewChat()" title="New Chat">✨</button>
+            <button class="new-chat-icon-btn" onclick="startNewChat()" title="New Chat">✏️</button>
         </div>
     </header>
 
@@ -207,7 +208,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         </div>
     </div>
 
-    <div class="main-content">
+    <div class="main-content" id="mainContainer">
         <div id="home-view" class="view-section active-view">
             <div id="chat-box" style="width: 100%;">
                 <div class="welcome-section" id="welcome-screen">
@@ -333,7 +334,8 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             const ws = document.getElementById('welcome-screen');
             if(ws) ws.style.display = 'none';
             const historyBox = document.getElementById('chat-history');
-            let userHtml = `<div class="message-wrapper"><div class="message user-msg">`;
+            let userWrapperId = 'user-msg-' + Date.now();
+            let userHtml = `<div class="message-wrapper" id="${userWrapperId}"><div class="message user-msg">`;
             if(currentImg) userHtml += `<img src="${currentImg}" style="max-width:150px; border-radius:8px; display:block; margin-bottom:8px;">`;
             if(query) userHtml += `<div>${query}</div>`;
             userHtml += `</div></div>`;
@@ -341,14 +343,21 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             inputField.value = '';
             inputField.style.height = 'inherit';
             removeAttachedImage();
+            
+            // Scroll to user query smoothly
+            const userMsgElement = document.getElementById(userWrapperId);
+            if(userMsgElement) {
+                userMsgElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+
             const uniqueId = 'msg-' + Date.now();
             historyBox.innerHTML += `<div class="message-wrapper"><div class="message ai-msg" id="${uniqueId}">Bismillah, analyzing...</div></div>`;
-            window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+            
             try {
                 const res = await fetch('/generate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ prompt: query, image: currentImg }) });
                 const data = await res.json();
                 document.getElementById(uniqueId).innerHTML = marked.parse(data.response || "Error");
-                window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+                document.getElementById(uniqueId).scrollIntoView({ behavior: 'smooth', block: 'nearest' });
                 saveCurrentChat(query.substring(0, 30) || "Image Query", historyBox.innerHTML);
             } catch(e) {
                 document.getElementById(uniqueId).innerText = "Network error.";
@@ -370,8 +379,8 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         async function saveProfileData() {
             const name = document.getElementById('profileName').value;
             const surname = document.getElementById('profileSurname').value;
-            const dob = document.getElementById('profileDob').value;
-            await fetch('/update_profile', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: name, surname: surname, dob: dob, pic: uploadedImageBase64 }) });
+            const dob = document.getElementById('profileDob') || document.getElementById('profileDob').value;
+            await fetch('/update_profile', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: name, surname: surname, dob: document.getElementById('profileDob').value, pic: uploadedImageBase64 }) });
             document.getElementById('welcomeTitle').innerText = "What's next, " + name.trim() + "?";
             alert("Profile updated successfully!");
         }
