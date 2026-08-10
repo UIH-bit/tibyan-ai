@@ -41,7 +41,13 @@ class ChatHistory(db.Model):
 def load_user(user_id):
     return db.session.get(User, int(user_id))
 
-# Global Exception Catcher taaki Internal Server Error ki jagah exact error screen par dikhe
+# Har request se pehle ensure karein ki tables bani hui hain
+@app.before_request
+def ensure_tables():
+    if not getattr(app, '_database_checked', False):
+        db.create_all()
+        app._database_checked = True
+
 @app.errorhandler(Exception)
 def handle_exception(e):
     tb = traceback.format_exc()
@@ -125,9 +131,6 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         .history-title { font-size: 13px; text-transform: uppercase; color: #777; font-weight: bold; margin-bottom: 10px; letter-spacing: 0.5px; }
         .history-item { padding: 10px 12px; font-size: 15px; font-weight: 600; color: #222; background: #f9f9f9; border-radius: 8px; margin-bottom: 8px; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; border: 1px solid #eee; transition: 0.2s; position: relative; user-select: none; }
         .history-item:hover { background: #f0f4f1; border-color: #d0ded4; color: #1e3d2f; }
-        .chat-context-menu { display: none; position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: #fff; border: 1px solid #ddd; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 100; overflow: hidden; }
-        .chat-context-menu.show { display: flex; gap: 5px; padding: 4px; }
-        .ctx-btn { background: #f0f4f1; border: none; border-radius: 4px; padding: 6px 10px; font-size: 13px; font-weight: bold; color: #1e3d2f; cursor: pointer; }
         .overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.4); display: none; z-index: 998; }
         .overlay.active { display: block; }
         .main-content { flex: 1; display: flex; flex-direction: column; overflow: hidden; position: relative; margin-top: 60px; }
@@ -147,9 +150,6 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         .user-msg { background: #f0f4f1; color: #1e3d2f; align-self: flex-end; margin-left: auto; white-space: pre-wrap; }
         .ai-msg { background: #ffffff; border: 1px solid #e0e0e0; color: #222; align-self: flex-start; width: 100%; max-width: 100%; }
         .ai-msg strong { font-weight: 800; color: #1e3d2f; font-size: 19px; display: block; margin-top: 16px; margin-bottom: 8px; border-left: 3px solid #1e3d2f; padding-left: 8px; }
-        .ai-actions { display: flex; gap: 10px; margin-top: 8px; align-self: flex-start; padding-left: 4px; align-items: center; }
-        .action-btn { background: #f9f9f9; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; color: #444; cursor: pointer; padding: 6px 12px; display: flex; align-items: center; gap: 5px; }
-        .action-btn:hover { background: #f0f4f1; color: #1e3d2f; border-color: #1e3d2f; }
         .library-grid { display: grid; grid-template-columns: 1fr; gap: 12px; }
         .library-card { background: #fff; border: 1px solid #e0e0e0; border-radius: 10px; padding: 16px 20px; font-size: 18px; font-weight: 500; color: #1e3d2f; cursor: pointer; display: flex; align-items: center; justify-content: space-between; }
         .profile-container { background: #fff; border: 1px solid #e0e0e0; border-radius: 12px; padding: 24px; max-width: 500px; margin: 10px auto; }
@@ -311,18 +311,6 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             }
         }
 
-        async function loadSavedMessagesView() {
-            const res = await fetch('/get_saved_messages');
-            const savedList = await res.json();
-            const container = document.getElementById('saved-chats-list');
-            if(savedList.length === 0) { container.innerHTML = '<p style="color: #666; font-size: 15px;">No saved responses yet.</p>'; return; }
-            let html = '';
-            savedList.forEach((item, index) => {
-                html += `<div style="background:#fff; border:1px solid #e0e0e0; border-radius:10px; padding:15px; margin-bottom:12px;"><div style="font-size:16px; color:#222; line-height:1.6;">${item.html}</div></div>`;
-            });
-            container.innerHTML = html;
-        }
-
         async function submitQuery() {
             const inputField = document.getElementById('userInput');
             const query = inputField.value.trim();
@@ -356,7 +344,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         }
 
         function sendPrompt(text) { document.getElementById('userInput').value = text; submitQuery(); }
-        window.onload = function() { loadSidebarHistory(); loadSavedMessagesView(); };
+        window.onload = function() { loadSidebarHistory(); };
 
         function previewProfileImage(event) {
             const file = event.target.files[0];
@@ -526,21 +514,6 @@ def update_profile():
     db.session.commit()
     return jsonify({'status': 'success'})
 
-@app.route('/get_saved_messages', methods=['GET'])
-@login_required
-def get_saved_messages():
-    return jsonify([])
-
 if __name__ == '__main__':
-    with app.app_context():
-        db.create_all()
-        for col_def in ['ALTER TABLE user ADD COLUMN surname VARCHAR(100)', 
-                        'ALTER TABLE user ADD COLUMN dob VARCHAR(20)', 
-                        'ALTER TABLE user ADD COLUMN pic TEXT']:
-            try:
-                db.session.execute(db.text(col_def))
-                db.session.commit()
-            except Exception:
-                db.session.rollback()
     app.run(host='0.0.0.0', port=5000)
 
