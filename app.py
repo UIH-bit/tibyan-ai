@@ -540,10 +540,12 @@ def update_profile():
     db.session.commit()
     return jsonify({'status': 'success'})
 @app.route('/forgot-password', methods=['GET', 'POST'])
+@app.route('/forgot-password', methods=['GET', 'POST'])
 def forgot_password():
     if request.method == 'POST':
-        email = request.form.get('email')
-        return render_template('forgot_password.html', message="Password reset link has been sent.")
+        flash('Password reset link sent to your email!')
+        return redirect(url_for('login'))
+    return render_template_string(AUTH_TEMPLATE, title='Forgot Password', is_signup=False)
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
