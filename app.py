@@ -1,13 +1,6 @@
 
-from flask_mail import Mail, Message
 import os
 
-app.config['MAIL_SERVER'] = 'smtp.gmail.com'
-app.config['MAIL_PORT'] = 587
-app.config['MAIL_USE_TLS'] = True
-app.config['MAIL_USERNAME'] = os.environ.get('MAIL_USERNAME')
-app.config['MAIL_PASSWORD'] = os.environ.get('MAIL_PASSWORD')
-mail = Mail(app)
 from flask import Flask, request, jsonify, render_template_string, url_for, redirect, flash
 from datetime import timedelta
 from flask_sqlalchemy import SQLAlchemy
@@ -20,6 +13,14 @@ import time
 import traceback
 
 app = Flask(__name__)
+from flask_mail import Mail, Message
+import os
+app.config['MAIL_SERVER'] = 'smtp.gmail.com'
+app.config['MAIL_PORT'] = 587
+app.config['MAIL_USE_TLS'] = True
+app.config['MAIL_USERNAME'] = os.environ.get('MAIL_USERNAME')
+app.config['MAIL_PASSWORD'] = os.environ.get('MAIL_PASSWORD')
+mail = Mail(app)
 app.permanent_session_lifetime = timedelta(days=365)
 app.config['SECRET_KEY'] = 'tibyan_secure_secret_key_2026'
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///tibyan.db'
