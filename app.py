@@ -435,6 +435,15 @@ AUTH_TEMPLATE = """<!DOCTYPE html>
             {% endif %}
             <div class="form-group"><label class="form-label">Email</label><input type="email" name="email" class="form-control" required></div>
             <div class="form-group"><label class="form-label">Password</label><input type="password" name="password" class="form-control" required></div>
+            <label class="form-label">Password</label>
+<div style="position: relative;">
+    <input type="password" id="password" name="password" class="form-control" required>
+    <span onclick="togglePassword()" style="position: absolute; right: 12px; top: 50%; transform: translateY(-50%); cursor: pointer;">👁️</span>
+</div>
+<div style="text-align: right; margin-top: 5px; margin-bottom: 15px;">
+    <a href="/forgot-password" style="font-size: 13px; color: #1e3d2f; text-decoration: none;">Forgot Password?</a>
+</div>
+
             {% if is_signup %}
             <div class="form-group"><label class="form-label">Confirm Password</label><input type="password" name="confirm_password" class="form-control" required></div>
             {% endif %}
@@ -459,7 +468,6 @@ def login():
             return redirect(url_for('home'))
         flash('Invalid email or password!')
     return render_template_string(AUTH_TEMPLATE, title='Login', is_signup=False)
-
 @app.route('/signup', methods=['GET', 'POST'])
 def signup():
     if request.method == 'POST':
@@ -535,8 +543,7 @@ def update_profile():
 def forgot_password():
     if request.method == 'POST':
         email = request.form.get('email')
-        return "Password reset link has been sent to your email."
-    return render_template('forgot_password.html')
+        return render_template('forgot_password.html', message="Password reset link has been sent.")
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
