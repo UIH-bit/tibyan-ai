@@ -2,3 +2,10 @@ flask
 google-generativeai
 requests
 gunicorn
+Flask
+Flask-SQLAlchemy
+Flask-Login
+Werkzeug
+requests
+gunicorn
+
