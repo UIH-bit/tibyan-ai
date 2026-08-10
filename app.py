@@ -5,6 +5,7 @@ from werkzeug.security import generate_password_hash, check_password_hash
 import os
 import requests
 import re
+import time
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'tibyan_secure_secret_key_2026'
@@ -40,6 +41,9 @@ def load_user(user_id):
     return db.session.get(User, int(user_id))
 
 def call_groq_api(prompt_text, image_data=None):
+    if not api_key:
+        return "Error: API Key is missing. Please set GROQ_API_KEY in environment variables."
+        
     url = "https://api.groq.com/openai/v1/chat/completions"
     headers = {
         'Authorization': f'Bearer {api_key}',
@@ -77,9 +81,9 @@ def call_groq_api(prompt_text, image_data=None):
         if response.status_code == 200:
             return response.json()['choices'][0]['message']['content']
         else:
-            return f"Error: {response.text}"
+            return f"API Error ({response.status_code}): {response.text}"
     except Exception as e:
-        return f"Exception: {str(e)}"
+        return f"Exception occurred while contacting API: {str(e)}"
 
 HTML_TEMPLATE = """<!DOCTYPE html>
 <html lang="en">
@@ -762,7 +766,6 @@ def signup():
             flash('Passwords do not match!')
             return redirect(url_for('signup'))
 
-        # Password validation: must contain letters and numbers mixture
         if not re.search(r'[A-Za-z]', password) or not re.search(r'\d', password):
             flash('Password must contain a mix of letters and numbers!')
             return redirect(url_for('signup'))
@@ -795,7 +798,7 @@ def home():
 @app.route('/generate', methods=['POST'])
 @login_required
 def generate():
-    data = request.json
+    data = request.json or {}
     user_prompt = data.get('prompt', '')
     image_data = data.get('image', None)
     ai_response = call_groq_api(user_prompt, image_data)
@@ -804,18 +807,21 @@ def generate():
 @app.route('/save_chat', methods=['POST'])
 @login_required
 def save_chat():
-    data = request.json
+    data = request.json or {}
     c_id = data.get('chat_id')
     title = data.get('title')
     html_content = data.get('html')
     
+    if not c_id:
+        return jsonify({'status': 'error', 'message': 'Missing chat_id'}), 400
+
     chat = ChatHistory.query.filter_by(user_id=current_user.id, chat_id=c_id).first()
     if chat:
         chat.title = title
         chat.html_content = html_content
-        chat.timestamp = db.func.now()
+        chat.timestamp = time.time()
     else:
-        new_chat = ChatHistory(user_id=current_user.id, chat_id=c_id, title=title, html_content=html_content, timestamp=os.times()[4])
+        new_chat = ChatHistory(user_id=current_user.id, chat_id=c_id, title=title, html_content=html_content, timestamp=time.time())
         db.session.add(new_chat)
     db.session.commit()
     return jsonify({'status': 'success'})
@@ -841,7 +847,7 @@ def delete_chat(chat_id):
 @app.route('/update_profile', methods=['POST'])
 @login_required
 def update_profile():
-    data = request.json
+    data = request.json or {}
     current_user.name = data.get('name', current_user.name)
     current_user.surname = data.get('surname', current_user.surname)
     current_user.dob = data.get('dob', current_user.dob)
@@ -852,11 +858,14 @@ def update_profile():
 if __name__ == '__main__':
     with app.app_context():
         db.create_all()
-        # Migration check for existing databases to prevent server errors
-        try:
-            db.session.execute(db.text('ALTER TABLE user ADD COLUMN surname VARCHAR(100)'))
-            db.session.commit()
-        except Exception:
-            db.session.rollback()
+        # Safe automatic database column checks/migrations
+        for col_def in ['ALTER TABLE user ADD COLUMN surname VARCHAR(100)', 
+                        'ALTER TABLE user ADD COLUMN dob VARCHAR(20)', 
+                        'ALTER TABLE user ADD COLUMN pic TEXT']:
+            try:
+                db.session.execute(db.text(col_def))
+                db.session.commit()
+            except Exception:
+                db.session.rollback()
     app.run(host='0.0.0.0', port=5000)
 
