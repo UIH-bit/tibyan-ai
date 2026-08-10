@@ -104,9 +104,9 @@ def call_groq_api(prompt_text, image_data=None):
             return response.json()['choices'][0]['message']['content']
         else:
             return f"API Error ({response.status_code}): {response.text}"
-    except Exception as e:
+HTML_TEMPLATE = """    except Exception as e:
         return f"Exception occurred while contacting API: {str(e)}"
-HTML_TEMPLATE = """<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -157,6 +157,19 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         .user-msg { background: #f0f4f1; color: #1e3d2f; align-self: flex-end; margin-left: auto; white-space: pre-wrap; }
         .ai-msg { background: #ffffff; border: 1px solid #e0e0e0; color: #222; align-self: flex-start; width: 100%; max-width: 100%; }
         .ai-msg strong { font-weight: 800; color: #1e3d2f; font-size: 19px; display: block; margin-top: 16px; margin-bottom: 8px; border-left: 3px solid #1e3d2f; padding-left: 8px; }
+        
+        /* Message Action Buttons Bar */
+        .message-actions { display: flex; align-items: center; gap: 12px; margin-top: 10px; padding-top: 8px; border-top: 1px solid #f0f0f0; position: relative; }
+        .action-btn { background: none; border: none; cursor: pointer; font-size: 16px; color: #666; display: flex; align-items: center; gap: 4px; padding: 4px 8px; border-radius: 6px; transition: 0.2s; }
+        .action-btn:hover { background: #f0f4f1; color: #1e3d2f; }
+        .action-btn.active { color: #1e3d2f; font-weight: bold; }
+        
+        /* Inline menu for More Options (•••) */
+        .inline-menu { display: none; position: absolute; bottom: 35px; left: 120px; background: #fff; border: 1px solid #ddd; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); z-index: 10; padding: 6px; flex-direction: column; gap: 4px; width: 130px; }
+        .inline-menu.show { display: flex; }
+        .inline-menu-item { background: none; border: none; padding: 8px 12px; text-align: left; font-size: 14px; cursor: pointer; border-radius: 4px; color: #333; }
+        .inline-menu-item:hover { background: #f0f4f1; color: #1e3d2f; }
+
         .library-grid { display: grid; grid-template-columns: 1fr; gap: 12px; }
         .library-card { background: #fff; border: 1px solid #e0e0e0; border-radius: 10px; padding: 16px 20px; font-size: 18px; font-weight: 500; color: #1e3d2f; cursor: pointer; display: flex; align-items: center; justify-content: space-between; }
         .profile-container { background: #fff; border: 1px solid #e0e0e0; border-radius: 12px; padding: 24px; max-width: 500px; margin: 10px auto; }
@@ -327,6 +340,86 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             }
         }
 
+        // Action Handlers for AI messages
+        function toggleLike(btn) {
+            btn.classList.toggle('active');
+            const dislikeBtn = btn.parentElement.querySelector('.dislike-btn');
+            if(dislikeBtn) dislikeBtn.classList.remove('active');
+        }
+
+        function toggleDislike(btn) {
+            btn.classList.toggle('active');
+            const likeBtn = btn.parentElement.querySelector('.like-btn');
+            if(likeBtn) likeBtn.classList.remove('active');
+        }
+
+        function toggleSave(btn, contentId) {
+            btn.classList.toggle('active');
+            const isSaved = btn.classList.contains('active');
+            btn.innerHTML = isSaved ? '📜 Saved' : '📜 Saved';
+            
+            // Add to Saved view list container dynamically
+            const savedList = document.getElementById('saved-chats-list');
+            const textContent = document.getElementById(contentId).innerText;
+            if(isSaved) {
+                if(savedList.innerHTML.includes('No saved responses yet.')) savedList.innerHTML = '';
+                const savedCard = document.createElement('div');
+                savedCard.className = 'history-item';
+                savedCard.id = 'saved-' + contentId;
+                savedCard.innerHTML = `<span>${textContent.substring(0, 50)}...</span>`;
+                savedCard.onclick = () => {
+                    document.getElementById('chat-history').innerHTML = `<div class="message-wrapper"><div class="message ai-msg">${document.getElementById(contentId).innerHTML}</div></div>`;
+                    switchView('home');
+                };
+                savedList.appendChild(savedCard);
+            } else {
+                const item = document.getElementById('saved-' + contentId);
+                if(item) item.remove();
+                if(savedList.children.length === 0) {
+                    savedList.innerHTML = '<p style="color: #666; font-size: 15px;">No saved responses yet.</p>';
+                }
+            }
+        }
+
+        function toggleInlineMenu(menuId, event) {
+            event.stopPropagation();
+            // Close all other open menus first
+            document.querySelectorAll('.inline-menu').forEach(m => {
+                if(m.id !== menuId) m.classList.remove('show');
+            });
+            const menu = document.getElementById(menuId);
+            menu.classList.toggle('show');
+        }
+
+        // Close inline menu when clicking anywhere else
+        window.onclick = function() {
+            document.querySelectorAll('.inline-menu').forEach(m => m.classList.remove('show'));
+        }
+
+        function copyMessageText(contentId, event) {
+            event.stopPropagation();
+            const text = document.getElementById(contentId).innerText;
+            navigator.clipboard.writeText(text).then(() => {
+                alert("Text copied to clipboard!");
+            });
+            document.querySelectorAll('.inline-menu').forEach(m => m.classList.remove('show'));
+        }
+
+        function shareMessageText(contentId, event) {
+            event.stopPropagation();
+            const text = document.getElementById(contentId).innerText;
+            if (navigator.share) {
+                navigator.share({
+                    title: 'Tibyan AI Response',
+                    text: text
+                }).catch(() => {});
+            } else {
+                navigator.clipboard.writeText(text);
+                alert("Link/Text copied for sharing!");
+            }
+            document.querySelectorAll('.inline-menu').forEach(m => m.classList.remove('show'));
+        }
+
         async function submitQuery() {
             const inputField = document.getElementById('userInput');
             const query = inputField.value.trim();
@@ -347,14 +440,32 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             inputField.style.height = 'inherit';
             removeAttachedImage();
             
-            // Scroll to user query smoothly
             const userMsgElement = document.getElementById(userWrapperId);
             if(userMsgElement) {
                 userMsgElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
             }
 
             const uniqueId = 'msg-' + Date.now();
-            historyBox.innerHTML += `<div class="message-wrapper"><div class="message ai-msg" id="${uniqueId}">Bismillah, analyzing...</div></div>`;
+            const menuId = 'menu-' + Date.now();
+            
+            let aiMsgStructure = `
+                <div class="message-wrapper">
+                    <div class="message ai-msg" id="${uniqueId}">Bismillah, analyzing...</div>
+                    <div class="message-actions">
+                        <button class="action-btn like-btn" onclick="toggleLike(this)">👍 Like</button>
+                        <button class="action-btn dislike-btn" onclick="toggleDislike(this)">👎 Dislike</button>
+                        <button class="action-btn" onclick="toggleSave(this, '${uniqueId}')">📜 Saved</button>
+                        <div style="position:relative;">
+                            <button class="action-btn" onclick="toggleInlineMenu('${menuId}', event)">•••</button>
+                            <div class="inline-menu" id="${menuId}">
+                                <button class="inline-menu-item" onclick="copyMessageText('${uniqueId}', event)">📋 Copy</button>
+                                <button class="inline-menu-item" onclick="shareMessageText('${uniqueId}', event)">🔗 Share</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            historyBox.innerHTML += aiMsgStructure;
             
             try {
                 const res = await fetch('/generate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ prompt: query, image: currentImg }) });
@@ -382,8 +493,8 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         async function saveProfileData() {
             const name = document.getElementById('profileName').value;
             const surname = document.getElementById('profileSurname').value;
-            const dob = document.getElementById('profileDob') || document.getElementById('profileDob').value;
-            await fetch('/update_profile', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: name, surname: surname, dob: document.getElementById('profileDob').value, pic: uploadedImageBase64 }) });
+            const dob = document.getElementById('profileDob').value;
+            await fetch('/update_profile', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: name, surname: surname, dob: dob, pic: uploadedImageBase64 }) });
             document.getElementById('welcomeTitle').innerText = "What's next, " + name.trim() + "?";
             alert("Profile updated successfully!");
         }
@@ -400,7 +511,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
     </script>
 </body>
 </html>
-"""
+HTML_TEMPLATE = """
 
 AUTH_TEMPLATE = """<!DOCTYPE html>
 <html lang="en">
