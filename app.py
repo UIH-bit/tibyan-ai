@@ -17,7 +17,6 @@ login_manager.login_view = 'login'
 
 api_key = os.environ.get("GROQ_API_KEY") or os.environ.get("GEMINI_API_KEY")
 
-# Database Models
 class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False)
@@ -35,7 +34,7 @@ class ChatHistory(db.Model):
     timestamp = db.Column(db.Float, nullable=False)
 
 @login_manager.user_loader
-class load_user(user_id):
+def load_user(user_id):
     return db.session.get(User, int(user_id))
 
 def call_groq_api(prompt_text, image_data=None):
@@ -805,4 +804,4 @@ if __name__ == '__main__':
     with app.app_context():
         db.create_all()
     app.run(host='0.0.0.0', port=5000)
-
+	
