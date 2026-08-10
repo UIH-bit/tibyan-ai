@@ -83,7 +83,7 @@ def call_groq_api(prompt_text, image_data=None):
                 {"type": "image_url", "image_url": {"url": image_data}}
             ]
         })
-        model_name = "meta-llama/llama-3.2-11b-vision-instruct
+        model_name = "meta-llama/llama-3.2-11b-vision-instruct"
 "
     else:
         messages.append({"role": "user", "content": prompt_text})
