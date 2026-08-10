@@ -9,3 +9,4 @@ Werkzeug
 requests
 gunicorn
 
+Flask-Mail
