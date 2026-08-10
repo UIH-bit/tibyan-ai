@@ -290,7 +290,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                     <input type="file" id="profilePicInput" accept="image/*" style="display:none;" onchange="previewProfileImage(event)">
                 </div>
                 <div class="form-group">
-                    <label class="form-label">Full Name</label>
+                    <label class="form-label">Name</label>
                     <input type="text" id="profileName" class="form-control" value="{{ user.name }}">
                 </div>
                 <div class="form-group">
@@ -684,11 +684,11 @@ AUTH_TEMPLATE = """<!DOCTYPE html>
             {% if is_signup %}
             <div class="form-group">
                 <label class="form-label">Name</label>
-                <input type="text" name="name" class="form-control" required placeholder="Enter name">
+                <input type="text" name="name" class="form-control" required placeholder="Name">
             </div>
             <div class="form-group">
                 <label class="form-label">Surname</label>
-                <input type="text" name="surname" class="form-control" placeholder="Enter surname">
+                <input type="text" name="surname" class="form-control" placeholder="Surname">
             </div>
             {% endif %}
             <div class="form-group">
@@ -762,7 +762,7 @@ def signup():
             flash('Passwords do not match!')
             return redirect(url_for('signup'))
 
-        # Password validation: must contain letters and digits/alphabets mixture
+        # Password validation: must contain letters and numbers mixture
         if not re.search(r'[A-Za-z]', password) or not re.search(r'\d', password):
             flash('Password must contain a mix of letters and numbers!')
             return redirect(url_for('signup'))
@@ -852,7 +852,7 @@ def update_profile():
 if __name__ == '__main__':
     with app.app_context():
         db.create_all()
-        # Migration check for existing databases
+        # Migration check for existing databases to prevent server errors
         try:
             db.session.execute(db.text('ALTER TABLE user ADD COLUMN surname VARCHAR(100)'))
             db.session.commit()
