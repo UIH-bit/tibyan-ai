@@ -1,3 +1,13 @@
+
+from flask_mail import Mail, Message
+import os
+
+app.config['MAIL_SERVER'] = 'smtp.gmail.com'
+app.config['MAIL_PORT'] = 587
+app.config['MAIL_USE_TLS'] = True
+app.config['MAIL_USERNAME'] = os.environ.get('MAIL_USERNAME')
+app.config['MAIL_PASSWORD'] = os.environ.get('MAIL_PASSWORD')
+mail = Mail(app)
 from flask import Flask, request, jsonify, render_template_string, url_for, redirect, flash
 from datetime import timedelta
 from flask_sqlalchemy import SQLAlchemy
@@ -539,6 +549,7 @@ def update_profile():
     current_user.pic = data.get('pic', current_user.pic)
     db.session.commit()
     return jsonify({'status': 'success'})
+@app.route('/forgot-password', methods=['GET', 'POST'])
 @app.route('/forgot-password', methods=['GET', 'POST'])
 @app.route('/forgot-password', methods=['GET', 'POST'])
 @app.route('/forgot-password', methods=['GET', 'POST'])
