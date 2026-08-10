@@ -1,4 +1,5 @@
 from flask import Flask, request, jsonify, render_template_string, url_for, redirect, flash
+from datetime import timedelta
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -9,6 +10,7 @@ import time
 import traceback
 
 app = Flask(__name__)
+app.permanent_session_lifetime = timedelta(days=365)
 app.config['SECRET_KEY'] = 'tibyan_secure_secret_key_2026'
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///tibyan.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
