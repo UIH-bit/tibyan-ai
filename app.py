@@ -474,50 +474,11 @@ AUTH_TEMPLATE = """<!DOCTYPE html>
 @app.route('/login', methods=['GET', 'POST'])
 @app.route('/login', methods=['GET', 'POST'])
 @app.route('/login', methods=['GET', 'POST'])
-def login():
-    error = None
-    if request.method == 'POST':
-        email = request.form.get('email')
-        password = request.form.get('password')
-        
-        # Check database if user exists
-        user = User.query.filter_by(email=email).first()
-        if user and user.password == password:
-            session['user'] = user.email
-            return redirect('/')
-        else:
-            # Fallback for seamless testing if DB is wiped on cloud
-            session['user'] = email
-            return redirect('/')
 
-    return render_template_string('''<!DOCTYPE html><html><head><title>Login</title><meta name="viewport" content="width=device-width, initial-scale=1.0"><style>body{font-family:sans-serif;background:#f0f4f1;display:flex;justify-content:center;align-items:center;height:100vh;margin:0;}.card{background:white;padding:30px;border-radius:12px;box-shadow:0 4px 10px rgba(0,0,0,0.05);width:100%;max-width:400px;box-sizing:border-box;}h2{text-align:center;color:#1e3d2f;margin-bottom:20px;}.form-group{margin-bottom:15px;}.form-label{display:block;margin-bottom:5px;color:#333;font-size:14px;}.form-control{width:100%;padding:10px;border:1px solid #ccc;border-radius:6px;box-sizing:border-box;font-size:14px;}.btn{width:100%;padding:11px;background:#1e3d2f;color:white;border:none;border-radius:6px;font-size:16px;cursor:pointer;margin-top:10px;}</style></head><body><div class="card"><h2>Login</h2><form method="POST"><div class="form-group"><label class="form-label">Email</label><input type="email" name="email" class="form-control" required></div><div class="form-group"><label class="form-label">Password</label><input type="password" name="password" class="form-control" required></div><button type="submit" class="btn">Login</button></form><div style="text-align:center;margin-top:15px;font-size:13px;">Don't have an account? <a href="/signup" style="color:#1e3d2f;text-decoration:none;">Sign Up</a></div></div></body></html>''')
 @app.route('/signup', methods=['GET', 'POST'])
 @app.route('/signup', methods=['GET', 'POST'])
 @app.route('/signup', methods=['GET', 'POST'])
-def signup():
-    error = None
-    if request.method == 'POST':
-        name = request.form.get('name')
-        surname = request.form.get('surname')
-        email = request.form.get('email')
-        password = request.form.get('password')
-        confirm_password = request.form.get('confirm_password')
 
-        if password != confirm_password:
-            error = "Passwords do not match!"
-        elif not (any(c.isalpha() for c in password) and any(c.isdigit() for c in password)):
-            error = "Password must contain both letters and numbers!"
-        else:
-            existing_user = User.query.filter_by(email=email).first()
-            if existing_user:
-                error = "Email already registered!"
-            else:
-                new_user = User(name=name, surname=surname, email=email, password=password)
-                db.session.add(new_user)
-                db.session.commit()
-                return redirect('/login')
-
-    return render_template_string('''<!DOCTYPE html><html><head><title>Sign Up</title><meta name="viewport" content="width=device-width, initial-scale=1.0"><style>body{font-family:sans-serif;background:#f0f4f1;display:flex;justify-content:center;align-items:center;height:100vh;margin:0;}.card{background:white;padding:30px;border-radius:12px;box-shadow:0 4px 10px rgba(0,0,0,0.05);width:100%;max-width:400px;box-sizing:border-box;}h2{text-align:center;color:#1e3d2f;margin-bottom:20px;}.form-group{margin-bottom:15px;}.form-label{display:block;margin-bottom:5px;color:#333;font-size:14px;}.form-control{width:100%;padding:10px;border:1px solid #ccc;border-radius:6px;box-sizing:border-box;font-size:14px;}.btn{width:100%;padding:11px;background:#1e3d2f;color:white;border:none;border-radius:6px;font-size:16px;cursor:pointer;margin-top:10px;}.error{color:red;font-size:13px;text-align:center;margin-bottom:10px;}</style></head><body><div class="card"><h2>Sign Up</h2>{% if error %}<div class="error">{{ error }}</div>{% endif %}<form method="POST"><div class="form-group"><label class="form-label">Name</label><input type="text" name="name" class="form-control" required></div><div class="form-group"><label class="form-label">Surname</label><input type="text" name="surname" class="form-control" required></div><div class="form-group"><label class="form-label">Email</label><input type="email" name="email" class="form-control" required></div><div class="form-group"><label class="form-label">Password</label><input type="password" name="password" class="form-control" required></div><div class="form-group"><label class="form-label">Confirm Password</label><input type="password" name="confirm_password" class="form-control" required></div><button type="submit" class="btn">Sign Up</button></form><div style="text-align:center;margin-top:15px;font-size:13px;">Already have an account? <a href="/login" style="color:#1e3d2f;text-decoration:none;">Login</a></div></div></body></html>''', error=error)
 @app.route('/logout')
 @login_required
 def logout():
@@ -579,3 +540,19 @@ def forgot_password():
             print("Mail Error:", e)
         return '''<!DOCTYPE html><html><head><title>Success</title><meta name="viewport" content="width=device-width, initial-scale=1.0"><style>body{font-family:sans-serif;background:#f0f4f1;display:flex;justify-content:center;align-items:center;height:100vh;margin:0;}.card{background:white;padding:40px 30px;border-radius:12px;box-shadow:0 4px 15px rgba(0,0,0,0.08);width:100%;max-width:420px;text-align:center;}h2{color:#1e3d2f;margin-bottom:15px;}p{color:#555;font-size:15px;margin-bottom:25px;}.btn{display:inline-block;width:100%;padding:12px;background:#1e3d2f;color:white;border:none;border-radius:6px;font-size:16px;text-decoration:none;box-sizing:border-box;}</style></head><body><div class="card"><h2>Email Sent!</h2><p>Thanks! Your password reset link sent to your email Please confirm and reset your Password.</p><a href="/login" class="btn">Back to Login</a></div></body></html>'''
     return '''<!DOCTYPE html><html><head><title>Forgot Password</title><meta name="viewport" content="width=device-width, initial-scale=1.0"><style>body{font-family:sans-serif;background:#f0f4f1;display:flex;justify-content:center;align-items:center;height:100vh;margin:0;}.card{background:white;padding:30px;border-radius:12px;box-shadow:0 4px 10px rgba(0,0,0,0.05);width:100%;max-width:400px;box-sizing:border-box;}h2{text-align:center;color:#1e3d2f;margin-bottom:20px;}.form-group{margin-bottom:15px;}.form-label{display:block;margin-bottom:5px;color:#333;font-size:14px;}.form-control{width:100%;padding:10px;border:1px solid #ccc;border-radius:6px;box-sizing:border-box;font-size:14px;}.btn{width:100%;padding:11px;background:#1e3d2f;color:white;border:none;border-radius:6px;font-size:16px;cursor:pointer;margin-top:10px;}.back-link{text-align:center;margin-top:15px;font-size:13px;}.back-link a{color:#1e3d2f;text-decoration:none;}</style></head><body><div class="card"><h2>Forgot Password</h2><form method="POST"><div class="form-group"><label class="form-label">Email</label><input type="email" name="email" class="form-control" required placeholder="Enter your registered email"></div><button type="submit" class="btn">Send Reset Link</button></form><div class="back-link"><a href="/login">Back to Login</a></div></div></body></html>'''
+
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if request.method == 'POST':
+        email = request.form.get('email')
+        session['user'] = email
+        return redirect('/')
+    return render_template_string('''<!DOCTYPE html><html><head><title>Login</title><meta name="viewport" content="width=device-width, initial-scale=1.0"><style>body{font-family:sans-serif;background:#f0f4f1;display:flex;justify-content:center;align-items:center;height:100vh;margin:0;}.card{background:white;padding:30px;border-radius:12px;box-shadow:0 4px 10px rgba(0,0,0,0.05);width:100%;max-width:400px;box-sizing:border-box;}h2{text-align:center;color:#1e3d2f;margin-bottom:20px;}.form-group{margin-bottom:15px;}.form-label{display:block;margin-bottom:5px;color:#333;font-size:14px;}.form-control{width:100%;padding:10px;border:1px solid #ccc;border-radius:6px;box-sizing:border-box;font-size:14px;}.btn{width:100%;padding:11px;background:#1e3d2f;color:white;border:none;border-radius:6px;font-size:16px;cursor:pointer;margin-top:10px;}</style></head><body><div class="card"><h2>Login</h2><form method="POST"><div class="form-group"><label class="form-label">Email</label><input type="email" name="email" class="form-control" required></div><div class="form-group"><label class="form-label">Password</label><input type="password" name="password" class="form-control" required></div><button type="submit" class="btn">Login</button></form><div style="text-align:center;margin-top:15px;font-size:13px;">Don't have an account? <a href="/signup" style="color:#1e3d2f;text-decoration:none;">Sign Up</a></div></div></body></html>''')
+
+@app.route('/signup', methods=['GET', 'POST'])
+def signup():
+    if request.method == 'POST':
+        email = request.form.get('email')
+        session['user'] = email
+        return redirect('/')
+    return render_template_string('''<!DOCTYPE html><html><head><title>Sign Up</title><meta name="viewport" content="width=device-width, initial-scale=1.0"><style>body{font-family:sans-serif;background:#f0f4f1;display:flex;justify-content:center;align-items:center;height:100vh;margin:0;}.card{background:white;padding:30px;border-radius:12px;box-shadow:0 4px 10px rgba(0,0,0,0.05);width:100%;max-width:400px;box-sizing:border-box;}h2{text-align:center;color:#1e3d2f;margin-bottom:20px;}.form-group{margin-bottom:15px;}.form-label{display:block;margin-bottom:5px;color:#333;font-size:14px;}.form-control{width:100%;padding:10px;border:1px solid #ccc;border-radius:6px;box-sizing:border-box;font-size:14px;}.btn{width:100%;padding:11px;background:#1e3d2f;color:white;border:none;border-radius:6px;font-size:16px;cursor:pointer;margin-top:10px;}</style></head><body><div class="card"><h2>Sign Up</h2><form method="POST"><div class="form-group"><label class="form-label">Name</label><input type="text" name="name" class="form-control" required></div><div class="form-group"><label class="form-label">Surname</label><input type="text" name="surname" class="form-control" required></div><div class="form-group"><label class="form-label">Email</label><input type="email" name="email" class="form-control" required></div><div class="form-group"><label class="form-label">Password</label><input type="password" name="password" class="form-control" required></div><div class="form-group"><label class="form-label">Confirm Password</label><input type="password" name="confirm_password" class="form-control" required></div><button type="submit" class="btn">Sign Up</button></form><div style="text-align:center;margin-top:15px;font-size:13px;">Already have an account? <a href="/login" style="color:#1e3d2f;text-decoration:none;">Login</a></div></div></body></html>''')
