@@ -541,12 +541,9 @@ def update_profile():
     return jsonify({'status': 'success'})
 @app.route('/forgot-password', methods=['GET', 'POST'])
 @app.route('/forgot-password', methods=['GET', 'POST'])
+@app.route('/forgot-password', methods=['GET', 'POST'])
 def forgot_password():
     if request.method == 'POST':
-        flash('Password reset link sent to your email!')
+        flash('Password reset link sent to your email!', 'success')
         return redirect(url_for('login'))
-    return render_template_string(AUTH_TEMPLATE, title='Forgot Password', is_signup=False)
-
-if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000)
-
+    return render_template_string('''<!DOCTYPE html><html><head><title>Forgot Password</title><meta name="viewport" content="width=device-width, initial-scale=1.0"><style>body{font-family:sans-serif;background:#f0f4f1;display:flex;justify-content:center;align-items:center;height:100vh;margin:0;}.card{background:white;padding:30px;border-radius:12px;box-shadow:0 4px 10px rgba(0,0,0,0.05);width:100%;max-width:400px;box-sizing:border-box;}h2{text-align:center;color:#1e3d2f;margin-bottom:20px;}.form-group{margin-bottom:15px;}.form-label{display:block;margin-bottom:5px;color:#333;font-size:14px;}.form-control{width:100%;padding:10px;border:1px solid #ccc;border-radius:6px;box-sizing:border-box;font-size:14px;}.btn{width:100%;padding:11px;background:#1e3d2f;color:white;border:none;border-radius:6px;font-size:16px;cursor:pointer;margin-top:10px;}.back-link{text-align:center;margin-top:15px;font-size:13px;}.back-link a{color:#1e3d2f;text-decoration:none;}</style></head><body><div class="card"><h2>Forgot Password</h2><form method="POST"><div class="form-group"><label class="form-label">Email</label><input type="email" name="email" class="form-control" required placeholder="Enter your registered email"></div><button type="submit" class="btn">Send Reset Link</button></form><div class="back-link"><a href="/login">Back to Login</a></div></div></body></html>''')
