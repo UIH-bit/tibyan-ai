@@ -102,7 +102,6 @@ def call_groq_api(prompt_text, image_data=None):
             return f"API Error ({response.status_code}): {response.text}"
     except Exception as e:
         return f"Exception occurred while contacting API: {str(e)}"
-
 HTML_TEMPLATE = """<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -117,6 +116,10 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         .header-left { display: flex; align-items: center; gap: 15px; }
         .menu-btn { background: none; border: none; font-size: 26px; cursor: pointer; color: #1e3d2f; z-index: 1001; padding: 4px 8px; }
         .logo-img { height: 35px; width: auto; display: block; mix-blend-mode: multiply; }
+        .header-right { display: flex; align-items: center; }
+        .new-chat-icon-btn { background: none; border: none; font-size: 24px; cursor: pointer; color: #1e3d2f; display: flex; align-items: center; justify-content: center; padding: 6px 10px; border-radius: 50%; transition: 0.2s; }
+        .new-chat-icon-btn:hover { background: #f0f4f1; }
+        
         .sidebar { position: fixed; top: 0; left: -280px; width: 280px; height: 100%; background: #fff; box-shadow: 2px 0 10px rgba(0,0,0,0.1); transition: 0.3s ease; z-index: 9999; display: flex; flex-direction: column; }
         .sidebar.open { left: 0; }
         .sidebar-header { padding: 20px; font-size: 20px; font-weight: bold; color: #1e3d2f; border-bottom: 1px solid #eaeaea; display: flex; justify-content: space-between; align-items: center; }
@@ -177,6 +180,9 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             <button class="menu-btn" onclick="toggleSidebar()">☰</button>
             <img src="{{ url_for('static', filename='logo.png') }}" alt="Tibyan AI" class="logo-img">
         </div>
+        <div class="header-right">
+            <button class="new-chat-icon-btn" onclick="startNewChat()" title="New Chat">✨</button>
+        </div>
     </header>
 
     <div class="overlay" id="overlay" onclick="toggleSidebar()"></div>
@@ -189,8 +195,6 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             <input type="text" id="chatSearchInput" class="sidebar-search" placeholder="Search Chats..." oninput="filterChats(this.value)">
         </div>
         <ul class="sidebar-menu">
-            <li onclick="startNewChat()">➕️ New Chat</li>
-            <li onclick="switchView('home')">🏡 Home</li>
             <li onclick="switchView('library')">📚 Library</li>
             <li onclick="switchView('saved')">📜 Saved</li>
             <li onclick="switchView('profile')">👤 Profile</li>
@@ -273,8 +277,16 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         let chatImageBase64 = null;
 
         function toggleSidebar() { document.getElementById('sidebar').classList.toggle('open'); document.getElementById('overlay').classList.toggle('active'); }
-        function switchView(viewName) { document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active-view')); document.getElementById(viewName + '-view').classList.add('active-view'); toggleSidebar(); }
-        function startNewChat() { currentChatId = 'chat_' + Date.now(); currentChatTitle = ""; document.getElementById('chat-history').innerHTML = ''; const ws = document.getElementById('welcome-screen'); if(ws) ws.style.display = 'flex'; switchView('home'); }
+        function switchView(viewName) { document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active-view')); document.getElementById(viewName + '-view').classList.add('active-view'); }
+        
+        function startNewChat() { 
+            currentChatId = 'chat_' + Date.now(); 
+            currentChatTitle = ""; 
+            document.getElementById('chat-history').innerHTML = ''; 
+            const ws = document.getElementById('welcome-screen'); 
+            if(ws) ws.style.display = 'flex'; 
+            switchView('home'); 
+        }
 
         async function saveCurrentChat(title, historyHtml) {
             if(!currentChatTitle) currentChatTitle = title;
