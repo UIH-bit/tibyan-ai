@@ -86,7 +86,7 @@ def call_groq_api(prompt_text, image_data=None):
             ]
         })
         model_name = "meta-llama/llama-3.2-11b-vision-instruct"
-"
+
     else:
         messages.append({"role": "user", "content": prompt_text})
         model_name = "llama-3.3-70b-versatile"
