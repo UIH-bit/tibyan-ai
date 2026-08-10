@@ -486,10 +486,8 @@ def logout():
     return redirect(url_for('login'))
 
 @app.route('/')
-@login_required
 def home():
-    return render_template_string(HTML_TEMPLATE, user=current_user)
-
+    return render_template_string('''<!DOCTYPE html><html><head><title>Home</title></head><body style="font-family:sans-serif;text-align:center;padding-top:50px;"><h1>Welcome to Tibyan AI!</h1><p>You are successfully logged in as: {{ session.get('user', 'Guest') }}</p><a href="/login" style="color:green;">Login</a> | <a href="/signup" style="color:blue;">Sign Up</a></body></html>''')
 @app.route('/generate', methods=['POST'])
 @login_required
 def generate():
