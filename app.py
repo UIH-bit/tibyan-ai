@@ -474,7 +474,7 @@ def login():
     if request.method == 'POST':
         email = request.form.get('email')
         password = request.form.get('password')
-        user = Users.query.filter_by(email=email).first()
+        user = User.query.filter_by(email=email).first()
         if user and user.password == password:
             session['user'] = user.email
             return redirect(url_for('index'))
@@ -497,11 +497,11 @@ def signup():
         elif not (any(c.isalpha() for c in password) and any(c.isdigit() for c in password)):
             error = "Password must contain both letters and numbers!"
         else:
-            existing_user = Users.query.filter_by(email=email).first()
+            existing_user = User.query.filter_by(email=email).first()
             if existing_user:
                 error = "Email already registered!"
             else:
-                new_user = Users(name=name, surname=surname, email=email, password=password)
+                new_user = User(name=name, surname=surname, email=email, password=password)
                 db.session.add(new_user)
                 db.session.commit()
                 return redirect(url_for('login'))
