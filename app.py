@@ -1,7 +1,7 @@
 
 import os
 
-from flask import Flask, request, jsonify, render_template_string, url_for, redirect, flash
+from flask import session, Flask, request, jsonify, render_template_string, url_for, redirect, flash
 from datetime import timedelta
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
