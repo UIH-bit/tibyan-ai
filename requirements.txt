@@ -10,3 +10,5 @@ requests
 gunicorn
 
 Flask-Mail
+psycopg2-binary
+
