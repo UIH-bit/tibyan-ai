@@ -99,13 +99,13 @@ def call_groq_api(prompt_text, image_data=None):
     }
     
         try:
-    response = requests.post(url, headers=headers, json=payload)
+   response = requests.post(url, headers=headers, json=payload)
     if response.status_code == 200:
         return response.json()['choices'][0]['message']['content']
     else:
         return f"API Error ({response.status_code}): {response.text}"
-except Exception as e:
-    return f"Exception occurred while contacting AI: {str(e)}"
+        except Exception as e:
+        return f"Exception occurred while contacting AI: {str(e)}"
 
 HTML_TEMPLATE = """
 <!DOCTYPE html>
