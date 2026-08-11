@@ -155,6 +155,13 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         .user-msg { background: #f0f4f1; color: #1e3d2f; align-self: flex-end; margin-left: auto; white-space: pre-wrap; }
         .ai-msg { background: #ffffff; border: 1px solid #e0e0e0; color: #222; align-self: flex-start; width: 100%; max-width: 100%; }
         .ai-msg strong { font-weight: 800; color: #1e3d2f; font-size: 19px; display: block; margin-top: 16px; margin-bottom: 8px; border-left: 3px solid #1e3d2f; padding-left: 8px; }
+        
+        /* Action bar under AI message */
+        .ai-actions-bar { display: flex; align-items: center; gap: 12px; margin-top: 10px; padding-left: 4px; }
+        .action-btn { background: none; border: none; cursor: pointer; font-size: 16px; color: #555; display: flex; align-items: center; gap: 4px; padding: 4px 8px; border-radius: 6px; transition: 0.2s; }
+        .action-btn:hover { background: #f0f4f1; color: #1e3d2f; }
+        .action-btn.active { color: #1e3d2f; font-weight: bold; background: #f0f4f1; }
+
         .library-grid { display: grid; grid-template-columns: 1fr; gap: 12px; }
         .library-card { background: #fff; border: 1px solid #e0e0e0; border-radius: 10px; padding: 16px 20px; font-size: 18px; font-weight: 500; color: #1e3d2f; cursor: pointer; display: flex; align-items: center; justify-content: space-between; }
         .profile-container { background: #fff; border: 1px solid #e0e0e0; border-radius: 12px; padding: 24px; max-width: 500px; margin: 10px auto; }
@@ -277,6 +284,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         let currentChatId = 'chat_' + Date.now();
         let currentChatTitle = "";
         let chatImageBase64 = null;
+        let savedResponses = {};
 
         function toggleSidebar() { document.getElementById('sidebar').classList.toggle('open'); document.getElementById('overlay').classList.toggle('active'); }
         function switchView(viewName) { document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active-view')); document.getElementById(viewName + '-view').classList.add('active-view'); }
@@ -325,6 +333,72 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             }
         }
 
+        // Silent UI Action Handlers
+        function handleLike(btn) {
+            const parent = btn.closest('.ai-actions-bar');
+            const likeBtn = parent.querySelector('.like-btn');
+            const dislikeBtn = parent.querySelector('.dislike-btn');
+            likeBtn.classList.toggle('active');
+            dislikeBtn.classList.remove('active');
+        }
+
+        function handleDislike(btn) {
+            const parent = btn.closest('.ai-actions-bar');
+            const likeBtn = parent.querySelector('.like-btn');
+            const dislikeBtn = parent.querySelector('.dislike-btn');
+            dislikeBtn.classList.toggle('active');
+            likeBtn.classList.remove('active');
+        }
+
+        function handleSave(btn, msgId) {
+            btn.classList.toggle('active');
+            const contentBox = document.getElementById(msgId);
+            const savedListContainer = document.getElementById('saved-chats-list');
+            if(btn.classList.contains('active')) {
+                savedResponses[msgId] = contentBox.innerHTML;
+            } else {
+                delete savedResponses[msgId];
+            }
+            renderSavedList();
+        }
+
+        function renderSavedList() {
+            const container = document.getElementById('saved-chats-list');
+            const keys = Object.keys(savedResponses);
+            if(keys.length === 0) {
+                container.innerHTML = '<p style="color: #666; font-size: 15px;">No saved responses yet.</p>';
+                return;
+            }
+            let html = '';
+            keys.forEach((k, idx) => {
+                html += `<div style="background:#fff; border:1px solid #e0e0e0; border-radius:10px; padding:16px; margin-bottom:12px;">
+                    <div style="font-size:13px; color:#777; margin-bottom:8px; font-weight:bold;">Saved Response #${idx + 1}</div>
+                    <div>${savedResponses[k]}</div>
+                </div>`;
+            });
+            container.innerHTML = html;
+        }
+
+        function handleMore(btn, msgId) {
+            const contentBox = document.getElementById(msgId);
+            // Extract raw text or clean html text for copying/sharing
+            const textToCopy = contentBox.innerText;
+            
+            if (navigator.share) {
+                navigator.share({
+                    title: 'Tibyan AI Response',
+                    text: textToCopy,
+                }).catch(() => {});
+            } else {
+                navigator.clipboard.writeText(textToCopy).then(() => {
+                    // Silent UI visual cue on button instead of popup alert
+                    let originalHTML = btn.innerHTML;
+                    btn.innerHTML = '✓ Copied';
+                    setTimeout(() => { btn.innerHTML = originalHTML; }, 1500);
+                });
+            }
+        }
+
         async function submitQuery() {
             const inputField = document.getElementById('userInput');
             const query = inputField.value.trim();
@@ -351,7 +425,18 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             }
 
             const uniqueId = 'msg-' + Date.now();
-            historyBox.innerHTML += `<div class="message-wrapper"><div class="message ai-msg" id="${uniqueId}">Bismillah, analyzing...</div></div>`;
+            const wrapperId = 'wrapper-' + Date.now();
+            
+            historyBox.innerHTML += `
+                <div class="message-wrapper" id="${wrapperId}">
+                    <div class="message ai-msg" id="${uniqueId}">Bismillah, analyzing...</div>
+                    <div class="ai-actions-bar">
+                        <button class="action-btn like-btn" onclick="handleLike(this)">👍 Like</button>
+                        <button class="action-btn dislike-btn" onclick="handleDislike(this)">👎 Dislike</button>
+                        <button class="action-btn" onclick="handleSave(this, '${uniqueId}')">📜 Save</button>
+                        <button class="action-btn" onclick="handleMore(this, '${uniqueId}')">•••</button>
+                    </div>
+                </div>`;
             
             try {
                 const res = await fetch('/generate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ prompt: query, image: currentImg }) });
