@@ -1,11 +1,12 @@
 from flask import Flask, request, jsonify, render_template_string, url_for, redirect, flash
-from datetime import timedelta
+from datetime import timedelta, datetime
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
 import os
 import requests
 import time
+import random
 import traceback
 
 app = Flask(__name__)
@@ -30,6 +31,9 @@ class User(UserMixin, db.Model):
     password = db.Column(db.String(200), nullable=False)
     dob = db.Column(db.String(20), nullable=True)
     pic = db.Column(db.Text, nullable=True)
+    # New columns for Forgot Password OTP
+    reset_token = db.Column(db.String(10), nullable=True)
+    token_expiry = db.Column(db.Float, nullable=True)
 
 class ChatHistory(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -49,6 +53,7 @@ def make_session_permanent():
     session.permanent = True
     if not getattr(app, '_database_checked', False):
         db.create_all()
+        # Safe column check/addition for existing tables if needed
         app._database_checked = True
 
 @app.errorhandler(Exception)
@@ -86,7 +91,6 @@ def call_groq_api(prompt_text, image_data=None):
                 {"type": "image_url", "image_url": {"url": image_data}}
             ]
         })
-        # Updated to current supported Groq vision model
         model_name = "meta-llama/llama-3.2-11b-vision-instruct"
     else:
         messages.append({"role": "user", "content": prompt_text})
@@ -503,6 +507,8 @@ AUTH_TEMPLATE = """<!DOCTYPE html>
         .auth-link { text-align: center; margin-top: 15px; font-size: 14px; color: #555; }
         .auth-link a { color: #1e3d2f; text-decoration: none; font-weight: bold; }
         .flash-msg { background: #ffe6e6; color: #d9534f; padding: 10px; border-radius: 6px; margin-bottom: 15px; font-size: 14px; text-align: center; }
+        .forgot-link-container { text-align: right; margin-top: -8px; margin-bottom: 15px; }
+        .forgot-link-container a { font-size: 13px; color: #1e3d2f; text-decoration: none; }
     </style>
 </head>
 <body>
@@ -516,8 +522,10 @@ AUTH_TEMPLATE = """<!DOCTYPE html>
             <div class="form-group"><label class="form-label">Name</label><input type="text" name="name" class="form-control" style="padding-right: 16px;" required></div>
             <div class="form-group"><label class="form-label">Surname</label><input type="text" name="surname" class="form-control" style="padding-right: 16px;"></div>
             {% endif %}
+            
             <div class="form-group"><label class="form-label">Email</label><input type="email" name="email" class="form-control" style="padding-right: 16px;" required></div>
             
+            {% if title == 'Login' %}
             <div class="form-group">
                 <label class="form-label">Password</label>
                 <div class="password-container">
@@ -527,8 +535,19 @@ AUTH_TEMPLATE = """<!DOCTYPE html>
                     </button>
                 </div>
             </div>
-
-            {% if is_signup %}
+            <div class="forgot-link-container">
+                <a href="{{ url_for('forgot_password') }}">Forgot Password?</a>
+            </div>
+            {% elif title == 'Sign Up' %}
+            <div class="form-group">
+                <label class="form-label">Password</label>
+                <div class="password-container">
+                    <input type="password" name="password" id="passwordField" class="form-control" required>
+                    <button type="button" class="toggle-password" onclick="togglePasswordVisibility('passwordField', this)">
+                        <svg class="eye-icon" viewBox="0 0 24 24"><path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/></svg>
+                    </button>
+                </div>
+            </div>
             <div class="form-group">
                 <label class="form-label">Confirm Password</label>
                 <div class="password-container">
@@ -538,12 +557,25 @@ AUTH_TEMPLATE = """<!DOCTYPE html>
                     </button>
                 </div>
             </div>
+            {% elif title == 'Forgot Password' %}
+            <p style="font-size: 14px; color: #666; margin-bottom: 15px;">Enter your registered email address and we'll generate a 6-digit recovery code for you.</p>
+            {% elif title == 'Reset Password' %}
+            <div class="form-group"><label class="form-label">6-Digit Code</label><input type="text" name="token" class="form-control" style="padding-right: 16px;" required></div>
+            <div class="form-group">
+                <label class="form-label">New Password</label>
+                <div class="password-container">
+                    <input type="password" name="password" id="passwordField" class="form-control" required>
+                    <button type="button" class="toggle-password" onclick="togglePasswordVisibility('passwordField', this)">
+                        <svg class="eye-icon" viewBox="0 0 24 24"><path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/></svg>
+                    </button>
+                </div>
+            </div>
             {% endif %}
 
             <button type="submit" class="auth-btn">{{ title }}</button>
         </form>
         <div class="auth-link">
-            {% if is_signup %}Already have an account? <a href="{{ url_for('login') }}">Login</a>{% else %}Don't have an account? <a href="{{ url_for('signup') }}">Sign Up</a>{% endif %}
+            {% if is_signup or title == 'Forgot Password' or title == 'Reset Password' %}Already have an account? <a href="{{ url_for('login') }}">Login</a>{% else %}Don't have an account? <a href="{{ url_for('signup') }}">Sign Up</a>{% endif %}
         </div>
     </div>
 
@@ -611,6 +643,45 @@ def logout():
     logout_user()
     return redirect(url_for('login'))
 
+@app.route('/forgot-password', methods=['GET', 'POST'])
+def forgot_password():
+    if request.method == 'POST':
+        email = request.form.get('email', '').strip().lower()
+        user = User.query.filter_by(email=email).first()
+        if user:
+            # 6-digit OTP code generate karna
+            otp_code = str(random.randint(100000, 999999))
+            user.reset_token = otp_code
+            user.token_expiry = time.time() + 900  # 15 minutes validity
+            db.session.commit()
+            
+            # Temporary message for testing / screen recovery view setup
+            flash(f'Your Password Reset Code is: {otp_code}')
+            return redirect(url_for('reset_password', email=email))
+        else:
+            flash('Email not found in our records!')
+    return render_template_string(AUTH_TEMPLATE, title='Forgot Password', is_signup=False)
+
+@app.route('/reset-password', methods=['GET', 'POST'])
+def reset_password():
+    email = request.args.get('email', '')
+    if request.method == 'POST':
+        token = request.form.get('token', '').strip()
+        new_password = request.form.get('password', '')
+        user = User.query.filter_by(email=email).first()
+        
+        if user and user.reset_token == token and user.token_expiry > time.time():
+            user.password = generate_password_hash(new_password, method='pbkdf2:sha256')
+            user.reset_token = None
+            user.token_expiry = None
+            db.session.commit()
+            flash('Password reset successfully! Please login with your new password.')
+            return redirect(url_for('login'))
+        else:
+            flash('Invalid or expired reset code!')
+            
+    return render_template_string(AUTH_TEMPLATE, title='Reset Password', is_signup=False)
+
 @app.route('/')
 @login_required
 def home():
@@ -664,12 +735,6 @@ def update_profile():
     db.session.commit()
     return jsonify({'status': 'success'})
 
-@app.route('/forgot-password', methods=['GET', 'POST'])
-def forgot_password():
-    if request.method == 'POST':
-        email = request.form.get('email')
-        return "Password reset link has been sent to your email."
-    return "Forgot Password Page"
-
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
+
