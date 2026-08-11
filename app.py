@@ -105,7 +105,7 @@ def call_groq_api(prompt_text, image_data=None):
     else:
     return f"API Error ({response.status_code}): {response.text}"
     except Exception as e:
-    return f"Exception occurred while contacting AI: {str(e)}"
+        return f"Exception occurred while contacting AI: {str(e)}"
 
 HTML_TEMPLATE = """
 <!DOCTYPE html>
