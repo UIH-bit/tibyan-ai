@@ -1,8 +1,8 @@
-from flask import Flask, request, jsonify, render_template_string, url_for, redirect, flash
+from flask import Flask, request, jsonify, render_template_string
 from datetime import timedelta
 from flask_sqlalchemy import SQLAlchemy
-from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
-from werkzeug.security import generate_password_hash, check_password_hash
+from flask_login import LoginManager, UserMixin, login_user
+from werkzeug.security import generate_password_hash
 import os
 import requests
 import re
@@ -10,8 +10,8 @@ import time
 import traceback
 
 app = Flask(__name__)
-app.permanent_session_lifetime = timedelta(days=365)
-app.config['SECRET_KEY'] = 'tibyan_secure_secret_key_2026'
+app.secret_key = 'Huzaifa@35789612'
+app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=365)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///tibyan.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
@@ -568,6 +568,7 @@ def login():
         user = User.query.filter_by(email=email).first()
         if user and check_password_hash(user.password, password):
             login_user(user)
+            session.permanent = True
             return redirect(url_for('home'))
         flash('Invalid email or password!')
     return render_template_string(AUTH_TEMPLATE, title='Login', is_signup=False)
@@ -595,6 +596,7 @@ def signup():
         db.session.add(new_user)
         db.session.commit()
         login_user(new_user)
+        session.permanent = True
         return redirect(url_for('home'))
     return render_template_string(AUTH_TEMPLATE, title='Sign Up', is_signup=True)
 
@@ -602,6 +604,7 @@ def signup():
 @login_required
 def logout():
     logout_user()
+    session.clear()
     return redirect(url_for('login'))
 
 @app.route('/')
