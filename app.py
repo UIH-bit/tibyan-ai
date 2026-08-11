@@ -9,7 +9,8 @@ import time
 import traceback
 
 app = Flask(__name__)
-app.permanent_session_lifetime = timedelta(days=365)
+# Session ko 10 saal tak permanent rakhne ke liye
+app.permanent_session_lifetime = timedelta(days=3650)
 app.config['SECRET_KEY'] = 'tibyan_secure_secret_key_2026'
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///tibyan.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
@@ -44,7 +45,9 @@ def load_user(user_id):
     return db.session.get(User, int(user_id))
 
 @app.before_request
-def ensure_tables():
+def make_session_permanent():
+    from flask import session
+    session.permanent = True
     if not getattr(app, '_database_checked', False):
         db.create_all()
         app._database_checked = True
@@ -156,7 +159,6 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         .ai-msg { background: #ffffff; border: 1px solid #e0e0e0; color: #222; align-self: flex-start; width: 100%; max-width: 100%; }
         .ai-msg strong { font-weight: 800; color: #1e3d2f; font-size: 19px; display: block; margin-top: 16px; margin-bottom: 8px; border-left: 3px solid #1e3d2f; padding-left: 8px; }
         
-        /* Action bar under AI message */
         .ai-actions-bar { display: flex; align-items: center; gap: 12px; margin-top: 10px; padding-left: 4px; }
         .action-btn { background: none; border: none; cursor: pointer; font-size: 16px; color: #555; display: flex; align-items: center; gap: 4px; padding: 4px 8px; border-radius: 6px; transition: 0.2s; }
         .action-btn:hover { background: #f0f4f1; color: #1e3d2f; }
@@ -333,7 +335,6 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             }
         }
 
-        // Silent UI Action Handlers
         function handleLike(btn) {
             const parent = btn.closest('.ai-actions-bar');
             const likeBtn = parent.querySelector('.like-btn');
@@ -353,7 +354,6 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         function handleSave(btn, msgId) {
             btn.classList.toggle('active');
             const contentBox = document.getElementById(msgId);
-            const savedListContainer = document.getElementById('saved-chats-list');
             if(btn.classList.contains('active')) {
                 savedResponses[msgId] = contentBox.innerHTML;
             } else {
@@ -381,7 +381,6 @@ HTML_TEMPLATE = """<!DOCTYPE html>
 
         function handleMore(btn, msgId) {
             const contentBox = document.getElementById(msgId);
-            // Extract raw text or clean html text for copying/sharing
             const textToCopy = contentBox.innerText;
             
             if (navigator.share) {
@@ -391,7 +390,6 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                 }).catch(() => {});
             } else {
                 navigator.clipboard.writeText(textToCopy).then(() => {
-                    // Silent UI visual cue on button instead of popup alert
                     let originalHTML = btn.innerHTML;
                     btn.innerHTML = '✓ Copied';
                     setTimeout(() => { btn.innerHTML = originalHTML; }, 1500);
@@ -576,7 +574,7 @@ def login():
         password = request.form.get('password', '')
         user = User.query.filter_by(email=email).first()
         if user and check_password_hash(user.password, password):
-            login_user(user)
+            login_user(user, remember=True)
             return redirect(url_for('home'))
         flash('Invalid email or password!')
     return render_template_string(AUTH_TEMPLATE, title='Login', is_signup=False)
@@ -603,7 +601,7 @@ def signup():
         new_user = User(name=name, surname=surname, email=email, password=hashed_password)
         db.session.add(new_user)
         db.session.commit()
-        login_user(new_user)
+        login_user(new_user, remember=True)
         return redirect(url_for('home'))
     return render_template_string(AUTH_TEMPLATE, title='Sign Up', is_signup=True)
 
