@@ -107,7 +107,7 @@ def login():
         user = User.query.filter_by(email=email).first()
         if user and check_password_hash(user.password, password):
             login_user(user)
-                session.permanent = True
+    session.permanent = True
             return redirect(url_for('home'))
         flash('Invalid email or password!')
     return render_template_string(AUTH_TEMPLATE, title='Login', is_signup=False)
@@ -135,7 +135,7 @@ def signup():
         db.session.add(new_user)
         db.session.commit()
         login_user(new_user)
-            session.permanent = True
+    session.permanent = True
         return redirect(url_for('home'))
     return render_template_string(AUTH_TEMPLATE, title='Sign Up', is_signup=True)
 
