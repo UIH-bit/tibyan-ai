@@ -86,7 +86,6 @@ def call_groq_api(prompt_text, image_data=None):
             ]
         })
         model_name = "llama-3.2-11b-vision-preview"
-
     else:
         messages.append({"role": "user", "content": prompt_text})
         model_name = "llama-3.3-70b-versatile"
@@ -414,7 +413,10 @@ AUTH_TEMPLATE = """<!DOCTYPE html>
         .auth-title { font-size: 26px; color: #1e3d2f; font-weight: bold; margin-bottom: 20px; text-align: center; }
         .form-group { margin-bottom: 16px; }
         .form-label { display: block; font-size: 14px; font-weight: 500; color: #333; margin-bottom: 6px; }
-        .form-control { width: 100%; padding: 12px 16px; border: 1px solid #ddd; border-radius: 8px; font-size: 16px; outline: none; background: #f9f9f9; }
+        .password-container { position: relative; width: 100%; }
+        .form-control { width: 100%; padding: 12px 45px 12px 16px; border: 1px solid #ddd; border-radius: 8px; font-size: 16px; outline: none; background: #f9f9f9; }
+        .toggle-password { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; width: 24px; height: 24px; color: #666; }
+        .toggle-password svg { width: 20px; height: 20px; fill: currentColor; }
         .auth-btn { background: #1e3d2f; color: white; border: none; border-radius: 8px; padding: 12px; width: 100%; font-size: 16px; font-weight: bold; cursor: pointer; margin-top: 10px; }
         .auth-link { text-align: center; margin-top: 15px; font-size: 14px; color: #555; }
         .auth-link a { color: #1e3d2f; text-decoration: none; font-weight: bold; }
@@ -429,20 +431,56 @@ AUTH_TEMPLATE = """<!DOCTYPE html>
         {% endwith %}
         <form method="POST">
             {% if is_signup %}
-            <div class="form-group"><label class="form-label">Name</label><input type="text" name="name" class="form-control" required></div>
-            <div class="form-group"><label class="form-label">Surname</label><input type="text" name="surname" class="form-control"></div>
+            <div class="form-group"><label class="form-label">Name</label><input type="text" name="name" class="form-control" style="padding-right: 16px;" required></div>
+            <div class="form-group"><label class="form-label">Surname</label><input type="text" name="surname" class="form-control" style="padding-right: 16px;"></div>
             {% endif %}
-            <div class="form-group"><label class="form-label">Email</label><input type="email" name="email" class="form-control" required></div>
-            <div class="form-group"><label class="form-label">Password</label><input type="password" name="password" class="form-control" required></div>
+            <div class="form-group"><label class="form-label">Email</label><input type="email" name="email" class="form-control" style="padding-right: 16px;" required></div>
+            
+            <div class="form-group">
+                <label class="form-label">Password</label>
+                <div class="password-container">
+                    <input type="password" name="password" id="passwordField" class="form-control" required>
+                    <button type="button" class="toggle-password" onclick="togglePasswordVisibility('passwordField', this)">
+                        <svg class="eye-icon" viewBox="0 0 24 24"><path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/></svg>
+                    </button>
+                </div>
+            </div>
+
             {% if is_signup %}
-            <div class="form-group"><label class="form-label">Confirm Password</label><input type="password" name="confirm_password" class="form-control" required></div>
+            <div class="form-group">
+                <label class="form-label">Confirm Password</label>
+                <div class="password-container">
+                    <input type="password" name="confirm_password" id="confirmPasswordField" class="form-control" required>
+                    <button type="button" class="toggle-password" onclick="togglePasswordVisibility('confirmPasswordField', this)">
+                        <svg class="eye-icon" viewBox="0 0 24 24"><path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/></svg>
+                    </button>
+                </div>
+            </div>
             {% endif %}
+
             <button type="submit" class="auth-btn">{{ title }}</button>
         </form>
         <div class="auth-link">
             {% if is_signup %}Already have an account? <a href="{{ url_for('login') }}">Login</a>{% else %}Don't have an account? <a href="{{ url_for('signup') }}">Sign Up</a>{% endif %}
         </div>
     </div>
+
+    <script>
+        const eyeOpenSvg = '<path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/>';
+        const eyeClosedSvg = '<path d="M12 7c2.76 0 5 2.24 5 5 0 .65-.13 1.26-.36 1.83l2.92 2.92c1.51-1.26 2.7-2.89 3.43-4.75-1.73-4.39-6-7.5-11-7.5-1.4 0-2.74.25-3.98.7l2.16 2.16C10.74 7.13 11.35 7 12 7zM2.81 2.81L1.39 4.22l3.41 3.41C3.17 9.07 1.95 10.4 1 12c1.73 4.39 6 7.5 11 7.5 1.55 0 3.03-.3 4.38-.84l4.4 4.4 1.41-1.41L2.81 2.81zM12 15c-1.66 0-3-1.34-3-3 0-.34.07-.66.19-.96l3.77 3.77c-.3.12-.62.19-.96.19z"/>';
+
+        function togglePasswordVisibility(fieldId, btn) {
+            const field = document.getElementById(fieldId);
+            const svgEl = btn.querySelector('svg');
+            if (field.type === "password") {
+                field.type = "text";
+                svgEl.innerHTML = eyeClosedSvg;
+            } else {
+                field.type = "password";
+                svgEl.innerHTML = eyeOpenSvg;
+            }
+        }
+    </script>
 </body>
 </html>
 """
