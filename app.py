@@ -109,7 +109,7 @@ def login():
             login_user(user)
     session.permanent = True
     return redirect(url_for('home'))
-            flash('Invalid email or password!') # fixed
+        flash('Invalid email or password!')
     return render_template_string(AUTH_TEMPLATE, title='Login', is_signup=False)
 
 @app.route('/signup', methods=['GET', 'POST'])
