@@ -1,8 +1,8 @@
-from flask import Flask, request, jsonify, render_template_string
+from flask import Flask, request, jsonify, render_template_string, redirect, url_for, flash
 from datetime import timedelta
 from flask_sqlalchemy import SQLAlchemy
-from flask_login import LoginManager, UserMixin, login_user
-from werkzeug.security import generate_password_hash
+from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
+from werkzeug.security import generate_password_hash, check_password_hash
 import os
 import requests
 import re
@@ -44,7 +44,6 @@ class ChatHistory(db.Model):
 def load_user(user_id):
     return db.session.get(User, int(user_id))
 
-# Har request se pehle ensure karein ki tables bani hui hain
 @app.before_request
 def ensure_tables():
     if not getattr(app, '_database_checked', False):
@@ -100,6 +99,8 @@ def call_groq_api(prompt_text, image_data=None):
             return f"API Error ({response.status_code}): {response.text}"
     except Exception as e:
         return f"Exception occurred while contacting AI: {str(e)}"
+
+@app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
         email = request.form.get('email')
@@ -107,10 +108,10 @@ def login():
         user = User.query.filter_by(email=email).first()
         if user and check_password_hash(user.password, password):
             login_user(user)
-    session.permanent = True
-    return redirect(url_for('home'))
+            session.permanent = True
+            return redirect(url_for('home'))
         flash('Invalid email or password!')
-    return render_template_string(AUTH_TEMPLATE, title='Login', is_signup=False)
+    return render_template_string(AUTH_TEMPLATE if 'AUTH_TEMPLATE' in globals() else "<h1>Login</h1>", title='Login', is_signup=False)
 
 @app.route('/signup', methods=['GET', 'POST'])
 def signup():
@@ -135,9 +136,9 @@ def signup():
         db.session.add(new_user)
         db.session.commit()
         login_user(new_user)
-    session.permanent = True
-    return redirect(url_for('home'))
-    return render_template_string(AUTH_TEMPLATE, title='Sign Up', is_signup=True)
+        session.permanent = True
+        return redirect(url_for('home'))
+    return render_template_string(AUTH_TEMPLATE if 'AUTH_TEMPLATE' in globals() else "<h1>Signup</h1>", title='Sign Up', is_signup=True)
 
 @app.route('/logout')
 @login_required
@@ -149,7 +150,7 @@ def logout():
 @app.route('/')
 @login_required
 def home():
-    return render_template_string(HTML_TEMPLATE, user=current_user)
+    return render_template_string(HTML_TEMPLATE if 'HTML_TEMPLATE' in globals() else "<h1>Home</h1>", user=current_user)
 
 @app.route('/generate', methods=['POST'])
 @login_required
@@ -185,12 +186,13 @@ def update_profile():
     current_user.pic = data.get('pic', current_user.pic)
     db.session.commit()
     return jsonify({'status': 'success'})
+
 @app.route('/forgot-password', methods=['GET', 'POST'])
 def forgot_password():
     if request.method == 'POST':
         email = request.form.get('email')
         return "Password reset link has been sent to your email."
-    return render_template('forgot_password.html')
+    return "Forgot Password Page"
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
