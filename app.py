@@ -9,7 +9,6 @@ import time
 import traceback
 
 app = Flask(__name__)
-# Session ko 10 saal tak permanent rakhne ke liye
 app.permanent_session_lifetime = timedelta(days=3650)
 app.config['SECRET_KEY'] = 'tibyan_secure_secret_key_2026'
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///tibyan.db'
@@ -87,7 +86,8 @@ def call_groq_api(prompt_text, image_data=None):
                 {"type": "image_url", "image_url": {"url": image_data}}
             ]
         })
-        model_name = "llama-3.2-11b-vision-preview"
+        # Updated to current supported Groq vision model
+        model_name = "meta-llama/llama-3.2-11b-vision-instruct"
     else:
         messages.append({"role": "user", "content": prompt_text})
         model_name = "llama-3.3-70b-versatile"
