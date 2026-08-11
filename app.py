@@ -5,7 +5,6 @@ from flask_login import LoginManager, UserMixin, login_user, login_required, log
 from werkzeug.security import generate_password_hash, check_password_hash
 import os
 import requests
-import re
 import time
 import traceback
 
@@ -488,8 +487,8 @@ AUTH_TEMPLATE = """<!DOCTYPE html>
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
-        email = request.form.get('email')
-        password = request.form.get('password')
+        email = request.form.get('email', '').strip().lower()
+        password = request.form.get('password', '')
         user = User.query.filter_by(email=email).first()
         if user and check_password_hash(user.password, password):
             login_user(user)
@@ -502,7 +501,7 @@ def signup():
     if request.method == 'POST':
         name = request.form.get('name')
         surname = request.form.get('surname')
-        email = request.form.get('email')
+        email = request.form.get('email', '').strip().lower()
         password = request.form.get('password')
         confirm_password = request.form.get('confirm_password')
         
@@ -512,8 +511,8 @@ def signup():
 
         user_exists = User.query.filter_by(email=email).first()
         if user_exists:
-            flash('Email address already registered!')
-            return redirect(url_for('signup'))
+            flash('Email address already registered! Please login.')
+            return redirect(url_for('login'))
             
         hashed_password = generate_password_hash(password, method='pbkdf2:sha256')
         new_user = User(name=name, surname=surname, email=email, password=hashed_password)
