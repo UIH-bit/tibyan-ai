@@ -8,6 +8,7 @@ import requests
 import time
 import random
 import traceback
+from sqlalchemy import text
 
 app = Flask(__name__)
 app.permanent_session_lifetime = timedelta(days=3650)
@@ -31,7 +32,6 @@ class User(UserMixin, db.Model):
     password = db.Column(db.String(200), nullable=False)
     dob = db.Column(db.String(20), nullable=True)
     pic = db.Column(db.Text, nullable=True)
-    # New columns for Forgot Password OTP
     reset_token = db.Column(db.String(10), nullable=True)
     token_expiry = db.Column(db.Float, nullable=True)
 
@@ -53,7 +53,14 @@ def make_session_permanent():
     session.permanent = True
     if not getattr(app, '_database_checked', False):
         db.create_all()
-        # Safe column check/addition for existing tables if needed
+        # Safe migration check for existing Supabase tables
+        try:
+            with db.engine.connect() as connection:
+                connection.execute(text('ALTER TABLE "user" ADD COLUMN IF NOT EXISTS reset_token VARCHAR(10);'))
+                connection.execute(text('ALTER TABLE "user" ADD COLUMN IF NOT EXISTS token_expiry DOUBLE PRECISION;'))
+                connection.commit()
+        except Exception:
+            pass
         app._database_checked = True
 
 @app.errorhandler(Exception)
@@ -649,13 +656,11 @@ def forgot_password():
         email = request.form.get('email', '').strip().lower()
         user = User.query.filter_by(email=email).first()
         if user:
-            # 6-digit OTP code generate karna
             otp_code = str(random.randint(100000, 999999))
             user.reset_token = otp_code
             user.token_expiry = time.time() + 900  # 15 minutes validity
             db.session.commit()
             
-            # Temporary message for testing / screen recovery view setup
             flash(f'Your Password Reset Code is: {otp_code}')
             return redirect(url_for('reset_password', email=email))
         else:
