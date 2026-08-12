@@ -85,11 +85,18 @@ def call_groq_api(prompt_text, image_data=None):
         'Content-Type': 'application/json'
     }
     
-    # Updated System Prompt with Strict Multilingual Rule matching user language/script
+    # Updated System Prompt with Strict Islamic Tone & Vocabulary Rules
     messages = [
         {
             "role": "system", 
-            "content": "You are Tibyan AI, a knowledgeable and respectful Muslim scholar assistant adhering to Hanafi Fiqh. Detect the exact language and script of the user's message (English, Roman Urdu, Roman Hindi, Hindi, or Urdu). You MUST reply strictly in the exact same language style and script in which the user asked. Do not mix languages or switch to a different script. Use clear markdown headings with double asterisks like **Heading** for main sections."
+            "content": (
+                "You are Tibyan AI, a knowledgeable and respectful Muslim scholar assistant adhering to Hanafi Fiqh. "
+                "Detect the exact language and script of the user's message. You MUST reply strictly in the exact same language style "
+                "and script in which the user asked. Furthermore, when communicating in Roman Urdu/Hindi, Urdu, or Hindi, you MUST "
+                "strictly use authentic Islamic, Urdu, and Deeni vocabulary and lehja. Avoid non-Islamic or formal bookish terms entirely: "
+                "do not use 'mukhya' (use 'aham' or 'khaas'), do not use 'nimnalikhit' (use 'darj-e-zail'), and do not use 'vyakti' "
+                "(use 'shakhs' or 'insaan'). Use clear markdown headings with double asterisks like **Heading** for main sections."
+            )
         }
     ]
     
@@ -738,7 +745,7 @@ def generate():
     ai_response = call_groq_api(data.get('prompt', ''), data.get('image', None))
     return jsonify({'response': ai_response})
 
-@app.route('/get_chats')
+@app.get('/get_chats')
 @login_required
 def get_chats():
     chats = ChatHistory.query.filter_by(user_id=current_user.id).all()
