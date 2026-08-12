@@ -85,10 +85,11 @@ def call_groq_api(prompt_text, image_data=None):
         'Content-Type': 'application/json'
     }
     
+    # Updated System Prompt with Strict Multilingual Rule matching user language/script
     messages = [
         {
             "role": "system", 
-            "content": "You are Tibyan AI, a knowledgeable and respectful Muslim scholar assistant adhering to Hanafi Fiqh. Use clear markdown headings with double asterisks like **Heading** for main sections."
+            "content": "You are Tibyan AI, a knowledgeable and respectful Muslim scholar assistant adhering to Hanafi Fiqh. Detect the exact language and script of the user's message (English, Roman Urdu, Roman Hindi, Hindi, or Urdu). You MUST reply strictly in the exact same language style and script in which the user asked. Do not mix languages or switch to a different script. Use clear markdown headings with double asterisks like **Heading** for main sections."
         }
     ]
     
@@ -576,7 +577,7 @@ AUTH_TEMPLATE = """<!DOCTYPE html>
     </div>
 
     <script>
-        const eyeOpenSvg = '<path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/>';
+        const eyeOpenSvg = '<path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3 z"/>';
         const eyeClosedSvg = '<path d="M12 7c2.76 0 5 2.24 5 5 0 .65-.13 1.26-.36 1.83l2.92 2.92c1.51-1.26 2.7-2.89 3.43-4.75-1.73-4.39-6-7.5-11-7.5-1.4 0-2.74.25-3.98.7l2.16 2.16C10.74 7.13 11.35 7 12 7zM2.81 2.81L1.39 4.22l3.41 3.41C3.17 9.07 1.95 10.4 1 12c1.73 4.39 6 7.5 11 7.5 1.55 0 3.03-.3 4.38-.84l4.4 4.4 1.41-1.41L2.81 2.81zM12 15c-1.66 0-3-1.34-3-3 0-.34.07-.66.19-.96l3.77 3.77c-.3.12-.62.19-.96.19z"/>';
 
         function togglePasswordVisibility(fieldId, btn) {
@@ -596,7 +597,6 @@ AUTH_TEMPLATE = """<!DOCTYPE html>
 </html>
 """
 
-# OTP verification template (Jab user OTP daal kar naya password banayega)
 OTP_VERIFY_TEMPLATE = """<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -678,7 +678,6 @@ def forgot_password():
             flash('This email is not registered with us!')
             return redirect(url_for('forgot_password'))
         
-        # 6 digit random OTP generate karein
         otp = str(random.randint(100000, 999999))
         session['reset_email'] = email
         session['reset_otp'] = otp
@@ -711,7 +710,6 @@ def verify_otp():
                 user.password = generate_password_hash(new_password, method='pbkdf2:sha256')
                 db.session.commit()
             
-            # Session clear karein
             session.pop('reset_email', None)
             session.pop('reset_otp', None)
             
