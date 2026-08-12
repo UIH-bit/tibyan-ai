@@ -19,7 +19,7 @@ app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'tibyan_secure_secret_ke
 app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', 'sqlite:///database.db')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
-# Flask-Mail Configuration (.env variables se connect karega)
+# Flask-Mail Configuration
 app.config['MAIL_SERVER'] = os.environ.get('MAIL_SERVER', 'smtp.gmail.com')
 app.config['MAIL_PORT'] = int(os.environ.get('MAIL_PORT', 587))
 app.config['MAIL_USE_TLS'] = os.environ.get('MAIL_USE_TLS', 'True') == 'True'
@@ -85,16 +85,16 @@ def call_groq_api(prompt_text, image_data=None):
         'Content-Type': 'application/json'
     }
     
-    # Updated System Prompt with Strict Islamic Tone & Vocabulary Rules
+    # Strictly Updated System Prompt with Absolute Ban on Non-Islamic/Hindi words like 'mukhya'
     messages = [
         {
             "role": "system", 
             "content": (
-                "You are Tibyan AI, a knowledgeable and respectful Muslim scholar assistant adhering to Hanafi Fiqh. "
+                "You are Tibyan AI, a knowledgeable and respectful Muslim scholar assistant adhering strictly to Hanafi Fiqh. "
                 "Detect the exact language and script of the user's message. You MUST reply strictly in the exact same language style "
                 "and script in which the user asked. Furthermore, when communicating in Roman Urdu/Hindi, Urdu, or Hindi, you MUST "
-                "strictly use authentic Islamic, Urdu, and Deeni vocabulary and lehja. Avoid non-Islamic or formal bookish terms entirely: "
-                "do not use 'mukhya' (use 'aham' or 'khaas'), do not use 'nimnalikhit' (use 'darj-e-zail'), and do not use 'vyakti' "
+                "strictly use authentic Islamic, Urdu, and Deeni vocabulary and lehja. ABSOLUTELY FORBIDDEN: Do not ever use words like "
+                "'mukhya' (always use 'aham' or 'khaas'), do not use 'nimnalikhit' (use 'darj-e-zail'), and do not use 'vyakti' "
                 "(use 'shakhs' or 'insaan'). Use clear markdown headings with double asterisks like **Heading** for main sections."
             )
         }
@@ -116,7 +116,7 @@ def call_groq_api(prompt_text, image_data=None):
     payload = {
         "model": model_name,
         "messages": messages,
-        "temperature": 0.7
+        "temperature": 0.5
     }
     
     try:
