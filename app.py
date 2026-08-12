@@ -1,22 +1,35 @@
-from flask import Flask, request, jsonify, render_template_string, url_for, redirect, flash
-from datetime import timedelta, datetime
+from flask import Flask, request, jsonify, render_template_string, url_for, redirect, flash, session
+from datetime import timedelta
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
+from flask_mail import Mail, Message
 import os
 import requests
 import time
 import random
 import traceback
-from sqlalchemy import text
+from dotenv import load_dotenv
+
+load_dotenv()
 
 app = Flask(__name__)
 app.permanent_session_lifetime = timedelta(days=3650)
-app.config['SECRET_KEY'] = 'tibyan_secure_secret_key_2026'
-app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL')
+app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'tibyan_secure_secret_key_2026')
+app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', 'sqlite:///database.db')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
+# Flask-Mail Configuration (.env variables se connect karega)
+app.config['MAIL_SERVER'] = os.environ.get('MAIL_SERVER', 'smtp.gmail.com')
+app.config['MAIL_PORT'] = int(os.environ.get('MAIL_PORT', 587))
+app.config['MAIL_USE_TLS'] = os.environ.get('MAIL_USE_TLS', 'True') == 'True'
+app.config['MAIL_USE_SSL'] = os.environ.get('MAIL_USE_SSL', 'False') == 'True'
+app.config['MAIL_USERNAME'] = os.environ.get('MAIL_USERNAME')
+app.config['MAIL_PASSWORD'] = os.environ.get('MAIL_PASSWORD')
+
 db = SQLAlchemy(app)
+mail = Mail(app)
+
 login_manager = LoginManager()
 login_manager.login_message = None
 login_manager.init_app(app)
@@ -32,8 +45,6 @@ class User(UserMixin, db.Model):
     password = db.Column(db.String(200), nullable=False)
     dob = db.Column(db.String(20), nullable=True)
     pic = db.Column(db.Text, nullable=True)
-    reset_token = db.Column(db.String(10), nullable=True)
-    token_expiry = db.Column(db.Float, nullable=True)
 
 class ChatHistory(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -49,18 +60,9 @@ def load_user(user_id):
 
 @app.before_request
 def make_session_permanent():
-    from flask import session
     session.permanent = True
     if not getattr(app, '_database_checked', False):
         db.create_all()
-        # Safe migration check for existing Supabase tables
-        try:
-            with db.engine.connect() as connection:
-                connection.execute(text('ALTER TABLE "user" ADD COLUMN IF NOT EXISTS reset_token VARCHAR(10);'))
-                connection.execute(text('ALTER TABLE "user" ADD COLUMN IF NOT EXISTS token_expiry DOUBLE PRECISION;'))
-                connection.commit()
-        except Exception:
-            pass
         app._database_checked = True
 
 @app.errorhandler(Exception)
@@ -75,7 +77,7 @@ def handle_exception(e):
 
 def call_groq_api(prompt_text, image_data=None):
     if not api_key:
-        return "Error: API Key is missing. Please set GROQ_API_KEY in Render environment variables."
+        return "Error: API Key is missing. Please set GROQ_API_KEY in your .env file."
         
     url = "https://api.groq.com/openai/v1/chat/completions"
     headers = {
@@ -333,6 +335,10 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             listContainer.innerHTML = html;
         }
 
+        function filterChats(query) {
+            loadSidebarHistory(query);
+        }
+
         async function loadSpecificChat(chatId) {
             const res = await fetch('/get_chats');
             const chats = await res.json();
@@ -514,8 +520,6 @@ AUTH_TEMPLATE = """<!DOCTYPE html>
         .auth-link { text-align: center; margin-top: 15px; font-size: 14px; color: #555; }
         .auth-link a { color: #1e3d2f; text-decoration: none; font-weight: bold; }
         .flash-msg { background: #ffe6e6; color: #d9534f; padding: 10px; border-radius: 6px; margin-bottom: 15px; font-size: 14px; text-align: center; }
-        .forgot-link-container { text-align: right; margin-top: -8px; margin-bottom: 15px; }
-        .forgot-link-container a { font-size: 13px; color: #1e3d2f; text-decoration: none; }
     </style>
 </head>
 <body>
@@ -532,44 +536,9 @@ AUTH_TEMPLATE = """<!DOCTYPE html>
             
             <div class="form-group"><label class="form-label">Email</label><input type="email" name="email" class="form-control" style="padding-right: 16px;" required></div>
             
-            {% if title == 'Login' %}
+            {% if not is_forgot_request %}
             <div class="form-group">
                 <label class="form-label">Password</label>
-                <div class="password-container">
-                    <input type="password" name="password" id="passwordField" class="form-control" required>
-                    <button type="button" class="toggle-password" onclick="togglePasswordVisibility('passwordField', this)">
-                        <svg class="eye-icon" viewBox="0 0 24 24"><path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/></svg>
-                    </button>
-                </div>
-            </div>
-            <div class="forgot-link-container">
-                <a href="{{ url_for('forgot_password') }}">Forgot Password?</a>
-            </div>
-            {% elif title == 'Sign Up' %}
-            <div class="form-group">
-                <label class="form-label">Password</label>
-                <div class="password-container">
-                    <input type="password" name="password" id="passwordField" class="form-control" required>
-                    <button type="button" class="toggle-password" onclick="togglePasswordVisibility('passwordField', this)">
-                        <svg class="eye-icon" viewBox="0 0 24 24"><path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/></svg>
-                    </button>
-                </div>
-            </div>
-            <div class="form-group">
-                <label class="form-label">Confirm Password</label>
-                <div class="password-container">
-                    <input type="password" name="confirm_password" id="confirmPasswordField" class="form-control" required>
-                    <button type="button" class="toggle-password" onclick="togglePasswordVisibility('confirmPasswordField', this)">
-                        <svg class="eye-icon" viewBox="0 0 24 24"><path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/></svg>
-                    </button>
-                </div>
-            </div>
-            {% elif title == 'Forgot Password' %}
-            <p style="font-size: 14px; color: #666; margin-bottom: 15px;">Enter your registered email address and we'll generate a 6-digit recovery code for you.</p>
-            {% elif title == 'Reset Password' %}
-            <div class="form-group"><label class="form-label">6-Digit Code</label><input type="text" name="token" class="form-control" style="padding-right: 16px;" required></div>
-            <div class="form-group">
-                <label class="form-label">New Password</label>
                 <div class="password-container">
                     <input type="password" name="password" id="passwordField" class="form-control" required>
                     <button type="button" class="toggle-password" onclick="togglePasswordVisibility('passwordField', this)">
@@ -579,10 +548,30 @@ AUTH_TEMPLATE = """<!DOCTYPE html>
             </div>
             {% endif %}
 
-            <button type="submit" class="auth-btn">{{ title }}</button>
+            {% if is_signup %}
+            <div class="form-group">
+                <label class="form-label">Confirm Password</label>
+                <div class="password-container">
+                    <input type="password" name="confirm_password" id="confirmPasswordField" class="form-control" required>
+                    <button type="button" class="toggle-password" onclick="togglePasswordVisibility('confirmPasswordField', this)">
+                        <svg class="eye-icon" viewBox="0 0 24 24"><path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/></svg>
+                    </button>
+                </div>
+            </div>
+            {% endif %}
+
+            <button type="submit" class="auth-btn">{{ btn_text }}</button>
         </form>
+        
         <div class="auth-link">
-            {% if is_signup or title == 'Forgot Password' or title == 'Reset Password' %}Already have an account? <a href="{{ url_for('login') }}">Login</a>{% else %}Don't have an account? <a href="{{ url_for('signup') }}">Sign Up</a>{% endif %}
+            {% if is_signup %}
+                Already have an account? <a href="{{ url_for('login') }}">Login</a>
+            {% elif is_forgot_request %}
+                Remember your password? <a href="{{ url_for('login') }}">Login</a>
+            {% else %}
+                <a href="{{ url_for('forgot_password') }}" style="display:block; margin-bottom:8px;">Forgot Password?</a>
+                Don't have an account? <a href="{{ url_for('signup') }}">Sign Up</a>
+            {% endif %}
         </div>
     </div>
 
@@ -592,6 +581,7 @@ AUTH_TEMPLATE = """<!DOCTYPE html>
 
         function togglePasswordVisibility(fieldId, btn) {
             const field = document.getElementById(fieldId);
+            if(!field) return;
             const svgEl = btn.querySelector('svg');
             if (field.type === "password") {
                 field.type = "text";
@@ -606,6 +596,41 @@ AUTH_TEMPLATE = """<!DOCTYPE html>
 </html>
 """
 
+# OTP verification template (Jab user OTP daal kar naya password banayega)
+OTP_VERIFY_TEMPLATE = """<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Verify OTP - Tibyan AI</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+        body { background: #f0f4f1; display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 20px; }
+        .auth-card { background: #fff; padding: 30px; border-radius: 16px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); width: 100%; max-width: 400px; border: 1px solid #d0ded4; }
+        .auth-title { font-size: 26px; color: #1e3d2f; font-weight: bold; margin-bottom: 20px; text-align: center; }
+        .form-group { margin-bottom: 16px; }
+        .form-label { display: block; font-size: 14px; font-weight: 500; color: #333; margin-bottom: 6px; }
+        .form-control { width: 100%; padding: 12px 16px; border: 1px solid #ddd; border-radius: 8px; font-size: 16px; outline: none; background: #f9f9f9; }
+        .auth-btn { background: #1e3d2f; color: white; border: none; border-radius: 8px; padding: 12px; width: 100%; font-size: 16px; font-weight: bold; cursor: pointer; margin-top: 10px; }
+        .flash-msg { background: #ffe6e6; color: #d9534f; padding: 10px; border-radius: 6px; margin-bottom: 15px; font-size: 14px; text-align: center; }
+    </style>
+</head>
+<body>
+    <div class="auth-card">
+        <div class="auth-title">Reset Password</div>
+        {% with messages = get_flashed_messages() %}
+          {% if messages %}<div class="flash-msg">{{ messages[0] }}</div>{% endif %}
+        {% endwith %}
+        <form method="POST">
+            <div class="form-group"><label class="form-label">Enter 6-Digit OTP</label><input type="text" name="otp" class="form-control" required></div>
+            <div class="form-group"><label class="form-label">New Password</label><input type="password" name="new_password" class="form-control" required></div>
+            <button type="submit" class="auth-btn">Update Password</button>
+        </form>
+    </div>
+</body>
+</html>
+"""
+
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
@@ -616,7 +641,7 @@ def login():
             login_user(user, remember=True)
             return redirect(url_for('home'))
         flash('Invalid email or password!')
-    return render_template_string(AUTH_TEMPLATE, title='Login', is_signup=False)
+    return render_template_string(AUTH_TEMPLATE, title='Login', is_signup=False, is_forgot_request=False, btn_text='Login')
 
 @app.route('/signup', methods=['GET', 'POST'])
 def signup():
@@ -642,50 +667,66 @@ def signup():
         db.session.commit()
         login_user(new_user, remember=True)
         return redirect(url_for('home'))
-    return render_template_string(AUTH_TEMPLATE, title='Sign Up', is_signup=True)
+    return render_template_string(AUTH_TEMPLATE, title='Sign Up', is_signup=True, is_forgot_request=False, btn_text='Sign Up')
+
+@app.route('/forgot_password', methods=['GET', 'POST'])
+def forgot_password():
+    if request.method == 'POST':
+        email = request.form.get('email', '').strip().lower()
+        user = User.query.filter_by(email=email).first()
+        if not user:
+            flash('This email is not registered with us!')
+            return redirect(url_for('forgot_password'))
+        
+        # 6 digit random OTP generate karein
+        otp = str(random.randint(100000, 999999))
+        session['reset_email'] = email
+        session['reset_otp'] = otp
+        
+        try:
+            msg = Message('Tibyan AI - Password Reset OTP',
+                          sender=os.environ.get('MAIL_USERNAME'),
+                          recipients=[email])
+            msg.body = f"Assalamu Alaikum,\n\nYour OTP for resetting your Tibyan AI password is: {otp}\n\nValid for a single use."
+            mail.send(msg)
+            return redirect(url_for('verify_otp'))
+        except Exception as e:
+            flash(f'Failed to send email. Check configuration: {str(e)}')
+            
+    return render_template_string(AUTH_TEMPLATE, title='Forgot Password', is_signup=False, is_forgot_request=True, btn_text='Send OTP')
+
+@app.route('/verify_otp', methods=['GET', 'POST'])
+def verify_otp():
+    if 'reset_email' not in session:
+        return redirect(url_for('forgot_password'))
+        
+    if request.method == 'POST':
+        entered_otp = request.form.get('otp', '').strip()
+        new_password = request.form.get('new_password', '').strip()
+        
+        if entered_otp == session.get('reset_otp'):
+            email = session.get('reset_email')
+            user = User.query.filter_by(email=email).first()
+            if user:
+                user.password = generate_password_hash(new_password, method='pbkdf2:sha256')
+                db.session.commit()
+            
+            # Session clear karein
+            session.pop('reset_email', None)
+            session.pop('reset_otp', None)
+            
+            flash('Password updated successfully! Please login.')
+            return redirect(url_for('login'))
+        else:
+            flash('Invalid OTP! Please try again.')
+            
+    return render_template_string(OTP_VERIFY_TEMPLATE)
 
 @app.route('/logout')
 @login_required
 def logout():
     logout_user()
     return redirect(url_for('login'))
-
-@app.route('/forgot-password', methods=['GET', 'POST'])
-def forgot_password():
-    if request.method == 'POST':
-        email = request.form.get('email', '').strip().lower()
-        user = User.query.filter_by(email=email).first()
-        if user:
-            otp_code = str(random.randint(100000, 999999))
-            user.reset_token = otp_code
-            user.token_expiry = time.time() + 900  # 15 minutes validity
-            db.session.commit()
-            
-            flash(f'Your Password Reset Code is: {otp_code}')
-            return redirect(url_for('reset_password', email=email))
-        else:
-            flash('Email not found in our records!')
-    return render_template_string(AUTH_TEMPLATE, title='Forgot Password', is_signup=False)
-
-@app.route('/reset-password', methods=['GET', 'POST'])
-def reset_password():
-    email = request.args.get('email', '')
-    if request.method == 'POST':
-        token = request.form.get('token', '').strip()
-        new_password = request.form.get('password', '')
-        user = User.query.filter_by(email=email).first()
-        
-        if user and user.reset_token == token and user.token_expiry > time.time():
-            user.password = generate_password_hash(new_password, method='pbkdf2:sha256')
-            user.reset_token = None
-            user.token_expiry = None
-            db.session.commit()
-            flash('Password reset successfully! Please login with your new password.')
-            return redirect(url_for('login'))
-        else:
-            flash('Invalid or expired reset code!')
-            
-    return render_template_string(AUTH_TEMPLATE, title='Reset Password', is_signup=False)
 
 @app.route('/')
 @login_required
