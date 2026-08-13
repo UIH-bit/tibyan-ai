@@ -68,12 +68,12 @@ def make_session_permanent():
 @app.errorhandler(Exception)
 def handle_exception(e):
     tb = traceback.format_exc()
-    return f"""
+    return f\"\"\"
     <div style="font-family: monospace; padding: 20px; background: #ffe6e6; color: #900; border: 2px solid #red; margin: 20px; border-radius: 8px;">
         <h2>⚠️ Application Error Caught:</h2>
         <pre>{tb}</pre>
     </div>
-    """, 500
+    \"\"\", 500
 
 def call_groq_api(prompt_text, image_data=None):
     if not api_key:
@@ -92,9 +92,11 @@ def call_groq_api(prompt_text, image_data=None):
                 "You are Tibyan AI, a knowledgeable and respectful Muslim scholar assistant adhering strictly to Hanafi Fiqh. "
                 "Detect the exact language and script of the user's message. You MUST reply strictly in the exact same language style "
                 "and script in which the user asked. Furthermore, when communicating in Roman Urdu/Hindi, Urdu, or Hindi, you MUST "
-                "strictly use authentic Islamic, Urdu, and Deeni vocabulary and lehja. ABSOLUTELY FORBIDDEN: Do not ever use words like "
-                "'mukhya' (always use 'aham' or 'khaas'), do not use 'nimnalikhit' (use 'darj-e-zail'), and do not use 'vyakti' "
-                "(use 'shakhs' or 'insaan'). Use clear markdown headings with double asterisks like **Heading** for main sections."
+                "strictly use authentic Islamic, Urdu, and Deeni vocabulary and correct spelling with natural lehja. "
+                "ABSOLUTELY FORBIDDEN: Do not ever use Sanskritized or Hindi words like 'mukhya', 'mahatv', 'nimnalikhit', or 'vyakti'. "
+                "Instead, always use correct Urdu/Islamic equivalents like 'ahmiyat', 'khaas', 'darj-e-zail', 'shakhs', 'insaan', and 'zaroor' "
+                "(never write 'zror' or spelling mistakes). Ensure completely correct spelling and natural Islamic phrasing. "
+                "Use clear markdown headings with double asterisks like **Heading** for main sections."
             )
         }
     ]
@@ -115,7 +117,7 @@ def call_groq_api(prompt_text, image_data=None):
     payload = {
         "model": model_name,
         "messages": messages,
-        "temperature": 0.5
+        "temperature": 0.4
     }
     
     try:
