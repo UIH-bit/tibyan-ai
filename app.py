@@ -68,12 +68,12 @@ def make_session_permanent():
 @app.errorhandler(Exception)
 def handle_exception(e):
     tb = traceback.format_exc()
-    return f"""
+    return f\"\"\"
     <div style="font-family: monospace; padding: 20px; background: #ffe6e6; color: #900; border: 2px solid #red; margin: 20px; border-radius: 8px;">
         <h2>⚠️ Application Error Caught:</h2>
         <pre>{tb}</pre>
     </div>
-    """, 500
+    \"\"\", 500
 
 def call_groq_api(prompt_text, image_data=None):
     if not api_key:
@@ -85,7 +85,6 @@ def call_groq_api(prompt_text, image_data=None):
         'Content-Type': 'application/json'
     }
     
-    # Strictly Updated System Prompt with Absolute Ban on Non-Islamic/Hindi words like 'mukhya'
     messages = [
         {
             "role": "system", 
@@ -158,8 +157,18 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         .sidebar-menu li a { text-decoration: none; color: inherit; width: 100%; display: flex; align-items: center; gap: 14px; }
         .chat-history-section { padding: 15px; overflow-y: auto; flex: 1; max-height: 40vh; }
         .history-title { font-size: 13px; text-transform: uppercase; color: #777; font-weight: bold; margin-bottom: 10px; letter-spacing: 0.5px; }
-        .history-item { padding: 10px 12px; font-size: 15px; font-weight: 600; color: #222; background: #f9f9f9; border-radius: 8px; margin-bottom: 8px; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; border: 1px solid #eee; transition: 0.2s; position: relative; user-select: none; }
-        .history-item:hover { background: #f0f4f1; border-color: #d0ded4; color: #1e3d2f; }
+        
+        /* Updated Recent Chat Item Styles (Larger & Bolder Font) */
+        .history-item { padding: 12px 14px; font-size: 16px; font-weight: 700; color: #1e3d2f; background: #f9f9f9; border-radius: 8px; margin-bottom: 8px; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; border: 1px solid #eee; transition: 0.2s; position: relative; user-select: none; }
+        .history-item:hover { background: #f0f4f1; border-color: #d0ded4; }
+        
+        /* Context Menu for Long-press on Recent Chat */
+        .chat-context-menu { position: absolute; background: #fff; border: 1px solid #d0ded4; box-shadow: 0 4px 12px rgba(0,0,0,0.15); border-radius: 8px; z-index: 10005; display: none; width: 160px; overflow: hidden; }
+        .chat-context-menu div { padding: 10px 14px; font-size: 14px; font-weight: 600; color: #333; cursor: pointer; transition: 0.2s; }
+        .chat-context-menu div:hover { background: #f0f4f1; color: #1e3d2f; }
+        .chat-context-menu div.delete-option { color: #d9534f; }
+        .chat-context-menu div.delete-option:hover { background: #ffe6e6; }
+
         .overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.4); display: none; z-index: 998; }
         .overlay.active { display: block; }
         .main-content { flex: 1; display: flex; flex-direction: column; overflow-y: auto; position: relative; margin-top: 60px; scroll-behavior: smooth; }
@@ -217,7 +226,14 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         </div>
     </header>
 
-    <div class="overlay" id="overlay" onclick="toggleSidebar()"></div>
+    <div class="overlay" id="overlay" onclick="toggleSidebar(); hideContextMenu();"></div>
+    
+    <!-- Long-press Context Menu -->
+    <div class="chat-context-menu" id="chatContextMenu">
+        <div onclick="shareChatLink()">🔗 Share Chat Link</div>
+        <div class="delete-option" onclick="deleteSelectedChat()">🗑️ Delete</div>
+    </div>
+
     <div class="sidebar" id="sidebar">
         <div class="sidebar-header">
             <span>Tibyan Menu</span>
@@ -308,6 +324,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         let currentChatTitle = "";
         let chatImageBase64 = null;
         let savedResponses = {};
+        let activeContextMenuChatId = null;
 
         function toggleSidebar() { document.getElementById('sidebar').classList.toggle('open'); document.getElementById('overlay').classList.toggle('active'); }
         function switchView(viewName) { document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active-view')); document.getElementById(viewName + '-view').classList.add('active-view'); }
@@ -337,10 +354,90 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             keys.forEach(k => {
                 let chat = chats[k];
                 if(!filterQuery || chat.title.toLowerCase().includes(filterQuery.toLowerCase())) {
-                    html += `<div class="history-item" onclick="loadSpecificChat('${k}')"><span>${chat.title}</span></div>`;
+                    html += `<div class="history-item" data-chat-id="${k}" onclick="loadSpecificChat('${k}')"><span>${chat.title}</span></div>`;
                 }
             });
             listContainer.innerHTML = html;
+            attachLongPressEvents();
+        }
+
+        function attachLongPressEvents() {
+            const items = document.querySelectorAll('.history-item');
+            items.forEach(item => {
+                let pressTimer;
+                const chatId = item.getAttribute('data-chat-id');
+
+                // Touch support for Mobile long press
+                item.addEventListener('touchstart', (e) => {
+                    pressTimer = setTimeout(() => { showContextMenu(e, chatId); }, 600);
+                });
+                item.addEventListener('touchend', () => { clearTimeout(pressTimer); });
+                item.addEventListener('touchmove', () => { clearTimeout(pressTimer); });
+
+                // Mouse support for Desktop long press / right click alternative
+                item.addEventListener('mousedown', (e) => {
+                    if (e.button === 0) { // Left click hold
+                        pressTimer = setTimeout(() => { showContextMenu(e, chatId); }, 600);
+                    }
+                });
+                item.addEventListener('mouseup', () => { clearTimeout(pressTimer); });
+                item.addEventListener('mouseleave', () => { clearTimeout(pressTimer); });
+            });
+        }
+
+        function showContextMenu(e, chatId) {
+            e.preventDefault();
+            e.stopPropagation();
+            activeContextMenuChatId = chatId;
+            const menu = document.getElementById('chatContextMenu');
+            const overlay = document.getElementById('overlay');
+            
+            let clientX = e.clientX || (e.touches && e.touches[0].clientX) || 100;
+            let clientY = e.clientY || (e.touches && e.touches[0].clientY) || 100;
+
+            menu.style.left = clientX + 'px';
+            menu.style.top = clientY + 'px';
+            menu.style.display = 'block';
+            overlay.classList.add('active');
+        }
+
+        function hideContextMenu() {
+            document.getElementById('chatContextMenu').style.display = 'none';
+            activeContextMenuChatId = null;
+        }
+
+        async function shareChatLink() {
+            if (!activeContextMenuChatId) return;
+            const shareUrl = window.location.origin + "/?chat=" + activeContextMenuChatId;
+            hideContextMenu();
+            if (navigator.share) {
+                try {
+                    await navigator.share({ title: 'Tibyan AI Chat', url: shareUrl });
+                } catch(err) {}
+            } else {
+                navigator.clipboard.writeText(shareUrl).then(() => {
+                    alert("Chat link copied to clipboard!");
+                });
+            }
+        }
+
+        async function deleteSelectedChat() {
+            if (!activeContextMenuChatId) return;
+            const cId = activeContextMenuChatId;
+            hideContextMenu();
+            
+            const res = await fetch('/delete_chat', { 
+                method: 'POST', 
+                headers: { 'Content-Type': 'application/json' }, 
+                body: JSON.stringify({ chat_id: cId }) 
+            });
+            
+            if (res.ok) {
+                if (currentChatId === cId) {
+                    startNewChat();
+                }
+                loadSidebarHistory();
+            }
         }
 
         function filterChats(query) {
@@ -773,6 +870,18 @@ def save_chat():
         new_chat = ChatHistory(user_id=current_user.id, chat_id=c_id, title=data.get('title'), html_content=data.get('html'), timestamp=time.time())
         db.session.add(new_chat)
     db.session.commit()
+    return jsonify({'status': 'success'})
+
+@app.route('/delete_chat', methods=['POST'])
+@login_required
+def delete_chat():
+    data = request.json or {}
+    c_id = data.get('chat_id')
+    if not c_id: return jsonify({'status': 'error'}), 400
+    chat = ChatHistory.query.filter_by(user_id=current_user.id, chat_id=c_id).first()
+    if chat:
+        db.session.delete(chat)
+        db.session.commit()
     return jsonify({'status': 'success'})
 
 @app.route('/update_profile', methods=['POST'])
