@@ -68,12 +68,12 @@ def make_session_permanent():
 @app.errorhandler(Exception)
 def handle_exception(e):
     tb = traceback.format_exc()
-    return f\"\"\"
+    return f"""
     <div style="font-family: monospace; padding: 20px; background: #ffe6e6; color: #900; border: 2px solid #red; margin: 20px; border-radius: 8px;">
         <h2>⚠️ Application Error Caught:</h2>
         <pre>{tb}</pre>
     </div>
-    \"\"\", 500
+    """, 500
 
 def call_groq_api(prompt_text, image_data=None):
     if not api_key:
@@ -158,11 +158,9 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         .chat-history-section { padding: 15px; overflow-y: auto; flex: 1; max-height: 40vh; }
         .history-title { font-size: 13px; text-transform: uppercase; color: #777; font-weight: bold; margin-bottom: 10px; letter-spacing: 0.5px; }
         
-        /* Updated Recent Chat Item Styles (Larger & Bolder Font) */
         .history-item { padding: 12px 14px; font-size: 16px; font-weight: 700; color: #1e3d2f; background: #f9f9f9; border-radius: 8px; margin-bottom: 8px; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; border: 1px solid #eee; transition: 0.2s; position: relative; user-select: none; }
         .history-item:hover { background: #f0f4f1; border-color: #d0ded4; }
         
-        /* Context Menu for Long-press on Recent Chat */
         .chat-context-menu { position: absolute; background: #fff; border: 1px solid #d0ded4; box-shadow: 0 4px 12px rgba(0,0,0,0.15); border-radius: 8px; z-index: 10005; display: none; width: 160px; overflow: hidden; }
         .chat-context-menu div { padding: 10px 14px; font-size: 14px; font-weight: 600; color: #333; cursor: pointer; transition: 0.2s; }
         .chat-context-menu div:hover { background: #f0f4f1; color: #1e3d2f; }
@@ -228,7 +226,6 @@ HTML_TEMPLATE = """<!DOCTYPE html>
 
     <div class="overlay" id="overlay" onclick="toggleSidebar(); hideContextMenu();"></div>
     
-    <!-- Long-press Context Menu -->
     <div class="chat-context-menu" id="chatContextMenu">
         <div onclick="shareChatLink()">🔗 Share Chat Link</div>
         <div class="delete-option" onclick="deleteSelectedChat()">🗑️ Delete</div>
@@ -367,16 +364,14 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                 let pressTimer;
                 const chatId = item.getAttribute('data-chat-id');
 
-                // Touch support for Mobile long press
                 item.addEventListener('touchstart', (e) => {
                     pressTimer = setTimeout(() => { showContextMenu(e, chatId); }, 600);
                 });
                 item.addEventListener('touchend', () => { clearTimeout(pressTimer); });
                 item.addEventListener('touchmove', () => { clearTimeout(pressTimer); });
 
-                // Mouse support for Desktop long press / right click alternative
                 item.addEventListener('mousedown', (e) => {
-                    if (e.button === 0) { // Left click hold
+                    if (e.button === 0) {
                         pressTimer = setTimeout(() => { showContextMenu(e, chatId); }, 600);
                     }
                 });
