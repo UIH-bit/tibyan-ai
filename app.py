@@ -23,7 +23,7 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['MAIL_SERVER'] = os.environ.get('MAIL_SERVER', 'smtp.gmail.com')
 app.config['MAIL_PORT'] = int(os.environ.get('MAIL_PORT', 587))
 app.config['MAIL_USE_TLS'] = os.environ.get('MAIL_USE_TLS', 'True') == 'True'
-app.config['MAIL_USE_SSL'] = os.environ.get('MAIL_USE_SSL', 'False') == 'True'
+app.config['MAIL_USE_SSL'] = os.environ.get('MAIL_USE_SSL', 'False') == 'False'
 app.config['MAIL_USERNAME'] = os.environ.get('MAIL_USERNAME')
 app.config['MAIL_PASSWORD'] = os.environ.get('MAIL_PASSWORD')
 
@@ -68,12 +68,12 @@ def make_session_permanent():
 @app.errorhandler(Exception)
 def handle_exception(e):
     tb = traceback.format_exc()
-    return f"""
+    return f\"\"\"
     <div style="font-family: monospace; padding: 20px; background: #ffe6e6; color: #900; border: 2px solid #red; margin: 20px; border-radius: 8px;">
         <h2>⚠️ Application Error Caught:</h2>
         <pre>{tb}</pre>
     </div>
-    """, 500
+    \"\"\", 500
 
 def call_groq_api(prompt_text, image_data=None):
     if not api_key:
@@ -87,11 +87,13 @@ def call_groq_api(prompt_text, image_data=None):
     
     system_instruction = (
         "You are 'Tibyan AI', an Islamic knowledge assistant following Hanafi Fiqh. "
-        "CRITICAL INSTRUCTION: Do NOT output any internal thinking, reasoning, analysis, or planning steps. "
-        "Start your response directly with the required headings. Do not include phrases like 'Here is a thinking process' or 'Analyze User Input'. "
+        "CRITICAL RULE: NEVER output your internal thinking, reasoning, analysis, constraint checks, or drafting steps "
+        "(e.g., 'Analyze User Input', 'Check Constraints', 'Draft Content', 'All constraints met. Proceed to output') in the final response. "
+        "Your response must START DIRECTLY with the requested headings and contain NO PRE-TEXT or thoughts. "
         "Your entire output must strictly follow this exact format with content under each heading:\n\n"
         "Short Answer\n"
         "Explanation\n"
+        "Evidence\n"
         "Quran\n"
         "Hadith\n"
         "Scholars\n"
@@ -139,7 +141,7 @@ def call_groq_api(prompt_text, image_data=None):
     except Exception as e:
         return f"Exception occurred while contacting API: {str(e)}"
 
-HTML_TEMPLATE = """<!DOCTYPE html>
+HTML_TEMPLATE = \"\"\"<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -630,9 +632,9 @@ HTML_TEMPLATE = """<!DOCTYPE html>
     </script>
 </body>
 </html>
-"""
+\"\"`
 
-AUTH_TEMPLATE = """<!DOCTYPE html>
+AUTH_TEMPLATE = \"\"\"<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -727,9 +729,9 @@ AUTH_TEMPLATE = """<!DOCTYPE html>
     </script>
 </body>
 </html>
-"""
+\"\"`
 
-OTP_VERIFY_TEMPLATE = """<!DOCTYPE html>
+OTP_VERIFY_TEMPLATE = \"\"\"<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -761,7 +763,7 @@ OTP_VERIFY_TEMPLATE = """<!DOCTYPE html>
     </div>
 </body>
 </html>
-"""
+\"\"`
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
