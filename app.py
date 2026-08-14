@@ -86,11 +86,11 @@ def call_groq_api(prompt_text, image_data=None):
         'Content-Type': 'application/json'
     }
     
+    # Updated system instruction to restrict internal thinking and enforce direct headings format
     system_instruction = (
         "You are 'Tibyan AI', an Islamic knowledge assistant following Hanafi Fiqh. "
-        "CRITICAL RULE: NEVER output your internal thinking, reasoning, analysis, constraint checks, or drafting steps "
-        "(e.g., 'Analyze User Input', 'Check Constraints', 'Draft Content', 'All constraints met. Proceed to output') in the final response. "
-        "Your response must START DIRECTLY with the requested headings and contain NO PRE-TEXT or thoughts. "
+        "CRITICAL RULE: DO NOT output any internal thinking, reasoning, analysis, or planning steps. "
+        "Start your response DIRECTLY with the requested headings/content. "
         "Your entire output must strictly follow this exact format with content under each heading:\n\n"
         "Short Answer\n"
         "Explanation\n"
@@ -101,7 +101,7 @@ def call_groq_api(prompt_text, image_data=None):
         "References\n"
         "Related topics\n\n"
         "Rules:\n"
-        "1. Direct Output Only: Provide the final answer straight away.\n"
+        "1. Direct Output Only: Provide the final answer straight away without any thinking tags or pre-text.\n"
         "2. Language Matching: Match the exact language and script of the user (e.g., Roman Urdu, English, Urdu).\n"
         "3. Vocabulary: Use authentic Islamic/Urdu vocabulary."
     )
@@ -128,9 +128,11 @@ def call_groq_api(prompt_text, image_data=None):
     ]
     
     payload = {
-        "model": "qwen/qwen3.6-27b",
+        "model": "llama-3.3-70b-versatile",
         "messages": messages,
-        "temperature": 0.2
+        "temperature": 0.3,
+        "max_completion_tokens": 2048,
+        "top_p": 1
     }
     
     try:
