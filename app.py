@@ -68,12 +68,12 @@ def make_session_permanent():
 @app.errorhandler(Exception)
 def handle_exception(e):
     tb = traceback.format_exc()
-    return f\"\"\"
+    return f"""
     <div style="font-family: monospace; padding: 20px; background: #ffe6e6; color: #900; border: 2px solid #red; margin: 20px; border-radius: 8px;">
         <h2>⚠️ Application Error Caught:</h2>
         <pre>{tb}</pre>
     </div>
-    \"\"\", 500
+    """, 500
 
 def call_groq_api(prompt_text, image_data=None):
     if not api_key:
@@ -85,43 +85,46 @@ def call_groq_api(prompt_text, image_data=None):
         'Content-Type': 'application/json'
     }
     
+    system_instruction = (
+        "You are Tibyan AI, a knowledgeable and respectful Muslim scholar assistant adhering strictly to Hanafi Fiqh. "
+        "Detect the exact language and script of the user's message. You MUST reply strictly in the exact same language style "
+        "and script in which the user asked. Furthermore, when communicating in Roman Urdu/Hindi, Urdu, or Hindi, you MUST "
+        "strictly use authentic Islamic, Urdu, and Deeni vocabulary and correct spelling with natural lehja. "
+        "ABSOLUTELY FORBIDDEN: Do not ever use Sanskritized or Hindi words like 'mukhya', 'mahatv', 'nimnalikhit', or 'vyakti'. "
+        "Instead, always use correct Urdu/Islamic equivalents like 'ahmiyat', 'khaas', 'darj-e-zail', 'shakhs', 'insaan', and 'zaroor' "
+        "(never write 'zror' or spelling mistakes). Ensure completely correct spelling and natural Islamic phrasing. "
+        "Use clear markdown headings with double asterisks like **Heading** for main sections."
+    )
+
+    content_list = [{"type": "text", "text": prompt_text if prompt_text else "Please analyze this image."}]
+    
+    if image_data:
+        if not image_data.startswith("data:image"):
+            image_data = f"data:image/jpeg;base64,{image_data}"
+        content_list.append({
+            "type": "image_url",
+            "image_url": {"url": image_data}
+        })
+
     messages = [
         {
             "role": "system", 
-            "content": (
-                "You are Tibyan AI, a knowledgeable and respectful Muslim scholar assistant adhering strictly to Hanafi Fiqh. "
-                "Detect the exact language and script of the user's message. You MUST reply strictly in the exact same language style "
-                "and script in which the user asked. Furthermore, when communicating in Roman Urdu/Hindi, Urdu, or Hindi, you MUST "
-                "strictly use authentic Islamic, Urdu, and Deeni vocabulary and correct spelling with natural lehja. "
-                "ABSOLUTELY FORBIDDEN: Do not ever use Sanskritized or Hindi words like 'mukhya', 'mahatv', 'nimnalikhit', or 'vyakti'. "
-                "Instead, always use correct Urdu/Islamic equivalents like 'ahmiyat', 'khaas', 'darj-e-zail', 'shakhs', 'insaan', and 'zaroor' "
-                "(never write 'zror' or spelling mistakes). Ensure completely correct spelling and natural Islamic phrasing. "
-                "Use clear markdown headings with double asterisks like **Heading** for main sections."
-            )
+            "content": system_instruction
+        },
+        {
+            "role": "user",
+            "content": content_list
         }
     ]
     
-    if image_data:
-        messages.append({
-            "role": "user",
-            "content": [
-                {"type": "text", "text": prompt_text if prompt_text else "Explain this image from an Islamic perspective."},
-                {"type": "image_url", "image_url": {"url": image_data}}
-            ]
-        })
-        model_name = "meta-llama/llama-3.2-11b-vision-instruct"
-    else:
-        messages.append({"role": "user", "content": prompt_text})
-        model_name = "llama-3.3-70b-versatile"
-
     payload = {
-        "model": model_name,
+        "model": "qwen/qwen3.6-27b",
         "messages": messages,
         "temperature": 0.4
     }
     
     try:
-        response = requests.post(url, headers=headers, json=payload, timeout=30)
+        response = requests.post(url, headers=headers, json=payload, timeout=45)
         if response.status_code == 200:
             return response.json()['choices'][0]['message']['content']
         else:
@@ -205,14 +208,17 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         .form-label { display: block; font-size: 15px; font-weight: 500; color: #333; margin-bottom: 6px; }
         .form-control { width: 100%; padding: 12px 16px; border: 1px solid #ddd; border-radius: 8px; font-size: 16px; outline: none; background: #f9f9f9; }
         .save-profile-btn { background: #1e3d2f; color: white; border: none; border-radius: 8px; padding: 12px; width: 100%; font-size: 16px; font-weight: bold; cursor: pointer; margin-top: 10px; }
+        
         .input-area { display: flex; flex-direction: column; padding: 10px 16px calc(20px + env(safe-area-inset-bottom, 25px)) 16px; border-top: 1px solid #eaeaea; background: #fff; max-width: 800px; width: 100%; margin: 0 auto; flex-shrink: 0; gap: 8px; z-index: 20; position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); box-shadow: 0 -4px 10px rgba(0,0,0,0.03); }
         .input-top-row { display: flex; align-items: center; gap: 10px; width: 100%; }
         .text-input { flex: 1; border: 1px solid #e0e0e0; border-radius: 24px; padding: 12px 18px; font-size: 16px; outline: none; background: #f9f9f9; resize: none; max-height: 150px; }
         .action-icon-btn { background: none; border: none; cursor: pointer; font-size: 22px; color: #1e3d2f; display: flex; align-items: center; justify-content: center; padding: 8px; }
         .send-btn { background: #1e3d2f; border: none; border-radius: 50%; width: 48px; height: 48px; min-width: 48px; display: flex; align-items: center; justify-content: center; cursor: pointer; color: white; font-size: 26px; font-weight: bold; }
-        .image-preview-bar { display: none; align-items: center; gap: 10px; padding: 6px 12px; background: #f0f4f1; border-radius: 8px; width: fit-content; }
-        .image-preview-bar img { width: 40px; height: 40px; border-radius: 6px; object-fit: cover; }
+        
+        #imagePreviewContainer { display: none; align-items: center; gap: 10px; padding: 6px 12px; background: #f0f4f1; border-radius: 8px; width: fit-content; margin-bottom: 4px; border: 1px solid #d0ded4; }
+        #imagePreviewContainer img { width: 40px; height: 40px; object-fit: cover; border-radius: 4px; }
         .remove-img-btn { background: none; border: none; color: #d9534f; font-weight: bold; cursor: pointer; font-size: 16px; }
+        .chat-img-thumb { max-width: 200px; max-height: 200px; border-radius: 8px; margin-bottom: 8px; display: block; border: 1px solid #ddd; }
     </style>
 </head>
 <body>
@@ -305,13 +311,16 @@ HTML_TEMPLATE = """<!DOCTYPE html>
     </div>
 
     <div class="input-area">
-        <div class="image-preview-bar" id="imagePreviewBar">
-            <img id="thumbPreview" src="" alt="preview">
-            <span id="thumbName" style="font-size: 14px; color: #333;">Image attached</span>
-            <button class="remove-img-btn" onclick="removeAttachedImage()">×</button>
+        <div id="imagePreviewContainer">
+            <img id="previewThumb" src="" alt="Preview">
+            <span id="previewName" style="font-size:13px; color:#1e3d2f; font-weight:500;">Image attached</span>
+            <button class="remove-img-btn" onclick="removeAttachedImage()">✕</button>
         </div>
         <div class="input-top-row">
-            <label class="action-icon-btn" title="Upload Image">📎<input type="file" id="chatImageInput" accept="image/*" style="display:none;" onchange="handleChatImageUpload(event)"></label>
+            <label class="action-icon-btn" title="Attach Image" style="cursor:pointer;">
+                📎
+                <input type="file" id="chatImageInput" accept="image/*" style="display:none;" onchange="handleChatImageSelect(event)">
+            </label>
             <textarea id="userInput" class="text-input" rows="1" placeholder="Ask Tibyan..." oninput="this.style.height='inherit';this.style.height=this.scrollHeight+'px';"></textarea>
             <button class="send-btn" id="sendBtn" onclick="submitQuery()" title="Send">↑</button>
         </div>
@@ -319,9 +328,9 @@ HTML_TEMPLATE = """<!DOCTYPE html>
 
     <script>
         let uploadedImageBase64 = "{{ user.pic or '' }}";
+        let currentAttachedImage = null;
         let currentChatId = 'chat_' + Date.now();
         let currentChatTitle = "";
-        let chatImageBase64 = null;
         let savedResponses = {};
         let activeContextMenuChatId = null;
 
@@ -335,6 +344,25 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             const ws = document.getElementById('welcome-screen'); 
             if(ws) ws.style.display = 'flex'; 
             switchView('home'); 
+        }
+
+        function handleChatImageSelect(event) {
+            const file = event.target.files[0];
+            if(file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    currentAttachedImage = e.target.result;
+                    document.getElementById('previewThumb').src = currentAttachedImage;
+                    document.getElementById('imagePreviewContainer').style.display = 'flex';
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+
+        function removeAttachedImage() {
+            currentAttachedImage = null;
+            document.getElementById('imagePreviewContainer').style.display = 'none';
+            document.getElementById('chatImageInput').value = '';
         }
 
         async function saveCurrentChat(title, historyHtml) {
@@ -519,18 +547,20 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         async function submitQuery() {
             const inputField = document.getElementById('userInput');
             const query = inputField.value.trim();
-            const currentImg = chatImageBase64;
-            if(!query && !currentImg) return;
+            const attachedImg = currentAttachedImage;
+
+            if(!query && !attachedImg) return;
+
             document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active-view'));
             document.getElementById('home-view').classList.add('active-view');
             const ws = document.getElementById('welcome-screen');
             if(ws) ws.style.display = 'none';
             const historyBox = document.getElementById('chat-history');
+            
             let userWrapperId = 'user-msg-' + Date.now();
-            let userHtml = `<div class="message-wrapper" id="${userWrapperId}"><div class="message user-msg">`;
-            if(currentImg) userHtml += `<img src="${currentImg}" style="max-width:150px; border-radius:8px; display:block; margin-bottom:8px;">`;
-            if(query) userHtml += `<div>${query}</div>`;
-            userHtml += `</div></div>`;
+            let imgHtmlTag = attachedImg ? `<img src="${attachedImg}" class="chat-img-thumb">` : '';
+            let userHtml = `<div class="message-wrapper" id="${userWrapperId}"><div class="message user-msg">${imgHtmlTag}<div>${query || "Analyze this image."}</div></div></div>`;
+            
             historyBox.innerHTML += userHtml;
             inputField.value = '';
             inputField.style.height = 'inherit';
@@ -556,11 +586,15 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                 </div>`;
             
             try {
-                const res = await fetch('/generate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ prompt: query, image: currentImg }) });
+                const res = await fetch('/generate', { 
+                    method: 'POST', 
+                    headers: { 'Content-Type': 'application/json' }, 
+                    body: JSON.stringify({ prompt: query, image: attachedImg }) 
+                });
                 const data = await res.json();
                 document.getElementById(uniqueId).innerHTML = marked.parse(data.response || "Error");
                 document.getElementById(uniqueId).scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-                saveCurrentChat(query.substring(0, 30) || "Image Query", historyBox.innerHTML);
+                saveCurrentChat((query || "Image Query").substring(0, 30), historyBox.innerHTML);
             } catch(e) {
                 document.getElementById(uniqueId).innerText = "Network error.";
             }
@@ -586,16 +620,6 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             document.getElementById('welcomeTitle').innerText = "What's next, " + name.trim() + "?";
             alert("Profile updated successfully!");
         }
-
-        function handleChatImageUpload(event) {
-            const file = event.target.files[0];
-            if (file) {
-                const reader = new FileReader();
-                reader.onload = function(e) { chatImageBase64 = e.target.result; document.getElementById('thumbPreview').src = chatImageBase64; document.getElementById('imagePreviewBar').style.display = 'flex'; }
-                reader.readAsDataURL(file);
-            }
-        }
-        function removeAttachedImage() { chatImageBase64 = null; document.getElementById('imagePreviewBar').style.display = 'none'; document.getElementById('chatImageInput').value = ''; }
     </script>
 </body>
 </html>
@@ -836,7 +860,7 @@ def home():
 @login_required
 def generate():
     data = request.json or {}
-    ai_response = call_groq_api(data.get('prompt', ''), data.get('image', None))
+    ai_response = call_groq_api(data.get('prompt', ''), data.get('image'))
     return jsonify({'response': ai_response})
 
 @app.get('/get_chats')
