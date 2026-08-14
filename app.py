@@ -86,11 +86,21 @@ def call_groq_api(prompt_text, image_data=None):
     }
     
     system_instruction = (
-        "Aap 'Tibyan AI' hain, ek Islamic knowledge assistant jo Hanafi Fiqh ke mutabiq rahnumai karta hai. "
-        "Niche diye gaye rules ko strictly follow karein:\n"
-        "1. No Extra Output: Apne response mein kabhi bhi apna internal thinking process, analysis, step-by-step breakdown (jaise 'Here is a thinking process', 'Task', 'Image Content'), ya koi bhi faltu explanation print nahi karna hai. Direct final output dena hai.\n"
-        "2. Language Matching (Dynamic Language Rule): User ne jis language, script ya style (jaise Urdu script, Roman Urdu, English, ya Hindi) mein sawal pucha hai ya image ke text ko maanga hai, bilkul usi language aur script mein jawab dein. Agar user ne Urdu script mein kaha hai toh Urdu script mein likhein, Roman Urdu mein kaha hai toh Roman Urdu mein likhein.\n"
-        "3. Vocabulary Rules: Jab Roman Urdu/Hindi ya Urdu mein communicate karein, toh authentic Islamic aur Urdu vocabulary istemal karein. Sanskritized ya Hindi words ('mukhya', 'mahatv', 'nimnalikhit', 'vyakti') bilkul use na karein, balki 'ahmiyat', 'khaas', 'darj-e-zail', 'shakhs', aur 'zaroor' ka istemal karein."
+        "You are 'Tibyan AI', an Islamic knowledge assistant following Hanafi Fiqh. "
+        "CRITICAL INSTRUCTION: Do NOT output any internal thinking, reasoning, analysis, or planning steps. "
+        "Start your response directly with the required headings. Do not include phrases like 'Here is a thinking process' or 'Analyze User Input'. "
+        "Your entire output must strictly follow this exact format with content under each heading:\n\n"
+        "Short Answer\n"
+        "Explanation\n"
+        "Quran\n"
+        "Hadith\n"
+        "Scholars\n"
+        "References\n"
+        "Related topics\n\n"
+        "Rules:\n"
+        "1. Direct Output Only: Provide the final answer straight away.\n"
+        "2. Language Matching: Match the exact language and script of the user (e.g., Roman Urdu, English, Urdu).\n"
+        "3. Vocabulary: Use authentic Islamic/Urdu vocabulary."
     )
 
     content_list = [{"type": "text", "text": prompt_text if prompt_text else "Please analyze this image."}]
@@ -117,7 +127,7 @@ def call_groq_api(prompt_text, image_data=None):
     payload = {
         "model": "qwen/qwen3.6-27b",
         "messages": messages,
-        "temperature": 0.4
+        "temperature": 0.2
     }
     
     try:
@@ -700,7 +710,7 @@ AUTH_TEMPLATE = """<!DOCTYPE html>
 
     <script>
         const eyeOpenSvg = '<path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3 z"/>';
-        const eyeClosedSvg = '<path d="M12 7c2.76 0 5 2.24 5 5 0 .65-.13 1.26-.36 1.83l2.92 2.92c1.51-1.26 2.7-2.89 3.43-4.75-1.73-4.39-6-7.5-11-7.5-1.4 0-2.74.25-3.98.7l2.16 2.16C10.74 7.13 11.35 7 12 7zM2.81 2.81L1.39 4.22l3.41 3.41C3.17 9.07 1.95 10.4 1 12c1.73 4.39 6 7.5 11 7.5 1.55 0 3.03-.3 4.38-.84l4.4 4.4 1.41-1.41L2.81 2.81zM12 15c-1.66 0-3-1.34-3-3 0-.34.07-.66.19-.96l3.77 3.77c-.3.12-.62.19-.96.19z"/>';
+        const eyeClosedSvg = '<path d="M12 7c2.76 0 5 2.24 5 5 0 .65-.13 1.26-.36 1.83l2.92 2.92c1.51-1.26 2.7-2.89 3.43-4.75-1.73-4.39-6-7.5-11-7.5-1.4 0-2.74.25-3.98.7l2.16 2.16C10.74 7.13 11.35 7 12 7zM2.81 2.81L1.39 4.22l3.41 3.41C3.17 9.07 1.95 10.4 1 12c1.73 4.39 6 7.5 11 7.5 1.55 0 3.03-.3 4.38-.84l4.4 4.4 1.41-1.41L2.81 2.81zM12 15c-1.66 0-3-1.34-3-3 0-.34.07-.66.19-.96l3.77 3.77c-.3.12-.62.19-.96.19 z"/>';
 
         function togglePasswordVisibility(fieldId, btn) {
             const field = document.getElementById(fieldId);
@@ -893,8 +903,8 @@ def save_chat():
 @app.route('/delete_chat', methods=['POST'])
 @login_required
 def delete_chat():
-    data = request.json or {}
-    c_id = data.get('chat_id')
+    data.get = request.json or {}
+    c_id = data.get('chat_id') if isinstance(data, dict) else (request.json or {}).get('chat_id')
     if not c_id: return jsonify({'status': 'error'}), 400
     chat = ChatHistory.query.filter_by(user_id=current_user.id, chat_id=c_id).first()
     if chat:
