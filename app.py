@@ -68,12 +68,13 @@ def make_session_permanent():
 @app.errorhandler(Exception)
 def handle_exception(e):
     tb = traceback.format_exc()
-    return f\"\"\"
-    <div style="font-family: monospace; padding: 20px; background: #ffe6e6; color: #900; border: 2px solid #red; margin: 20px; border-radius: 8px;">
+    error_page = f"""
+    <div style="font-family: monospace; padding: 20px; background: #ffe6e6; color: #900; border: 2px solid red; margin: 20px; border-radius: 8px;">
         <h2>⚠️ Application Error Caught:</h2>
         <pre>{tb}</pre>
     </div>
-    \"\"\", 500
+    """
+    return error_page, 500
 
 def call_groq_api(prompt_text, image_data=None):
     if not api_key:
@@ -141,7 +142,7 @@ def call_groq_api(prompt_text, image_data=None):
     except Exception as e:
         return f"Exception occurred while contacting API: {str(e)}"
 
-HTML_TEMPLATE = \"\"\"<!DOCTYPE html>
+HTML_TEMPLATE = """<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -632,9 +633,9 @@ HTML_TEMPLATE = \"\"\"<!DOCTYPE html>
     </script>
 </body>
 </html>
-\"\"`
+"""
 
-AUTH_TEMPLATE = \"\"\"<!DOCTYPE html>
+AUTH_TEMPLATE = """<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -729,9 +730,9 @@ AUTH_TEMPLATE = \"\"\"<!DOCTYPE html>
     </script>
 </body>
 </html>
-\"\"`
+"""
 
-OTP_VERIFY_TEMPLATE = \"\"\"<!DOCTYPE html>
+OTP_VERIFY_TEMPLATE = """<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -763,7 +764,7 @@ OTP_VERIFY_TEMPLATE = \"\"\"<!DOCTYPE html>
     </div>
 </body>
 </html>
-\"\"`
+"""
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -905,8 +906,8 @@ def save_chat():
 @app.route('/delete_chat', methods=['POST'])
 @login_required
 def delete_chat():
-    data.get = request.json or {}
-    c_id = data.get('chat_id') if isinstance(data, dict) else (request.json or {}).get('chat_id')
+    data = request.json or {}
+    c_id = data.get('chat_id')
     if not c_id: return jsonify({'status': 'error'}), 400
     chat = ChatHistory.query.filter_by(user_id=current_user.id, chat_id=c_id).first()
     if chat:
