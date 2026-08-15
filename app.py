@@ -1,15 +1,16 @@
-from flask import Flask, request, jsonify, render_template_string, url_for, redirect, flash, session
-from datetime import timedelta
-from flask_sqlalchemy import SQLAlchemy
-from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
-from werkzeug.security import generate_password_hash, check_password_hash
-from flask_mail import Mail, Message
 import os
 import requests
 import time
 import random
 import traceback
+from datetime import timedelta
 from dotenv import load_dotenv
+
+from flask import Flask, request, jsonify, render_template_string, url_for, redirect, flash, session
+from flask_sqlalchemy import SQLAlchemy
+from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
+from werkzeug.security import generate_password_hash, check_password_hash
+from flask_mail import Mail, Message
 
 load_dotenv()
 
@@ -86,24 +87,20 @@ def call_groq_api(prompt_text, image_data=None):
         'Content-Type': 'application/json'
     }
     
-    # Updated system instruction to restrict internal thinking and enforce direct headings format
+    # Updated system instruction to restrict internal thinking and enforce dynamic Markdown headings
     system_instruction = (
-        "You are 'Tibyan AI', an Islamic knowledge assistant following Hanafi Fiqh. "
-        "CRITICAL RULE: DO NOT output any internal thinking, reasoning, analysis, or planning steps. "
-        "Start your response DIRECTLY with the requested headings/content. "
-        "Your entire output must strictly follow this exact format with content under each heading:\n\n"
-        "Short Answer\n"
-        "Explanation\n"
-        "Evidence\n"
-        "Quran\n"
-        "Hadith\n"
-        "Scholars\n"
-        "References\n"
-        "Related topics\n\n"
-        "Rules:\n"
-        "1. Direct Output Only: Provide the final answer straight away without any thinking tags or pre-text.\n"
-        "2. Language Matching: Match the exact language and script of the user (e.g., Roman Urdu, English, Urdu).\n"
-        "3. Vocabulary: Use authentic Islamic/Urdu vocabulary."
+        "You are 'Tibyan AI', an authentic Islamic knowledge assistant following Hanafi Fiqh.\n"
+        "CRITICAL RULES:\n"
+        "1. DO NOT output any internal thinking, reasoning, analysis, or planning steps.\n"
+        "2. Match the exact language and script of the user (e.g., Roman Urdu, English, Urdu).\n"
+        "3. Provide well-structured answers with relevant dynamic Headings formatted in Markdown h3 (### Heading Name).\n"
+        "   Example format:\n"
+        "   ### Namaz Ki Haqiqat\n"
+        "   [Content here]\n\n"
+        "   ### Namaz Ki Pehchan\n"
+        "   [Content here]\n\n"
+        "   ### Namaz Ki Fazilat\n"
+        "   [Content here]\n"
     )
 
     content_list = [{"type": "text", "text": prompt_text if prompt_text else "Please analyze this image."}]
@@ -130,7 +127,7 @@ def call_groq_api(prompt_text, image_data=None):
     payload = {
         "model": "llama-3.3-70b-versatile",
         "messages": messages,
-        "temperature": 0.3,
+        "temperature": 0.6,
         "max_completion_tokens": 2048,
         "top_p": 1
     }
@@ -202,7 +199,22 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         .message { padding: 16px 20px; border-radius: 14px; max-width: 85%; line-height: 1.6; font-size: 17px; text-align: left; }
         .user-msg { background: #f0f4f1; color: #1e3d2f; align-self: flex-end; margin-left: auto; white-space: pre-wrap; }
         .ai-msg { background: #ffffff; border: 1px solid #e0e0e0; color: #222; align-self: flex-start; width: 100%; max-width: 100%; }
-        .ai-msg strong { font-weight: 800; color: #1e3d2f; font-size: 19px; display: block; margin-top: 16px; margin-bottom: 8px; border-left: 3px solid #1e3d2f; padding-left: 8px; }
+        
+        /* Heading & Typography Styling Rules (Screenshot Matching) */
+        .ai-msg h1, .ai-msg h2, .ai-msg h3, .ai-msg h4 {
+            color: #1e3d2f;
+            font-weight: 700;
+            font-size: 19px;
+            margin-top: 16px;
+            margin-bottom: 8px;
+            padding-left: 10px;
+            border-left: 4px solid #1e3d2f;
+            line-height: 1.3;
+        }
+        .ai-msg h3:first-child { margin-top: 4px; }
+        .ai-msg strong { font-weight: 700; color: #1e3d2f; }
+        .ai-msg p { margin-bottom: 12px; line-height: 1.6; color: #222; }
+        .ai-msg ul, .ai-msg ol { margin-left: 20px; margin-bottom: 12px; }
         
         .ai-actions-bar { display: flex; align-items: center; gap: 12px; margin-top: 10px; padding-left: 4px; }
         .action-btn { background: none; border: none; cursor: pointer; font-size: 16px; color: #555; display: flex; align-items: center; gap: 4px; padding: 4px 8px; border-radius: 6px; transition: 0.2s; }
