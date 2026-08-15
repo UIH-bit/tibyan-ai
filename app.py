@@ -87,47 +87,45 @@ def call_groq_api(prompt_text, image_data=None):
         'Content-Type': 'application/json'
     }
     
-    # Updated system instruction to restrict internal thinking and enforce dynamic Markdown headings
+    # Strict language and heading enforcement system prompt
     system_instruction = (
         "You are 'Tibyan AI', an authentic Islamic knowledge assistant following Hanafi Fiqh.\n"
-        "CRITICAL RULES:\n"
+        "STRICT MANDATORY RULES:\n"
         "1. DO NOT output any internal thinking, reasoning, analysis, or planning steps.\n"
-        "2. Match the exact language and script of the user (e.g., Roman Urdu, English, Urdu).\n"
-        "3. Provide well-structured answers with relevant dynamic Headings formatted in Markdown h3 (### Heading Name).\n"
-        "   Example format:\n"
-        "   ### Namaz Ki Haqiqat\n"
-        "   [Content here]\n\n"
-        "   ### Namaz Ki Pehchan\n"
-        "   [Content here]\n\n"
-        "   ### Namaz Ki Fazilat\n"
-        "   [Content here]\n"
+        "2. LANGUAGE MATCHING IS ABSOLUTELY STRICT: Respond ONLY in the EXACT language and script of the user's input prompt.\n"
+        "   - If the user asks in English (e.g., 'Who is adam'), respond ENTIRELY in English.\n"
+        "   - If the user asks in Roman Urdu/Hinglish, respond in Roman Urdu.\n"
+        "   - If the user asks in Urdu script (اردو), respond in Urdu script.\n"
+        "3. Provide well-structured answers with dynamic Headings formatted in Markdown h3 (### Heading Name).\n"
     )
 
-    content_list = [{"type": "text", "text": prompt_text if prompt_text else "Please analyze this image."}]
-    
+    # Dynamic model routing: Vision model for images, Text model for text prompts
     if image_data:
+        selected_model = "llama-3.2-11b-vision-preview"
         if not image_data.startswith("data:image"):
             image_data = f"data:image/jpeg;base64,{image_data}"
-        content_list.append({
-            "type": "image_url",
-            "image_url": {"url": image_data}
-        })
-
-    messages = [
-        {
-            "role": "system", 
-            "content": system_instruction
-        },
-        {
-            "role": "user",
-            "content": content_list
-        }
-    ]
+        
+        messages = [
+            {"role": "system", "content": system_instruction},
+            {
+                "role": "user",
+                "content": [
+                    {"type": "text", "text": prompt_text if prompt_text else "Please analyze this image."},
+                    {"type": "image_url", "image_url": {"url": image_data}}
+                ]
+            }
+        ]
+    else:
+        selected_model = "llama-3.3-70b-versatile"
+        messages = [
+            {"role": "system", "content": system_instruction},
+            {"role": "user", "content": prompt_text}
+        ]
     
     payload = {
-        "model": "llama-3.3-70b-versatile",
+        "model": selected_model,
         "messages": messages,
-        "temperature": 0.6,
+        "temperature": 0.5,
         "max_completion_tokens": 2048,
         "top_p": 1
     }
@@ -200,7 +198,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         .user-msg { background: #f0f4f1; color: #1e3d2f; align-self: flex-end; margin-left: auto; white-space: pre-wrap; }
         .ai-msg { background: #ffffff; border: 1px solid #e0e0e0; color: #222; align-self: flex-start; width: 100%; max-width: 100%; }
         
-        /* Heading & Typography Styling Rules (Screenshot Matching) */
+        /* Heading Styling Rules */
         .ai-msg h1, .ai-msg h2, .ai-msg h3, .ai-msg h4 {
             color: #1e3d2f;
             font-weight: 700;
