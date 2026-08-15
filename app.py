@@ -71,7 +71,7 @@ def handle_exception(e):
     tb = traceback.format_exc()
     error_page = f"""
     <div style="font-family: monospace; padding: 20px; background: #ffe6e6; color: #900; border: 2px solid red; margin: 20px; border-radius: 8px;">
-        <h2>⚠️ Application Error Caught:</h2>
+        <h2>⚠️ Mashqooliyat me Khata (Application Error):</h2>
         <pre>{tb}</pre>
     </div>
     """
@@ -79,7 +79,7 @@ def handle_exception(e):
 
 def call_groq_api(prompt_text, image_data=None):
     if not api_key:
-        return "Error: API Key is missing. Please set GROQ_API_KEY in your .env file."
+        return "Khata (Error): API Key mojood nahi hai. Bara-e-karam .env file me GROQ_API_KEY set karein."
         
     url = "https://api.groq.com/openai/v1/chat/completions"
     headers = {
@@ -87,19 +87,18 @@ def call_groq_api(prompt_text, image_data=None):
         'Content-Type': 'application/json'
     }
     
-    # Strict language and heading enforcement system prompt
+    # Islamic/Urdu Vocabulary System Instruction
     system_instruction = (
-        "You are 'Tibyan AI', an authentic Islamic knowledge assistant following Hanafi Fiqh.\n"
+        "Aap 'Tibyan AI' hain, ek authentic Islamic Ilmi assistant jo Fiqh-e-Hanafi ki pehravani karte hain.\n"
         "STRICT MANDATORY RULES:\n"
-        "1. DO NOT output any internal thinking, reasoning, analysis, or planning steps.\n"
-        "2. LANGUAGE MATCHING IS ABSOLUTELY STRICT: Respond ONLY in the EXACT language and script of the user's input prompt.\n"
-        "   - If the user asks in English (e.g., 'Who is adam'), respond ENTIRELY in English.\n"
-        "   - If the user asks in Roman Urdu/Hinglish, respond in Roman Urdu.\n"
-        "   - If the user asks in Urdu script (اردو), respond in Urdu script.\n"
-        "3. Provide well-structured answers with dynamic Headings formatted in Markdown h3 (### Heading Name).\n"
+        "1. Internal thinking, reasoning, ya analysis steps ki vazaahat bilkul na karein.\n"
+        "2. LANGUAGE MATCHING: Jis zabaan me sawaal pucha jaye, usi me jawaab dein.\n"
+        "   - Agar Roman Urdu/Hinglish me sawaal ho, toh aam Hindi/English alfaaz ki jagah shuddh Islamic aur Urdu alfaz ka istemal karein (jaise: 'is tarah', 'fazeelat', 'paigham', 'sawaal', 'jawaab', 'pak/muqaddas', 'ita'at', 'fehrist').\n"
+        "   - Urdu script me pucha jaye toh Urdu script me jawaab dein.\n"
+        "   - English me pucha jaye toh English me authentic Islamic terms ke saath jawaab dein.\n"
+        "3. Jawaab aamna-saamna aur ba-tarteeb rakhein, Markdown headings (### Unwan) ka istemal karein.\n"
     )
 
-    # Dynamic model routing: Vision model for images, Text model for text prompts
     if image_data:
         selected_model = "llama-3.2-11b-vision-preview"
         if not image_data.startswith("data:image"):
@@ -110,7 +109,7 @@ def call_groq_api(prompt_text, image_data=None):
             {
                 "role": "user",
                 "content": [
-                    {"type": "text", "text": prompt_text if prompt_text else "Please analyze this image."},
+                    {"type": "text", "text": prompt_text if prompt_text else "Bara-e-karam is tasveer ka tajziya karein."},
                     {"type": "image_url", "image_url": {"url": image_data}}
                 ]
             }
@@ -135,16 +134,16 @@ def call_groq_api(prompt_text, image_data=None):
         if response.status_code == 200:
             return response.json()['choices'][0]['message']['content']
         else:
-            return f"API Error ({response.status_code}): {response.text}"
+            return f"API Khata ({response.status_code}): {response.text}"
     except Exception as e:
-        return f"Exception occurred while contacting API: {str(e)}"
+        return f"API se rabta me khata pesh aayi: {str(e)}"
 
 HTML_TEMPLATE = """<!DOCTYPE html>
-<html lang="en">
+<html lang="ur">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tibyan AI - Authentic Islamic Knowledge</title>
+    <title>Tibyan AI - Islamic Ilm ka Sarchashma</title>
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
@@ -198,7 +197,6 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         .user-msg { background: #f0f4f1; color: #1e3d2f; align-self: flex-end; margin-left: auto; white-space: pre-wrap; }
         .ai-msg { background: #ffffff; border: 1px solid #e0e0e0; color: #222; align-self: flex-start; width: 100%; max-width: 100%; }
         
-        /* Heading Styling Rules */
         .ai-msg h1, .ai-msg h2, .ai-msg h3, .ai-msg h4 {
             color: #1e3d2f;
             font-weight: 700;
@@ -250,35 +248,35 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             <img src="{{ url_for('static', filename='logo.png') }}" alt="Tibyan AI" class="logo-img">
         </div>
         <div class="header-right">
-            <button class="new-chat-icon-btn" onclick="startNewChat()" title="New Chat">✏️</button>
+            <button class="new-chat-icon-btn" onclick="startNewChat()" title="Nayi Guftagu">✏️</button>
         </div>
     </header>
 
     <div class="overlay" id="overlay" onclick="toggleSidebar(); hideContextMenu();"></div>
     
     <div class="chat-context-menu" id="chatContextMenu">
-        <div onclick="shareChatLink()">🔗 Share Chat Link</div>
-        <div class="delete-option" onclick="deleteSelectedChat()">🗑️ Delete</div>
+        <div onclick="shareChatLink()">🔗 Guftagu Share Karein</div>
+        <div class="delete-option" onclick="deleteSelectedChat()">🗑️ Khareez/Hataen</div>
     </div>
 
     <div class="sidebar" id="sidebar">
         <div class="sidebar-header">
-            <span>Tibyan Menu</span>
+            <span>Tibyan Fehrist</span>
             <button class="close-sidebar" onclick="toggleSidebar()">✕</button>
         </div>
         <div class="sidebar-search-box">
-            <input type="text" id="chatSearchInput" class="sidebar-search" placeholder="Search Chats..." oninput="filterChats(this.value)">
+            <input type="text" id="chatSearchInput" class="sidebar-search" placeholder="Guftagu Talash Karein..." oninput="filterChats(this.value)">
         </div>
         <ul class="sidebar-menu">
-            <li onclick="switchView('library')">📚 Library</li>
-            <li onclick="switchView('saved')">📜 Saved</li>
-            <li onclick="switchView('profile')">👤 Profile</li>
-            <li onclick="switchView('about')">❕️ About</li>
-            <li><a href="/logout" style="color: #d9534f;">🚪 Logout</a></li>
+            <li onclick="switchView('library')">📚 Kutubkhana (Library)</li>
+            <li onclick="switchView('saved')">📜 Mehfooz Shuda (Saved)</li>
+            <li onclick="switchView('profile')">👤 Aapki Profile</li>
+            <li onclick="switchView('about')">❕️ Hamare Baare Me</li>
+            <li><a href="/logout" style="color: #d9534f;">🚪 Khurooj (Logout)</a></li>
         </ul>
         <div class="chat-history-section">
-            <div class="history-title">Recent Chats</div>
-            <div id="sidebarHistoryList"><div style="font-size: 14px; color: #888;">No past chats yet.</div></div>
+            <div class="history-title">Sabiqa Guftagu</div>
+            <div id="sidebarHistoryList"><div style="font-size: 14px; color: #888;">Abhi koi purani guftagu nahi hai.</div></div>
         </div>
     </div>
 
@@ -287,11 +285,11 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             <div id="chat-box" style="width: 100%;">
                 <div class="welcome-section" id="welcome-screen">
                     <div class="tibyan-logo-icon"><img src="{{ url_for('static', filename='logo.png') }}" alt="Tibyan Logo"></div>
-                    <div class="welcome-title" id="welcomeTitle">What's next, {{ user.name }}?</div>
+                    <div class="welcome-title" id="welcomeTitle">Assalamu Alaikum, {{ user.name }}! Kya sawaal hai?</div>
                     <div class="suggestions">
                         <div class="suggestions-row">
-                            <div class="suggestion-chip" onclick="sendPrompt('What does the Quran say about patience (Sabr)?')">What does the Quran say about patience (Sabr)?</div>
-                            <div class="suggestion-chip" onclick="sendPrompt('Roza kaise toot jata hai')">Roza kaise toot jata hai</div>
+                            <div class="suggestion-chip" onclick="sendPrompt('Quran Pak me Sabr ke bare me kya irshad hai?')">Quran Pak me Sabr ke bare me kya irshad hai?</div>
+                            <div class="suggestion-chip" onclick="sendPrompt('Roza kis tarah toot jata hai?')">Roza kis tarah toot jata hai?</div>
                         </div>
                     </div>
                 </div>
@@ -300,17 +298,17 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         </div>
 
         <div id="library-view" class="view-section">
-            <div style="font-size:28px; color:#1e3d2f; margin-bottom:20px; font-weight:bold;">Islamic Library 📚</div>
+            <div style="font-size:28px; color:#1e3d2f; margin-bottom:20px; font-weight:bold;">Islamic Kutubkhana 📚</div>
             <div class="library-grid">
-                <div class="library-card" onclick="sendPrompt('Tell me about Qur\'an sciences.')">📖 Qur'an</div>
-                <div class="library-card" onclick="sendPrompt('Explain Hadith collections.')">🏷️ Hadith</div>
-                <div class="library-card" onclick="sendPrompt('Explain Fiqh according to Hanafi school.')">⚖️ Fiqh</div>
+                <div class="library-card" onclick="sendPrompt('Uloom-ul-Quran ke bare me vazaahat karein.')">📖 Qur'an Majeed</div>
+                <div class="library-card" onclick="sendPrompt('Kutub-e-Hadith ki fehrist aur ahammiyat batayein.')">🏷️ Hadith Mubarak</div>
+                <div class="library-card" onclick="sendPrompt('Fiqh-e-Hanafi ke usool aur ahammiyat samjhayein.')">⚖️ Fiqh (Hanafi)</div>
             </div>
         </div>
 
         <div id="saved-view" class="view-section">
-            <div style="font-size:28px; color:#1e3d2f; margin-bottom:20px; font-weight:bold;">Saved Chats 📜</div>
-            <div id="saved-chats-list"><p style="color: #666; font-size: 15px;">No saved responses yet.</p></div>
+            <div style="font-size:28px; color:#1e3d2f; margin-bottom:20px; font-weight:bold;">Mehfooz Jawaabat 📜</div>
+            <div id="saved-chats-list"><p style="color: #666; font-size: 15px;">Abhi koi mehfooz jawaab nahi hai.</p></div>
         </div>
         
         <div id="profile-view" class="view-section">
@@ -318,33 +316,33 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             <div class="profile-container">
                 <div class="profile-pic-wrapper">
                     <div class="profile-preview" id="profilePicPreview">{% if user.pic %}<img src="{{ user.pic }}" alt="Profile">{% else %}👤{% endif %}</div>
-                    <label class="file-input-label" for="profilePicInput">Choose Profile Picture</label>
+                    <label class="file-input-label" for="profilePicInput">Tasveer Muntakhib Karein</label>
                     <input type="file" id="profilePicInput" accept="image/*" style="display:none;" onchange="previewProfileImage(event)">
                 </div>
-                <div class="form-group"><label class="form-label">Name</label><input type="text" id="profileName" class="form-control" value="{{ user.name }}"></div>
-                <div class="form-group"><label class="form-label">Surname</label><input type="text" id="profileSurname" class="form-control" value="{{ user.surname or '' }}"></div>
-                <div class="form-group"><label class="form-label">Email</label><input type="email" class="form-control" value="{{ user.email }}" disabled style="background:#eee;"></div>
-                <div class="form-group"><label class="form-label">D.O.B</label><input type="date" id="profileDob" class="form-control" value="{{ user.dob or '' }}"></div>
-                <button class="save-profile-btn" onclick="saveProfileData()">Save Profile</button>
+                <div class="form-group"><label class="form-label">Naam</label><input type="text" id="profileName" class="form-control" value="{{ user.name }}"></div>
+                <div class="form-group"><label class="form-label">Zat/Surname</label><input type="text" id="profileSurname" class="form-control" value="{{ user.surname or '' }}"></div>
+                <div class="form-group"><label class="form-label">Email Address</label><input type="email" class="form-control" value="{{ user.email }}" disabled style="background:#eee;"></div>
+                <div class="form-group"><label class="form-label">Taarikh-e-Pedaish (D.O.B)</label><input type="date" id="profileDob" class="form-control" value="{{ user.dob or '' }}"></div>
+                <button class="save-profile-btn" onclick="saveProfileData()">Profile Mehfooz Karein</button>
             </div>
         </div>
 
-        <div id="about-view" class="view-section"><div style="font-size:28px; color:#1e3d2f; margin-bottom:20px; font-weight:bold;">About ❕️</div><p>Tibyan AI authentic scholar assistant.</p></div>
+        <div id="about-view" class="view-section"><div style="font-size:28px; color:#1e3d2f; margin-bottom:20px; font-weight:bold;">Hamare Baare Me ❕️</div><p>Tibyan AI ek authentic Islamic Ilmi assistant hai jo sahih hawala jaat ke saath khidmat fraham karta hai.</p></div>
     </div>
 
     <div class="input-area">
         <div id="imagePreviewContainer">
             <img id="previewThumb" src="" alt="Preview">
-            <span id="previewName" style="font-size:13px; color:#1e3d2f; font-weight:500;">Image attached</span>
+            <span id="previewName" style="font-size:13px; color:#1e3d2f; font-weight:500;">Tasveer munsalik hai</span>
             <button class="remove-img-btn" onclick="removeAttachedImage()">✕</button>
         </div>
         <div class="input-top-row">
-            <label class="action-icon-btn" title="Attach Image" style="cursor:pointer;">
+            <label class="action-icon-btn" title="Tasveer Munsalik Karein" style="cursor:pointer;">
                 📎
                 <input type="file" id="chatImageInput" accept="image/*" style="display:none;" onchange="handleChatImageSelect(event)">
             </label>
-            <textarea id="userInput" class="text-input" rows="1" placeholder="Ask Tibyan..." oninput="this.style.height='inherit';this.style.height=this.scrollHeight+'px';"></textarea>
-            <button class="send-btn" id="sendBtn" onclick="submitQuery()" title="Send">↑</button>
+            <textarea id="userInput" class="text-input" rows="1" placeholder="Tibyan se sawaal daryaft karein..." oninput="this.style.height='inherit';this.style.height=this.scrollHeight+'px';"></textarea>
+            <button class="send-btn" id="sendBtn" onclick="submitQuery()" title="Irsal Karein (Send)">↑</button>
         </div>
     </div>
 
@@ -398,7 +396,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             const chats = await res.json();
             const listContainer = document.getElementById('sidebarHistoryList');
             let keys = Object.keys(chats).sort((a,b) => chats[b].time - chats[a].time);
-            if(keys.length === 0) { listContainer.innerHTML = '<div style="font-size: 14px; color: #888;">No past chats yet.</div>'; return; }
+            if(keys.length === 0) { listContainer.innerHTML = '<div style="font-size: 14px; color: #888;">Abhi koi purani guftagu nahi hai.</div>'; return; }
             let html = '';
             keys.forEach(k => {
                 let chat = chats[k];
@@ -463,7 +461,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                 } catch(err) {}
             } else {
                 navigator.clipboard.writeText(shareUrl).then(() => {
-                    alert("Chat link copied to clipboard!");
+                    alert("Guftagu ka rabta (link) nakal kar liya gaya hai!");
                 });
             }
         }
@@ -535,13 +533,13 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             const container = document.getElementById('saved-chats-list');
             const keys = Object.keys(savedResponses);
             if(keys.length === 0) {
-                container.innerHTML = '<p style="color: #666; font-size: 15px;">No saved responses yet.</p>';
+                container.innerHTML = '<p style="color: #666; font-size: 15px;">Abhi koi mehfooz jawaab nahi hai.</p>';
                 return;
             }
             let html = '';
             keys.forEach((k, idx) => {
                 html += `<div style="background:#fff; border:1px solid #e0e0e0; border-radius:10px; padding:16px; margin-bottom:12px;">
-                    <div style="font-size:13px; color:#777; margin-bottom:8px; font-weight:bold;">Saved Response #${idx + 1}</div>
+                    <div style="font-size:13px; color:#777; margin-bottom:8px; font-weight:bold;">Mehfooz Jawaab #${idx + 1}</div>
                     <div>${savedResponses[k]}</div>
                 </div>`;
             });
@@ -554,7 +552,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             
             if (navigator.share) {
                 navigator.share({
-                    title: 'Tibyan AI Response',
+                    title: 'Tibyan AI Jawaab',
                     text: textToCopy,
                 }).catch(() => {});
             } else {
@@ -581,7 +579,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             
             let userWrapperId = 'user-msg-' + Date.now();
             let imgHtmlTag = attachedImg ? `<img src="${attachedImg}" class="chat-img-thumb">` : '';
-            let userHtml = `<div class="message-wrapper" id="${userWrapperId}"><div class="message user-msg">${imgHtmlTag}<div>${query || "Analyze this image."}</div></div></div>`;
+            let userHtml = `<div class="message-wrapper" id="${userWrapperId}"><div class="message user-msg">${imgHtmlTag}<div>${query || "Is tasveer ka tajziya karein."}</div></div></div>`;
             
             historyBox.innerHTML += userHtml;
             inputField.value = '';
@@ -598,11 +596,11 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             
             historyBox.innerHTML += `
                 <div class="message-wrapper" id="${wrapperId}">
-                    <div class="message ai-msg" id="${uniqueId}">Bismillah, analyzing...</div>
+                    <div class="message ai-msg" id="${uniqueId}">Bismillah, jawaab taiyar kiya ja raha hai...</div>
                     <div class="ai-actions-bar">
-                        <button class="action-btn like-btn" onclick="handleLike(this)">👍 Like</button>
-                        <button class="action-btn dislike-btn" onclick="handleDislike(this)">👎 Dislike</button>
-                        <button class="action-btn" onclick="handleSave(this, '${uniqueId}')">📜 Save</button>
+                        <button class="action-btn like-btn" onclick="handleLike(this)">👍 Pasand</button>
+                        <button class="action-btn dislike-btn" onclick="handleDislike(this)">👎 Na-pasand</button>
+                        <button class="action-btn" onclick="handleSave(this, '${uniqueId}')">📜 Mehfooz</button>
                         <button class="action-btn" onclick="handleMore(this, '${uniqueId}')">•••</button>
                     </div>
                 </div>`;
@@ -614,11 +612,11 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                     body: JSON.stringify({ prompt: query, image: attachedImg }) 
                 });
                 const data = await res.json();
-                document.getElementById(uniqueId).innerHTML = marked.parse(data.response || "Error");
+                document.getElementById(uniqueId).innerHTML = marked.parse(data.response || "Khata (Error)");
                 document.getElementById(uniqueId).scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-                saveCurrentChat((query || "Image Query").substring(0, 30), historyBox.innerHTML);
+                saveCurrentChat((query || "Tasveeri Sawaal").substring(0, 30), historyBox.innerHTML);
             } catch(e) {
-                document.getElementById(uniqueId).innerText = "Network error.";
+                document.getElementById(uniqueId).innerText = "Rabte me dushvari (Network Error).";
             }
         }
 
@@ -639,8 +637,8 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             const surname = document.getElementById('profileSurname').value;
             const dob = document.getElementById('profileDob').value;
             await fetch('/update_profile', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: name, surname: surname, dob: dob, pic: uploadedImageBase64 }) });
-            document.getElementById('welcomeTitle').innerText = "What's next, " + name.trim() + "?";
-            alert("Profile updated successfully!");
+            document.getElementById('welcomeTitle').innerText = "Assalamu Alaikum, " + name.trim() + "! Kya sawaal hai?";
+            alert("Profile kamyabi se mehfooz ho gayi!");
         }
     </script>
 </body>
@@ -648,7 +646,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
 """
 
 AUTH_TEMPLATE = """<!DOCTYPE html>
-<html lang="en">
+<html lang="ur">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -678,8 +676,8 @@ AUTH_TEMPLATE = """<!DOCTYPE html>
         {% endwith %}
         <form method="POST">
             {% if is_signup %}
-            <div class="form-group"><label class="form-label">Name</label><input type="text" name="name" class="form-control" style="padding-right: 16px;" required></div>
-            <div class="form-group"><label class="form-label">Surname</label><input type="text" name="surname" class="form-control" style="padding-right: 16px;"></div>
+            <div class="form-group"><label class="form-label">Naam</label><input type="text" name="name" class="form-control" style="padding-right: 16px;" required></div>
+            <div class="form-group"><label class="form-label">Zat / Surname</label><input type="text" name="surname" class="form-control" style="padding-right: 16px;"></div>
             {% endif %}
             
             <div class="form-group"><label class="form-label">Email</label><input type="email" name="email" class="form-control" style="padding-right: 16px;" required></div>
@@ -698,7 +696,7 @@ AUTH_TEMPLATE = """<!DOCTYPE html>
 
             {% if is_signup %}
             <div class="form-group">
-                <label class="form-label">Confirm Password</label>
+                <label class="form-label">Password ki Tasdeeq Karein</label>
                 <div class="password-container">
                     <input type="password" name="confirm_password" id="confirmPasswordField" class="form-control" required>
                     <button type="button" class="toggle-password" onclick="togglePasswordVisibility('confirmPasswordField', this)">
@@ -713,12 +711,12 @@ AUTH_TEMPLATE = """<!DOCTYPE html>
         
         <div class="auth-link">
             {% if is_signup %}
-                Already have an account? <a href="{{ url_for('login') }}">Login</a>
+                Pehle se account mojood hai? <a href="{{ url_for('login') }}">Dakhil Hon (Login)</a>
             {% elif is_forgot_request %}
-                Remember your password? <a href="{{ url_for('login') }}">Login</a>
+                Password yaad aa gaya? <a href="{{ url_for('login') }}">Dakhil Hon (Login)</a>
             {% else %}
-                <a href="{{ url_for('forgot_password') }}" style="display:block; margin-bottom:8px;">Forgot Password?</a>
-                Don't have an account? <a href="{{ url_for('signup') }}">Sign Up</a>
+                <a href="{{ url_for('forgot_password') }}" style="display:block; margin-bottom:8px;">Password bhool gaye?</a>
+                Naya account banana hai? <a href="{{ url_for('signup') }}">Naya Account Banayein</a>
             {% endif %}
         </div>
     </div>
@@ -745,11 +743,11 @@ AUTH_TEMPLATE = """<!DOCTYPE html>
 """
 
 OTP_VERIFY_TEMPLATE = """<!DOCTYPE html>
-<html lang="en">
+<html lang="ur">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Verify OTP - Tibyan AI</title>
+    <title>OTP Tasdeeq - Tibyan AI</title>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
         body { background: #f0f4f1; display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 20px; }
@@ -764,14 +762,14 @@ OTP_VERIFY_TEMPLATE = """<!DOCTYPE html>
 </head>
 <body>
     <div class="auth-card">
-        <div class="auth-title">Reset Password</div>
+        <div class="auth-title">Naya Password Set Karein</div>
         {% with messages = get_flashed_messages() %}
           {% if messages %}<div class="flash-msg">{{ messages[0] }}</div>{% endif %}
         {% endwith %}
         <form method="POST">
-            <div class="form-group"><label class="form-label">Enter 6-Digit OTP</label><input type="text" name="otp" class="form-control" required></div>
-            <div class="form-group"><label class="form-label">New Password</label><input type="password" name="new_password" class="form-control" required></div>
-            <button type="submit" class="auth-btn">Update Password</button>
+            <div class="form-group"><label class="form-label">6-Hindo ka OTP Darj Karein</label><input type="text" name="otp" class="form-control" required></div>
+            <div class="form-group"><label class="form-label">Naya Password</label><input type="password" name="new_password" class="form-control" required></div>
+            <button type="submit" class="auth-btn">Password Tabdeel Karein</button>
         </form>
     </div>
 </body>
@@ -787,7 +785,7 @@ def login():
         if user and check_password_hash(user.password, password):
             login_user(user, remember=True)
             return redirect(url_for('home'))
-        flash('Invalid email or password!')
+        flash('Ghalat email ya password!')
     return render_template_string(AUTH_TEMPLATE, title='Login', is_signup=False, is_forgot_request=False, btn_text='Login')
 
 @app.route('/signup', methods=['GET', 'POST'])
@@ -800,12 +798,12 @@ def signup():
         confirm_password = request.form.get('confirm_password')
         
         if password != confirm_password:
-            flash('Passwords do not match!')
+            flash('Dono password ek jaise nahi hain!')
             return redirect(url_for('signup'))
 
         user_exists = User.query.filter_by(email=email).first()
         if user_exists:
-            flash('Email address already registered! Please login.')
+            flash('Yeh email pehle se hi registered hai! Bara-e-karam login karein.')
             return redirect(url_for('login'))
             
         hashed_password = generate_password_hash(password, method='pbkdf2:sha256')
@@ -814,7 +812,7 @@ def signup():
         db.session.commit()
         login_user(new_user, remember=True)
         return redirect(url_for('home'))
-    return render_template_string(AUTH_TEMPLATE, title='Sign Up', is_signup=True, is_forgot_request=False, btn_text='Sign Up')
+    return render_template_string(AUTH_TEMPLATE, title='Naya Account', is_signup=True, is_forgot_request=False, btn_text='Account Banayein')
 
 @app.route('/forgot_password', methods=['GET', 'POST'])
 def forgot_password():
@@ -822,7 +820,7 @@ def forgot_password():
         email = request.form.get('email', '').strip().lower()
         user = User.query.filter_by(email=email).first()
         if not user:
-            flash('This email is not registered with us!')
+            flash('Yeh email humare record me mojood nahi hai!')
             return redirect(url_for('forgot_password'))
         
         otp = str(random.randint(100000, 999999))
@@ -833,13 +831,13 @@ def forgot_password():
             msg = Message('Tibyan AI - Password Reset OTP',
                           sender=os.environ.get('MAIL_USERNAME'),
                           recipients=[email])
-            msg.body = f"Assalamu Alaikum,\n\nYour OTP for resetting your Tibyan AI password is: {otp}\n\nValid for a single use."
+            msg.body = f"Assalamu Alaikum,\n\nTibyan AI password reset karne ke liye aapka OTP hai: {otp}\n\nYeh sirf ek baar ke istemal ke liye hai."
             mail.send(msg)
             return redirect(url_for('verify_otp'))
         except Exception as e:
-            flash(f'Failed to send email. Check configuration: {str(e)}')
+            flash(f'Email bhejne me nakami hui: {str(e)}')
             
-    return render_template_string(AUTH_TEMPLATE, title='Forgot Password', is_signup=False, is_forgot_request=True, btn_text='Send OTP')
+    return render_template_string(AUTH_TEMPLATE, title='Password Dobara Hasil Karein', is_signup=False, is_forgot_request=True, btn_text='OTP Bhejein')
 
 @app.route('/verify_otp', methods=['GET', 'POST'])
 def verify_otp():
@@ -860,10 +858,10 @@ def verify_otp():
             session.pop('reset_email', None)
             session.pop('reset_otp', None)
             
-            flash('Password updated successfully! Please login.')
+            flash('Password kamyabi se tabdeel ho gaya hai! Ab login karein.')
             return redirect(url_for('login'))
         else:
-            flash('Invalid OTP! Please try again.')
+            flash('Ghalat OTP! Dobara koshish karein.')
             
     return render_template_string(OTP_VERIFY_TEMPLATE)
 
