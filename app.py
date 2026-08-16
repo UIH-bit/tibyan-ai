@@ -295,9 +295,10 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
         body { background-color: #ffffff; color: #111; display: flex; flex-direction: column; height: 100vh; overflow: hidden; font-size: 17px; }
         header { display: flex; align-items: center; justify-content: space-between; padding: 12px 20px; border-bottom: 1px solid #eaeaea; background: #fff; z-index: 1000; position: fixed; top: 0; left: 0; width: 100%; }
-        .header-left { display: flex; align-items: center; gap: 15px; }
+        .header-left { display: flex; align-items: center; gap: 12px; }
+        .header-logo { height: 28px; width: auto; object-fit: contain; }
+        .welcome-logo { height: 75px; width: auto; object-fit: contain; margin-bottom: 12px; }
         .menu-btn { background: none; border: none; font-size: 26px; cursor: pointer; color: #1e3d2f; padding: 4px 8px; }
-        .logo-title { font-size: 22px; font-weight: bold; color: #1e3d2f; }
         .header-right { display: flex; align-items: center; }
         .pencil-btn { background: none; border: none; font-size: 22px; cursor: pointer; color: #1e3d2f; padding: 6px 10px; transform: rotate(180deg); display: inline-block; }
         .sidebar { position: fixed; top: 0; left: -300px; width: 300px; height: 100%; background: #fff; box-shadow: 2px 0 10px rgba(0,0,0,0.1); transition: 0.3s ease; z-index: 9999; display: flex; flex-direction: column; }
@@ -312,8 +313,8 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         .main-content { flex: 1; display: flex; flex-direction: column; overflow-y: auto; position: relative; margin-top: 60px; scroll-behavior: smooth; }
         .view-section { display: none; flex: 1; padding: 20px 20px 120px 20px; max-width: 800px; width: 100%; margin: 0 auto; }
         .view-section.active-view { display: flex; flex-direction: column; }
-        .welcome-section { display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; margin: 40px 0; width: 100%; padding: 25px 20px; background: linear-gradient(180deg, rgba(240,244,241,0.6) 0%, rgba(255,255,255,1) 100%); border-radius: 24px; border: 1px solid #e2ece4; }
-        .welcome-title { font-size: 28px; color: #1e3d2f; font-weight: bold; margin-bottom: 15px; }
+        .welcome-section { display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; margin: 30px 0; width: 100%; padding: 25px 20px; background: linear-gradient(180deg, rgba(240,244,241,0.6) 0%, rgba(255,255,255,1) 100%); border-radius: 24px; border: 1px solid #e2ece4; }
+        .welcome-title { font-size: 26px; color: #1e3d2f; font-weight: bold; margin-bottom: 8px; }
         .suggestions-container { display: flex; flex-direction: column; gap: 10px; width: 100%; margin-top: 15px; }
         .suggestion-bar { background: #f4f8f5; border: 1px solid #c8dcd0; border-radius: 12px; padding: 12px 16px; font-size: 15px; font-weight: 600; color: #1e3d2f; cursor: pointer; text-align: left; transition: all 0.2s ease; }
         .suggestion-bar:hover { background: #e2ece4; }
@@ -338,7 +339,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
     <header>
         <div class="header-left">
             <button class="menu-btn" onclick="toggleSidebar()">☰</button>
-            <div class="logo-title">Tibyan AI</div>
+            <img src="{{ url_for('static', filename='logo.png') }}" alt="Tibyan AI Logo" class="header-logo">
         </div>
         <div class="header-right">
             <button class="pencil-btn" onclick="startNewChat()">✏︎</button>
@@ -369,6 +370,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         <div id="home-view" class="view-section active-view">
             <div id="chat-box" style="width: 100%;">
                 <div class="welcome-section" id="welcome-screen">
+                    <img src="{{ url_for('static', filename='logo.png') }}" alt="Tibyan Logo" class="welcome-logo">
                     <div class="welcome-title">Assalamu Alaikum, {{ user.name }}!</div>
                     <p style="color:#555;">How can I assist you today?</p>
                     <div class="suggestions-container" id="suggestionsBox"></div>
