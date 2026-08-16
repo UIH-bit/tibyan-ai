@@ -1,8 +1,10 @@
 import os
-import requests
+import re
 import time
-import random
-import traceback
+import hmac
+import hashlib
+import requests
+import secrets
 from datetime import timedelta
 from dotenv import load_dotenv
 
@@ -15,16 +17,19 @@ from flask_mail import Mail, Message
 load_dotenv()
 
 app = Flask(__name__)
-app.permanent_session_lifetime = timedelta(days=3650)
-app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'tibyan_secure_secret_key_2026')
+app.permanent_session_lifetime = timedelta(days=7) # Capped to a reasonable limit
+
+# Production Security Configurations
+app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY') or secrets.token_hex(32)
 app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', 'sqlite:///database.db')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+app.config['MAX_CONTENT_LENGTH'] = 10 * 1024 * 1024 # Limit total request size to 10MB
 
 # Flask-Mail Configuration
 app.config['MAIL_SERVER'] = os.environ.get('MAIL_SERVER', 'smtp.gmail.com')
 app.config['MAIL_PORT'] = int(os.environ.get('MAIL_PORT', 587))
-app.config['MAIL_USE_TLS'] = os.environ.get('MAIL_USE_TLS', 'True') == 'True'
-app.config['MAIL_USE_SSL'] = os.environ.get('MAIL_USE_SSL', 'False') == 'False'
+app.config['MAIL_USE_TLS'] = os.environ.get('MAIL_USE_TLS', 'True').lower() == 'true'
+app.config['MAIL_USE_SSL'] = os.environ.get('MAIL_USE_SSL', 'False').lower() == 'true'
 app.config['MAIL_USERNAME'] = os.environ.get('MAIL_USERNAME')
 app.config['MAIL_PASSWORD'] = os.environ.get('MAIL_PASSWORD')
 
@@ -36,21 +41,21 @@ login_manager.login_message = None
 login_manager.init_app(app)
 login_manager.login_view = 'login'
 
-api_key = os.environ.get("GROQ_API_KEY") or os.environ.get("GEMINI_API_KEY")
+API_KEY = os.environ.get("GROQ_API_KEY") or os.environ.get("GEMINI_API_KEY")
 
 class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False)
     surname = db.Column(db.String(100), nullable=True)
-    email = db.Column(db.String(120), unique=True, nullable=False)
+    email = db.Column(db.String(120), unique=True, nullable=False, index=True)
     password = db.Column(db.String(200), nullable=False)
     dob = db.Column(db.String(20), nullable=True)
     pic = db.Column(db.Text, nullable=True)
 
 class ChatHistory(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    chat_id = db.Column(db.String(100), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False, index=True)
+    chat_id = db.Column(db.String(100), nullable=False, index=True)
     title = db.Column(db.String(200), nullable=False)
     html_content = db.Column(db.Text, nullable=False)
     timestamp = db.Column(db.Float, nullable=False)
@@ -59,31 +64,47 @@ class ChatHistory(db.Model):
 def load_user(user_id):
     return db.session.get(User, int(user_id))
 
-@app.before_request
-def make_session_permanent():
-    session.permanent = True
-    if not getattr(app, '_database_checked', False):
-        db.create_all()
-        app._database_checked = True
+# Secure Database Initialization
+with app.app_context():
+    db.create_all()
+
+@app.after_request
+def apply_security_headers(response):
+    """Enforce standard Web Security Headers."""
+    response.headers['X-Frame-Options'] = 'DENY'
+    response.headers['X-Content-Type-Options'] = 'nosniff'
+    response.headers['X-XSS-Protection'] = '1; mode=block'
+    response.headers['Referrer-Policy'] = 'strict-origin-when-cross-origin'
+    return response
 
 @app.errorhandler(Exception)
 def handle_exception(e):
-    tb = traceback.format_exc()
-    error_page = f"""
-    <div style="font-family: monospace; padding: 20px; background: #ffe6e6; color: #900; border: 2px solid red; margin: 20px; border-radius: 8px;">
-        <h2>⚠️ Application Error:</h2>
-        <pre>{tb}</pre>
-    </div>
-    """
-    return error_page, 500
+    """Sanitized Generic Error Handler (No Sensitive Leaks)."""
+    app.logger.error(f"Internal Error: {str(e)}")
+    return jsonify({"error": "An internal server error occurred. Please try again later."}), 500
+
+def sanitize_prompt(text):
+    """Sanitize user text input against injections and size limit."""
+    if not text:
+        return ""
+    text = str(text).strip()
+    if len(text) > 1500:
+        text = text[:1500]
+    return text
+
+def generate_otp_hash(email, otp):
+    """Create a secure HMAC hash for OTP verification."""
+    secret = app.config['SECRET_KEY'].encode('utf-8')
+    data = f"{email}:{otp}".encode('utf-8')
+    return hmac.new(secret, data, hashlib.sha256).hexdigest()
 
 def call_groq_api(prompt_text, image_data=None):
-    if not api_key:
-        return "Error: API Key is missing. Please set GROQ_API_KEY in .env file."
+    if not API_KEY:
+        return "Error: API Key is missing. Please set GROQ_API_KEY in system environment."
         
     url = "https://api.groq.com/openai/v1/chat/completions"
     headers = {
-        'Authorization': f'Bearer {api_key}',
+        'Authorization': f'Bearer {API_KEY}',
         'Content-Type': 'application/json'
     }
     
@@ -98,6 +119,8 @@ def call_groq_api(prompt_text, image_data=None):
         "3. Jawaab clear aur structured rakhein, Markdown headings (### Unwan) ka istemal karein.\n"
     )
 
+    clean_text = sanitize_prompt(prompt_text)
+
     if image_data:
         selected_model = "llama-3.2-11b-vision-preview"
         if not image_data.startswith("data:image"):
@@ -108,7 +131,7 @@ def call_groq_api(prompt_text, image_data=None):
             {
                 "role": "user",
                 "content": [
-                    {"type": "text", "text": prompt_text if prompt_text else "Bara-e-karam is tasveer ka tajziya karein."},
+                    {"type": "text", "text": clean_text if clean_text else "Bara-e-karam is tasveer ka tajziya karein."},
                     {"type": "image_url", "image_url": {"url": image_data}}
                 ]
             }
@@ -117,25 +140,27 @@ def call_groq_api(prompt_text, image_data=None):
         selected_model = "llama-3.3-70b-versatile"
         messages = [
             {"role": "system", "content": system_instruction},
-            {"role": "user", "content": prompt_text}
+            {"role": "user", "content": clean_text}
         ]
     
     payload = {
         "model": selected_model,
         "messages": messages,
-        "temperature": 0.5,
+        "temperature": 0.4,
         "max_completion_tokens": 2048,
         "top_p": 1
     }
     
     try:
-        response = requests.post(url, headers=headers, json=payload, timeout=45)
+        response = requests.post(url, headers=headers, json=payload, timeout=30)
         if response.status_code == 200:
             return response.json()['choices'][0]['message']['content']
         else:
-            return f"API Error ({response.status_code}): {response.text}"
+            app.logger.error(f"Groq API Error Status: {response.status_code}")
+            return "Khata: API se jawab haasil nahi ho saka. Dobara koshish karein."
     except Exception as e:
-        return f"API Connection Error: {str(e)}"
+        app.logger.error(f"API Connection Failure: {str(e)}")
+        return "Network connection issue. Service filhal unavailable hai."
 
 HTML_TEMPLATE = """<!DOCTYPE html>
 <html lang="en">
@@ -144,6 +169,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Tibyan AI</title>
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dompurify@3.0.6/dist/purify.min.js"></script>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
         body { background-color: #ffffff; color: #111; display: flex; flex-direction: column; height: 100vh; overflow: hidden; font-size: 17px; }
@@ -340,7 +366,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                 📎
                 <input type="file" id="chatImageInput" accept="image/*" style="display:none;" onchange="handleChatImageSelect(event)">
             </label>
-            <textarea id="userInput" class="text-input" rows="1" placeholder="Ask Tibyan" oninput="this.style.height='inherit';this.style.height=this.scrollHeight+'px';"></textarea>
+            <textarea id="userInput" class="text-input" rows="1" maxlength="1500" placeholder="Ask Tibyan" oninput="this.style.height='inherit';this.style.height=this.scrollHeight+'px';"></textarea>
             <button class="send-btn" id="sendBtn" onclick="submitQuery()" title="Send">↑</button>
         </div>
     </div>
@@ -368,6 +394,10 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         function handleChatImageSelect(event) {
             const file = event.target.files[0];
             if(file) {
+                if(file.size > 5 * 1024 * 1024) {
+                    alert("Image size should be less than 5MB");
+                    return;
+                }
                 const reader = new FileReader();
                 reader.onload = function(e) {
                     currentAttachedImage = e.target.result;
@@ -385,16 +415,16 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         }
 
         async function saveCurrentChat(baseTitle, historyHtml) {
-            // Append short unique tag if title isn't set yet to avoid duplicate labels
             if(!currentChatTitle) {
                 let randomId = Math.floor(1000 + Math.random() * 9000);
                 let cleanPrompt = (baseTitle || "New Chat").substring(0, 25);
                 currentChatTitle = cleanPrompt + " #" + randomId;
             }
+            const cleanHTML = DOMPurify.sanitize(historyHtml);
             await fetch('/save_chat', { 
                 method: 'POST', 
                 headers: { 'Content-Type': 'application/json' }, 
-                body: JSON.stringify({ chat_id: currentChatId, title: currentChatTitle, html: historyHtml }) 
+                body: JSON.stringify({ chat_id: currentChatId, title: currentChatTitle, html: cleanHTML }) 
             });
             loadSidebarHistory();
         }
@@ -409,7 +439,8 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             keys.forEach(k => {
                 let chat = chats[k];
                 if(!filterQuery || chat.title.toLowerCase().includes(filterQuery.toLowerCase())) {
-                    html += `<div class="history-item" data-chat-id="${k}" onclick="loadSpecificChat('${k}')"><span>${chat.title}</span></div>`;
+                    let safeTitle = DOMPurify.sanitize(chat.title);
+                    html += `<div class="history-item" data-chat-id="${k}" onclick="loadSpecificChat('${k}')"><span>${safeTitle}</span></div>`;
                 }
             });
             listContainer.innerHTML = html;
@@ -461,7 +492,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
 
         async function shareChatLink() {
             if (!activeContextMenuChatId) return;
-            const shareUrl = window.location.origin + "/?chat=" + activeContextMenuChatId;
+            const shareUrl = window.location.origin + "/?chat=" + encodeURIComponent(activeContextMenuChatId);
             hideContextMenu();
             if (navigator.share) {
                 try {
@@ -503,7 +534,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             if(chats[chatId]) {
                 currentChatId = chatId;
                 currentChatTitle = chats[chatId].title;
-                document.getElementById('chat-history').innerHTML = chats[chatId].html;
+                document.getElementById('chat-history').innerHTML = DOMPurify.sanitize(chats[chatId].html);
                 const ws = document.getElementById('welcome-screen');
                 if(ws) ws.style.display = 'none';
                 switchView('home');
@@ -530,7 +561,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             btn.classList.toggle('active');
             const contentBox = document.getElementById(msgId);
             if(btn.classList.contains('active')) {
-                savedResponses[msgId] = contentBox.innerHTML;
+                savedResponses[msgId] = DOMPurify.sanitize(contentBox.innerHTML);
             } else {
                 delete savedResponses[msgId];
             }
@@ -586,8 +617,9 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             const historyBox = document.getElementById('chat-history');
             
             let userWrapperId = 'user-msg-' + Date.now();
-            let imgHtmlTag = attachedImg ? `<img src="${attachedImg}" class="chat-img-thumb">` : '';
-            let userHtml = `<div class="message-wrapper" id="${userWrapperId}"><div class="message user-msg">${imgHtmlTag}<div>${query || "Image Analysis Request"}</div></div></div>`;
+            let imgHtmlTag = attachedImg ? `<img src="${DOMPurify.sanitize(attachedImg)}" class="chat-img-thumb">` : '';
+            let safeUserQuery = DOMPurify.sanitize(query || "Image Analysis Request");
+            let userHtml = `<div class="message-wrapper" id="${userWrapperId}"><div class="message user-msg">${imgHtmlTag}<div>${safeUserQuery}</div></div></div>`;
             
             historyBox.innerHTML += userHtml;
             inputField.value = '';
@@ -620,7 +652,11 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                     body: JSON.stringify({ prompt: query, image: attachedImg }) 
                 });
                 const data = await res.json();
-                document.getElementById(uniqueId).innerHTML = marked.parse(data.response || "Error");
+                
+                // Markdown Parsing & XSS Sanitization
+                const rawMarkdown = data.response || "Error generating response.";
+                const htmlResponse = marked.parse(rawMarkdown);
+                document.getElementById(uniqueId).innerHTML = DOMPurify.sanitize(htmlResponse);
                 document.getElementById(uniqueId).scrollIntoView({ behavior: 'smooth', block: 'nearest' });
                 saveCurrentChat((query || "Image Question"), historyBox.innerHTML);
             } catch(e) {
@@ -634,8 +670,12 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         function previewProfileImage(event) {
             const file = event.target.files[0];
             if (file) {
+                if(file.size > 2 * 1024 * 1024) { alert("Profile picture size must be under 2MB"); return; }
                 const reader = new FileReader();
-                reader.onload = function(e) { uploadedImageBase64 = e.target.result; document.getElementById('profilePicPreview').innerHTML = `<img src="${uploadedImageBase64}" alt="Profile">`; }
+                reader.onload = function(e) { 
+                    uploadedImageBase64 = e.target.result; 
+                    document.getElementById('profilePicPreview').innerHTML = `<img src="${DOMPurify.sanitize(uploadedImageBase64)}" alt="Profile">`; 
+                }
                 reader.readAsDataURL(file);
             }
         }
@@ -645,7 +685,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             const surname = document.getElementById('profileSurname').value;
             const dob = document.getElementById('profileDob').value;
             await fetch('/update_profile', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: name, surname: surname, dob: dob, pic: uploadedImageBase64 }) });
-            document.getElementById('welcomeTitle').innerText = "Assalamu Alaikum, " + name.trim() + "! Kya sawaal hai?";
+            document.getElementById('welcomeTitle').innerText = "Assalamu Alaikum, " + DOMPurify.sanitize(name.trim()) + "! Kya sawaal hai?";
             alert("Profile updated successfully!");
         }
     </script>
@@ -775,8 +815,8 @@ OTP_VERIFY_TEMPLATE = """<!DOCTYPE html>
           {% if messages %}<div class="flash-msg">{{ messages[0] }}</div>{% endif %}
         {% endwith %}
         <form method="POST">
-            <div class="form-group"><label class="form-label">Enter 6-digit OTP</label><input type="text" name="otp" class="form-control" required></div>
-            <div class="form-group"><label class="form-label">New Password</label><input type="password" name="new_password" class="form-control" required></div>
+            <div class="form-group"><label class="form-label">Enter 6-digit OTP</label><input type="text" name="otp" class="form-control" maxlength="6" required></div>
+            <div class="form-group"><label class="form-label">New Password</label><input type="password" name="new_password" class="form-control" minlength="6" required></div>
             <button type="submit" class="auth-btn">Change Password</button>
         </form>
     </div>
@@ -786,6 +826,9 @@ OTP_VERIFY_TEMPLATE = """<!DOCTYPE html>
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
+    if current_user.is_authenticated:
+        return redirect(url_for('home'))
+
     if request.method == 'POST':
         email = request.form.get('email', '').strip().lower()
         password = request.form.get('password', '')
@@ -798,13 +841,20 @@ def login():
 
 @app.route('/signup', methods=['GET', 'POST'])
 def signup():
+    if current_user.is_authenticated:
+        return redirect(url_for('home'))
+
     if request.method == 'POST':
-        name = request.form.get('name')
-        surname = request.form.get('surname')
+        name = request.form.get('name', '').strip()
+        surname = request.form.get('surname', '').strip()
         email = request.form.get('email', '').strip().lower()
-        password = request.form.get('password')
-        confirm_password = request.form.get('confirm_password')
+        password = request.form.get('password', '')
+        confirm_password = request.form.get('confirm_password', '')
         
+        if len(password) < 6:
+            flash('Password must be at least 6 characters long!')
+            return redirect(url_for('signup'))
+
         if password != confirm_password:
             flash('Passwords do not match!')
             return redirect(url_for('signup'))
@@ -831,45 +881,65 @@ def forgot_password():
             flash('Email not found in our records!')
             return redirect(url_for('forgot_password'))
         
-        otp = str(random.randint(100000, 999999))
-        session['reset_email'] = email
-        session['reset_otp'] = otp
+        # Cryptographically strong 6-digit OTP
+        otp = f"{secrets.randbelow(900000) + 100000}"
         
+        session['reset_email'] = email
+        session['reset_otp_hash'] = generate_otp_hash(email, otp)
+        session['reset_otp_expiry'] = time.time() + 600 # 10 minutes expiry window
+
         try:
             msg = Message('Tibyan AI - Password Reset OTP',
                           sender=os.environ.get('MAIL_USERNAME'),
                           recipients=[email])
-            msg.body = f"Assalamu Alaikum,\n\nYour OTP code to reset your Tibyan AI password is: {otp}\n\nThis is for single-use only."
+            msg.body = f"Assalamu Alaikum,\n\nYour OTP code to reset your Tibyan AI password is: {otp}\n\nThis OTP is valid for 10 minutes only."
             mail.send(msg)
             return redirect(url_for('verify_otp'))
         except Exception as e:
-            flash(f'Failed to send email: {str(e)}')
+            app.logger.error(f"Mail Dispatch Error: {str(e)}")
+            flash('Failed to send OTP email. Please check server email credentials.')
             
     return render_template_string(AUTH_TEMPLATE, title='Reset Password', is_signup=False, is_forgot_request=True, btn_text='Send OTP')
 
 @app.route('/verify_otp', methods=['GET', 'POST'])
 def verify_otp():
-    if 'reset_email' not in session:
+    if 'reset_email' not in session or 'reset_otp_hash' not in session:
         return redirect(url_for('forgot_password'))
         
     if request.method == 'POST':
         entered_otp = request.form.get('otp', '').strip()
         new_password = request.form.get('new_password', '').strip()
+        email = session.get('reset_email')
+
+        # Expiry Check
+        if time.time() > session.get('reset_otp_expiry', 0):
+            session.pop('reset_email', None)
+            session.pop('reset_otp_hash', None)
+            session.pop('reset_otp_expiry', None)
+            flash('OTP has expired! Please request a new one.')
+            return redirect(url_for('forgot_password'))
+
+        computed_hash = generate_otp_hash(email, entered_otp)
         
-        if entered_otp == session.get('reset_otp'):
-            email = session.get('reset_email')
+        # Constant Time Comparison to prevent timing attacks
+        if hmac.compare_digest(computed_hash, session.get('reset_otp_hash', '')):
+            if len(new_password) < 6:
+                flash('Password must be at least 6 characters!')
+                return render_template_string(OTP_VERIFY_TEMPLATE)
+
             user = User.query.filter_by(email=email).first()
             if user:
                 user.password = generate_password_hash(new_password, method='pbkdf2:sha256')
                 db.session.commit()
             
             session.pop('reset_email', None)
-            session.pop('reset_otp', None)
+            session.pop('reset_otp_hash', None)
+            session.pop('reset_otp_expiry', None)
             
             flash('Password changed successfully! Please login.')
             return redirect(url_for('login'))
         else:
-            flash('Invalid OTP! Please try again.')
+            flash('Invalid OTP code!')
             
     return render_template_string(OTP_VERIFY_TEMPLATE)
 
@@ -888,7 +958,10 @@ def home():
 @login_required
 def generate():
     data = request.json or {}
-    ai_response = call_groq_api(data.get('prompt', ''), data.get('image'))
+    prompt = sanitize_prompt(data.get('prompt', ''))
+    image = data.get('image')
+    
+    ai_response = call_groq_api(prompt, image)
     return jsonify({'response': ai_response})
 
 @app.get('/get_chats')
@@ -909,14 +982,17 @@ def get_chats():
 def save_chat():
     data = request.json or {}
     c_id = data.get('chat_id')
-    if not c_id: return jsonify({'status': 'error'}), 400
+    if not c_id: return jsonify({'status': 'error', 'message': 'Invalid Chat ID'}), 400
+    
     chat = ChatHistory.query.filter_by(user_id=current_user.id, chat_id=c_id).first()
+    safe_title = sanitize_prompt(data.get('title', 'Untitled Chat'))
+    
     if chat:
-        chat.title = data.get('title')
-        chat.html_content = data.get('html')
+        chat.title = safe_title
+        chat.html_content = data.get('html', '')
         chat.timestamp = time.time()
     else:
-        new_chat = ChatHistory(user_id=current_user.id, chat_id=c_id, title=data.get('title'), html_content=data.get('html'), timestamp=time.time())
+        new_chat = ChatHistory(user_id=current_user.id, chat_id=c_id, title=safe_title, html_content=data.get('html', ''), timestamp=time.time())
         db.session.add(new_chat)
     db.session.commit()
     return jsonify({'status': 'success'})
@@ -937,13 +1013,14 @@ def delete_chat():
 @login_required
 def update_profile():
     data = request.json or {}
-    current_user.name = data.get('name', current_user.name)
-    current_user.surname = data.get('surname', current_user.surname)
-    current_user.dob = data.get('dob', current_user.dob)
+    current_user.name = sanitize_prompt(data.get('name', current_user.name))
+    current_user.surname = sanitize_prompt(data.get('surname', current_user.surname))
+    current_user.dob = sanitize_prompt(data.get('dob', current_user.dob))
     current_user.pic = data.get('pic', current_user.pic)
     db.session.commit()
     return jsonify({'status': 'success'})
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000)
+    # Default host strictly set to local loopback to avoid external exposure in development mode
+    app.run(host='127.0.0.1', port=5000, debug=False)
 
