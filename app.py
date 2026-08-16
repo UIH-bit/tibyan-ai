@@ -69,6 +69,12 @@ class ChatHistory(db.Model):
     html_content = db.Column(db.Text, nullable=False)
     timestamp = db.Column(db.Float, nullable=False)
 
+class CustomKnowledge(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    title = db.Column(db.String(200), nullable=False)
+    content = db.Column(db.Text, nullable=False)
+    updated_at = db.Column(db.Float, default=time.time)
+
 # --- ADMIN DECORATOR ---
 def admin_required(f):
     @wraps(f)
@@ -117,12 +123,23 @@ def call_groq_api(prompt_text, image_data=None):
         'Content-Type': 'application/json'
     }
     
+    # Custom Admin Knowledge Base Retrieve karein
+    custom_records = CustomKnowledge.query.all()
+    knowledge_text = ""
+    if custom_records:
+        knowledge_text = "\n--- OFFICIAL KNOWLEDGE BASE DATA ---\n"
+        for rec in custom_records:
+            knowledge_text += f"Topic: {rec.title}\nContent: {rec.content}\n\n"
+        knowledge_text += "--- END OF KNOWLEDGE BASE ---\n"
+
     system_instruction = (
         "You are 'Tibyan AI', an authentic Islamic Ilmi assistant following the Hanafi school of thought (Fiqh-e-Hanafi).\n"
         "STRICT MANDATORY RULES:\n"
-        "1. STRICT LANGUAGE & SCRIPT MATCHING: Always respond strictly in the EXACT same language, dialect, and script used by the user in their prompt.\n"
-        "2. ABSOLUTELY NO INTERNAL THINKING: Do NOT output any internal thinking, reasoning steps, or analysis.\n"
-        "3. FORMATTING: Provide clear, polite, and well-structured responses using Markdown headers (### Heading) where appropriate.\n"
+        "1. KNOWLEDGE BASE PRIORITIZATION: If custom knowledge base data is provided below, strictly check it first to answer user questions.\n"
+        "2. STRICT LANGUAGE & SCRIPT MATCHING: Always respond strictly in the EXACT same language, dialect, and script used by the user in their prompt.\n"
+        "3. ABSOLUTELY NO INTERNAL THINKING: Do NOT output any internal thinking, reasoning steps, or analysis.\n"
+        "4. FORMATTING: Provide clear, polite, and well-structured responses using Markdown headers (### Heading) where appropriate.\n"
+        f"{knowledge_text}"
     )
 
     if image_data:
@@ -164,13 +181,13 @@ def call_groq_api(prompt_text, image_data=None):
     except Exception as e:
         return f"API Connection Error: {str(e)}"
 
-# --- MODERN SPATIAL ADMIN TEMPLATE WITH HORIZONTAL SCROLL ---
+# --- MODERN SPATIAL ADMIN TEMPLATE ---
 ADMIN_TEMPLATE = """<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Spatial Admin Panel - Tibyan AI</title>
+    <title>Spatial Admin Control Panel - Tibyan AI</title>
     <style>
         :root {
             --bg-color: #0d1310;
@@ -212,27 +229,8 @@ ADMIN_TEMPLATE = """<!DOCTYPE html>
         .stat-card h3 { font-size: 13px; text-transform: uppercase; letter-spacing: 0.8px; color: var(--text-muted); margin-bottom: 10px; }
         .stat-card p { font-size: 28px; font-weight: 800; color: var(--accent-green); }
 
-        .controls-row { 
-            display: flex; 
-            justify-content: space-between; 
-            align-items: center; 
-            gap: 15px; 
-            margin-bottom: 18px; 
-            flex-wrap: wrap; 
-        }
-        .search-box { 
-            padding: 10px 16px; 
-            border-radius: 10px; 
-            border: 1px solid var(--border-color); 
-            background: rgba(255,255,255,0.05); 
-            color: #fff; 
-            outline: none; 
-            min-width: 280px; 
-            font-size: 14px; 
-        }
-        .search-box:focus { border-color: var(--accent-green); }
+        .section-title { font-size: 20px; font-weight: 700; margin: 30px 0 15px 0; color: var(--accent-green); }
 
-        /* Spatial Table Canvas with Forced Horizontal Scroll */
         .table-canvas { 
             background: var(--card-bg); 
             backdrop-filter: blur(12px); 
@@ -240,57 +238,31 @@ ADMIN_TEMPLATE = """<!DOCTYPE html>
             border: 1px solid var(--border-color); 
             overflow-x: auto; 
             width: 100%;
+            margin-bottom: 30px;
             box-shadow: 0 10px 30px rgba(0,0,0,0.3);
         }
 
-        table { 
-            width: 100%; 
-            min-width: 800px; /* Ensures table columns won't shrink on mobile */
-            border-collapse: collapse; 
-            text-align: left; 
-        }
-
-        th { 
-            background: rgba(30, 61, 47, 0.6); 
-            padding: 16px 20px; 
-            font-size: 13px; 
-            text-transform: uppercase; 
-            color: var(--text-muted); 
-            letter-spacing: 0.5px;
-            white-space: nowrap; 
-        }
-
-        td { 
-            padding: 16px 20px; 
-            border-bottom: 1px solid var(--border-color); 
-            font-size: 14px; 
-            white-space: nowrap; 
-        }
-
-        tr:last-child td { border-bottom: none; }
+        table { width: 100%; min-width: 900px; border-collapse: collapse; text-align: left; }
+        th { background: rgba(30, 61, 47, 0.6); padding: 16px 20px; font-size: 13px; text-transform: uppercase; color: var(--text-muted); white-space: nowrap; }
+        td { padding: 14px 20px; border-bottom: 1px solid var(--border-color); font-size: 14px; white-space: nowrap; }
         tr:hover td { background: rgba(255, 255, 255, 0.02); }
+
+        .input-inline { background: rgba(255,255,255,0.08); border: 1px solid var(--border-color); color: #fff; padding: 6px 10px; border-radius: 6px; font-size: 13px; outline: none; }
+        .input-inline:focus { border-color: var(--accent-green); }
 
         .badge { padding: 6px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; display: inline-block; }
         .badge-admin { background: rgba(46, 204, 113, 0.15); color: var(--accent-green); border: 1px solid var(--accent-green); }
         .badge-user { background: rgba(160, 178, 166, 0.15); color: var(--text-muted); border: 1px solid var(--text-muted); }
 
-        .btn { 
-            padding: 8px 14px; 
-            border-radius: 8px; 
-            text-decoration: none; 
-            font-size: 13px; 
-            font-weight: 600; 
-            display: inline-block; 
-            transition: all 0.2s ease; 
-            border: none;
-            cursor: pointer;
-        }
-        .btn-toggle { background: var(--primary-green); color: #fff; border: 1px solid var(--border-color); margin-right: 6px; }
-        .btn-toggle:hover { background: #254d3b; }
+        .btn { padding: 8px 14px; border-radius: 8px; text-decoration: none; font-size: 13px; font-weight: 600; display: inline-block; transition: all 0.2s ease; border: none; cursor: pointer; }
+        .btn-success { background: #27ae60; color: #fff; }
+        .btn-toggle { background: var(--primary-green); color: #fff; border: 1px solid var(--border-color); }
         .btn-danger { background: rgba(231, 76, 60, 0.2); color: var(--danger-color); border: 1px solid var(--danger-color); }
-        .btn-danger:hover { background: var(--danger-color); color: #fff; }
         .btn-secondary { background: rgba(255, 255, 255, 0.1); color: #fff; }
-        .btn-secondary:hover { background: rgba(255, 255, 255, 0.2); }
+
+        .form-card { background: var(--card-bg); backdrop-filter: blur(12px); border-radius: 16px; border: 1px solid var(--border-color); padding: 20px; margin-bottom: 25px; }
+        .form-card input, .form-card textarea { width: 100%; background: rgba(255,255,255,0.05); border: 1px solid var(--border-color); color: #fff; padding: 12px; border-radius: 8px; margin-bottom: 12px; outline: none; }
+        .form-card textarea { height: 100px; resize: vertical; }
     </style>
 </head>
 <body>
@@ -301,67 +273,94 @@ ADMIN_TEMPLATE = """<!DOCTYPE html>
         </div>
 
         <div class="stats-grid">
-            <div class="stat-card"><h3>Registered Users</h3><p>{{ total_users }}</p></div>
+            <div class="stat-card"><h3>Total Users</h3><p>{{ total_users }}</p></div>
             <div class="stat-card"><h3>Active Admins</h3><p>{{ total_admins }}</p></div>
-            <div class="stat-card"><h3>Saved Chats</h3><p>{{ total_chats }}</p></div>
+            <div class="stat-card"><h3>Knowledge Records</h3><p>{{ knowledge_items|length }}</p></div>
         </div>
 
-        <div class="controls-row">
-            <h3 style="font-size: 18px;">User Management</h3>
-            <input type="text" id="adminUserSearch" class="search-box" placeholder="Search user name or email..." onkeyup="filterAdminTable()">
-        </div>
-
+        <!-- SECTION 1: USER DATA MANAGEMENT -->
+        <div class="section-title">👤 User Data Management (Edit/Save/Delete Users)</div>
         <div class="table-canvas">
-            <table id="adminUsersTable">
+            <table>
                 <thead>
                     <tr>
                         <th>ID</th>
-                        <th>User Name</th>
-                        <th>Email Address</th>
-                        <th>Account Role</th>
-                        <th>Management Actions</th>
+                        <th>Name</th>
+                        <th>Surname</th>
+                        <th>Email</th>
+                        <th>DOB</th>
+                        <th>Role</th>
+                        <th>Actions</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for u in users %}
                     <tr>
-                        <td>#{{ u.id }}</td>
-                        <td style="font-weight: 600;">{{ u.name }} {{ u.surname or '' }}</td>
-                        <td>{{ u.email }}</td>
-                        <td>
-                            {% if u.is_admin %}
-                            <span class="badge badge-admin">Admin</span>
-                            {% else %}
-                            <span class="badge badge-user">User</span>
-                            {% endif %}
-                        </td>
-                        <td>
-                            {% if u.id != current_user.id %}
-                            <a href="/admin/toggle_admin/{{ u.id }}" class="btn btn-toggle">
-                                {% if u.is_admin %}Demote{% else %}Promote to Admin{% endif %}
-                            </a>
-                            <a href="/admin/delete_user/{{ u.id }}" class="btn btn-danger" onclick="return confirm('Are you sure? User data will be erased.')">Delete User</a>
-                            {% else %}
-                            <span style="color: var(--text-muted); font-size: 13px;">(Current Session)</span>
-                            {% endif %}
-                        </td>
+                        <form method="POST" action="/admin/edit_user/{{ u.id }}">
+                            <td>#{{ u.id }}</td>
+                            <td><input type="text" name="name" class="input-inline" value="{{ u.name }}" required></td>
+                            <td><input type="text" name="surname" class="input-inline" value="{{ u.surname or '' }}"></td>
+                            <td><input type="email" name="email" class="input-inline" value="{{ u.email }}" required></td>
+                            <td><input type="date" name="dob" class="input-inline" value="{{ u.dob or '' }}"></td>
+                            <td>
+                                {% if u.is_admin %}<span class="badge badge-admin">Admin</span>{% else %}<span class="badge badge-user">User</span>{% endif %}
+                            </td>
+                            <td>
+                                <button type="submit" class="btn btn-success">Save</button>
+                                {% if u.id != current_user.id %}
+                                <a href="/admin/toggle_admin/{{ u.id }}" class="btn btn-toggle">Role</a>
+                                <a href="/admin/delete_user/{{ u.id }}" class="btn btn-danger" onclick="return confirm('Delete this user?')">Delete</a>
+                                {% endif %}
+                            </td>
+                        </form>
                     </tr>
                     {% endfor %}
                 </tbody>
             </table>
         </div>
-    </div>
 
-    <script>
-        function filterAdminTable() {
-            let input = document.getElementById('adminUserSearch').value.toLowerCase();
-            let rows = document.querySelectorAll('#adminUsersTable tbody tr');
-            rows.forEach(row => {
-                let text = row.innerText.toLowerCase();
-                row.style.display = text.includes(input) ? '' : 'none';
-            });
-        }
-    </script>
+        <!-- SECTION 2: AI KNOWLEDGE BASE MANAGEMENT -->
+        <div class="section-title">🧠 AI Knowledge Base (Add/Edit/Delete Data for AI)</div>
+        
+        <div class="form-card">
+            <h4 style="margin-bottom: 10px; color: var(--accent-green);">+ Add New Knowledge Topic</h4>
+            <form method="POST" action="/admin/add_knowledge">
+                <input type="text" name="title" placeholder="Topic Title (e.g. Academy Timing & Fees)" required>
+                <textarea name="content" placeholder="Enter full detail that AI should know..." required></textarea>
+                <button type="submit" class="btn btn-success">+ Save to AI Data</button>
+            </form>
+        </div>
+
+        <div class="table-canvas">
+            <table>
+                <thead>
+                    <tr>
+                        <th style="width: 20%;">Topic Title</th>
+                        <th style="width: 60%;">Data Detail / Content</th>
+                        <th style="width: 20%;">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in knowledge_items %}
+                    <tr>
+                        <form method="POST" action="/admin/edit_knowledge/{{ item.id }}">
+                            <td><input type="text" name="title" class="input-inline" value="{{ item.title }}" style="width:100%;" required></td>
+                            <td><textarea name="content" class="input-inline" style="width:100%; height:50px;" required>{{ item.content }}</textarea></td>
+                            <td>
+                                <button type="submit" class="btn btn-success">Update</button>
+                                <a href="/admin/delete_knowledge/{{ item.id }}" class="btn btn-danger" onclick="return confirm('Delete this knowledge record?')">Delete</a>
+                            </td>
+                        </form>
+                    </tr>
+                    {% endfor %}
+                    {% if not knowledge_items %}
+                    <tr><td colspan="3" style="text-align: center; color: var(--text-muted);">No custom knowledge added yet. AI will answer from its base model.</td></tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+
+    </div>
 </body>
 </html>
 """
@@ -425,16 +424,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         .user-msg { background: #f0f4f1; color: #1e3d2f; align-self: flex-end; margin-left: auto; white-space: pre-wrap; }
         .ai-msg { background: #ffffff; border: 1px solid #e0e0e0; color: #222; align-self: flex-start; width: 100%; max-width: 100%; }
         
-        .ai-msg h1, .ai-msg h2, .ai-msg h3, .ai-msg h4 {
-            color: #1e3d2f;
-            font-weight: 700;
-            font-size: 19px;
-            margin-top: 16px;
-            margin-bottom: 8px;
-            padding-left: 10px;
-            border-left: 4px solid #1e3d2f;
-            line-height: 1.3;
-        }
+        .ai-msg h1, .ai-msg h2, .ai-msg h3, .ai-msg h4 { color: #1e3d2f; font-weight: 700; font-size: 19px; margin-top: 16px; margin-bottom: 8px; padding-left: 10px; border-left: 4px solid #1e3d2f; line-height: 1.3; }
         .ai-msg h3:first-child { margin-top: 4px; }
         .ai-msg strong { font-weight: 700; color: #1e3d2f; }
         .ai-msg p { margin-bottom: 12px; line-height: 1.6; color: #222; }
@@ -1111,7 +1101,6 @@ def signup():
             return redirect(url_for('login'))
             
         hashed_password = generate_password_hash(password, method='pbkdf2:sha256')
-        
         first_user = User.query.first() is None
         new_user = User(name=name, surname=surname, email=email, password=hashed_password, is_admin=first_user)
         
@@ -1191,23 +1180,30 @@ def admin_dashboard():
     users = User.query.order_by(User.id.desc()).all()
     total_users = User.query.count()
     total_admins = User.query.filter_by(is_admin=True).count()
-    total_chats = ChatHistory.query.count()
-    return render_template_string(ADMIN_TEMPLATE, users=users, total_users=total_users, total_admins=total_admins, total_chats=total_chats)
+    knowledge_items = CustomKnowledge.query.order_by(CustomKnowledge.id.desc()).all()
+    return render_template_string(ADMIN_TEMPLATE, users=users, total_users=total_users, total_admins=total_admins, knowledge_items=knowledge_items)
+
+@app.route('/admin/edit_user/<int:user_id>', methods=['POST'])
+@login_required
+@admin_required
+def edit_user(user_id):
+    user = db.session.get(User, user_id)
+    if user:
+        user.name = request.form.get('name', user.name)
+        user.surname = request.form.get('surname', user.surname)
+        user.email = request.form.get('email', user.email)
+        user.dob = request.form.get('dob', user.dob)
+        db.session.commit()
+    return redirect(url_for('admin_dashboard'))
 
 @app.route('/admin/toggle_admin/<int:user_id>')
 @login_required
 @admin_required
 def toggle_admin(user_id):
     user = db.session.get(User, user_id)
-    if not user:
-        flash("User not found", "warning")
-        return redirect(url_for("admin_dashboard"))
-    if user.id == current_user.id:
-        flash("Aap khud ki admin authority nahi hata sakte!")
-        return redirect(url_for('admin_dashboard'))
-    
-    user.is_admin = not user.is_admin
-    db.session.commit()
+    if user and user.id != current_user.id:
+        user.is_admin = not user.is_admin
+        db.session.commit()
     return redirect(url_for('admin_dashboard'))
 
 @app.route('/admin/delete_user/<int:user_id>')
@@ -1215,15 +1211,44 @@ def toggle_admin(user_id):
 @admin_required
 def delete_user(user_id):
     user = db.session.get(User, user_id)
-    if not user:
-        flash("User not found", "warning")
-        return redirect(url_for("admin_dashboard"))
-    if user.id == current_user.id:
-        flash("Aap khud ka account yahan se delete nahi kar sakte!")
-        return redirect(url_for('admin_dashboard'))
-    
-    db.session.delete(user)
-    db.session.commit()
+    if user and user.id != current_user.id:
+        db.session.delete(user)
+        db.session.commit()
+    return redirect(url_for('admin_dashboard'))
+
+# --- ADMIN KNOWLEDGE BASE ROUTES ---
+@app.route('/admin/add_knowledge', methods=['POST'])
+@login_required
+@admin_required
+def add_knowledge():
+    title = request.form.get('title')
+    content = request.form.get('content')
+    if title and content:
+        new_record = CustomKnowledge(title=title, content=content, updated_at=time.time())
+        db.session.add(new_record)
+        db.session.commit()
+    return redirect(url_for('admin_dashboard'))
+
+@app.route('/admin/edit_knowledge/<int:item_id>', methods=['POST'])
+@login_required
+@admin_required
+def edit_knowledge(item_id):
+    record = db.session.get(CustomKnowledge, item_id)
+    if record:
+        record.title = request.form.get('title', record.title)
+        record.content = request.form.get('content', record.content)
+        record.updated_at = time.time()
+        db.session.commit()
+    return redirect(url_for('admin_dashboard'))
+
+@app.route('/admin/delete_knowledge/<int:item_id>')
+@login_required
+@admin_required
+def delete_knowledge(item_id):
+    record = db.session.get(CustomKnowledge, item_id)
+    if record:
+        db.session.delete(record)
+        db.session.commit()
     return redirect(url_for('admin_dashboard'))
 
 @app.route('/generate', methods=['POST'])
