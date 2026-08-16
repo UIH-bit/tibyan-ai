@@ -3,6 +3,7 @@ import requests
 import time
 import random
 import traceback
+import hashlib
 from datetime import timedelta
 from dotenv import load_dotenv
 
@@ -47,6 +48,12 @@ login_manager.init_app(app)
 login_manager.login_view = 'login'
 
 api_key = os.environ.get("GROQ_API_KEY") or os.environ.get("GEMINI_API_KEY")
+
+def get_gravatar(email, size=200):
+    if not email:
+        return ""
+    email_hash = hashlib.md5(email.strip().lower().encode('utf-8')).hexdigest()
+    return f"https://www.gravatar.com/avatar/{email_hash}?s={size}&d=mp"
 
 class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -154,12 +161,30 @@ HTML_TEMPLATE = """<!DOCTYPE html>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
         body { background-color: #ffffff; color: #111; display: flex; flex-direction: column; height: 100vh; overflow: hidden; font-size: 17px; }
-        header { display: flex; align-items: center; justify-content: space-between; padding: 12px 20px; border-bottom: 1px solid #eaeaea; background: #fff; z-index: 1000; flex-shrink: 0; position: fixed; top: 0; left: 0; width: 100%; }
+        header { display: flex; align-items: center; justify-content: space-between; padding: 12px 20px; border-bottom: 1px solid #eaeaea; background: #fff; z-index: 100; flex-shrink: 0; position: fixed; top: 0; left: 0; width: 100%; }
         .header-left { display: flex; align-items: center; gap: 15px; }
-        .menu-btn { background: none; border: none; font-size: 26px; cursor: pointer; color: #1e3d2f; z-index: 1001; padding: 4px 8px; }
+        .menu-btn { background: none; border: none; font-size: 26px; cursor: pointer; color: #1e3d2f; z-index: 101; padding: 4px 8px; }
         .logo-img { height: 35px; width: auto; display: block; mix-blend-mode: multiply; }
         .header-right { display: flex; align-items: center; }
-        .new-chat-icon-btn { background: none; border: none; font-size: 22px; cursor: pointer; color: #1e3d2f; display: flex; align-items: center; justify-content: center; padding: 6px 10px; border-radius: 50%; transition: 0.2s; transform: rotate(180deg); }
+        
+        .new-chat-icon-btn { 
+            background: none; 
+            border: none; 
+            cursor: pointer; 
+            color: #1e3d2f; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            padding: 6px 10px; 
+            border-radius: 50%; 
+            transition: 0.2s; 
+            transform: rotate(-135deg); 
+        }
+        .new-chat-icon-btn svg {
+            width: 24px;
+            height: 24px;
+            fill: currentColor;
+        }
         .new-chat-icon-btn:hover { background: #f0f4f1; }
         
         .sidebar { position: fixed; top: 0; left: -280px; width: 280px; height: 100%; background: #fff; box-shadow: 2px 0 10px rgba(0,0,0,0.1); transition: 0.3s ease; z-index: 9999; display: flex; flex-direction: column; }
@@ -254,7 +279,9 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             <img src="{{ url_for('static', filename='logo.png') }}" alt="Tibyan AI" class="logo-img">
         </div>
         <div class="header-right">
-            <button class="new-chat-icon-btn" onclick="startNewChat()" title="New Chat">✏︎</button>
+            <button class="new-chat-icon-btn" onclick="startNewChat()" title="New Chat">
+                <svg viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
+            </button>
         </div>
     </header>
 
@@ -318,7 +345,9 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             <div style="font-size:28px; color:#1e3d2f; margin-bottom:15px; font-weight:bold;">Profile 👤</div>
             <div class="profile-container">
                 <div class="profile-pic-wrapper">
-                    <div class="profile-preview" id="profilePicPreview">{% if user.pic %}<img src="{{ user.pic }}" alt="Profile">{% else %}👤{% endif %}</div>
+                    <div class="profile-preview" id="profilePicPreview">
+                        <img src="{{ user.pic if user.pic else get_gravatar(user.email) }}" alt="Profile">
+                    </div>
                     <label class="file-input-label" for="profilePicInput">Choose Profile Picture</label>
                     <input type="file" id="profilePicInput" accept="image/*" style="display:none;" onchange="previewProfileImage(event)">
                 </div>
@@ -350,7 +379,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
     </div>
 
     <script>
-        let uploadedImageBase64 = "{{ user.pic or '' }}";
+        let uploadedImageBase64 = "{{ user.pic or get_gravatar(user.email) }}";
         let currentAttachedImage = null;
         let currentChatId = 'chat_' + Date.now();
         let currentChatTitle = "";
@@ -836,6 +865,9 @@ def login():
         password = request.form.get('password', '')
         user = User.query.filter_by(email=email).first()
         if user and user.password and check_password_hash(user.password, password):
+            if not user.pic:
+                user.pic = get_gravatar(user.email)
+                db.session.commit()
             login_user(user, remember=True)
             return redirect(url_for('home'))
         flash('Invalid email or password!')
@@ -855,12 +887,15 @@ def google_authorize():
     email = user_info.get('email')
     name = user_info.get('given_name', user_info.get('name', 'User'))
     surname = user_info.get('family_name', '')
-    picture = user_info.get('picture', '')
+    picture = user_info.get('picture', '') or get_gravatar(email)
 
     user = User.query.filter_by(email=email).first()
     if not user:
         user = User(name=name, surname=surname, email=email, pic=picture, password=None)
         db.session.add(user)
+        db.session.commit()
+    elif not user.pic:
+        user.pic = picture
         db.session.commit()
     
     login_user(user, remember=True)
@@ -885,7 +920,8 @@ def signup():
             return redirect(url_for('login'))
             
         hashed_password = generate_password_hash(password, method='pbkdf2:sha256')
-        new_user = User(name=name, surname=surname, email=email, password=hashed_password)
+        default_pic = get_gravatar(email)
+        new_user = User(name=name, surname=surname, email=email, password=hashed_password, pic=default_pic)
         db.session.add(new_user)
         db.session.commit()
         login_user(new_user, remember=True)
@@ -952,7 +988,10 @@ def logout():
 @app.route('/')
 @login_required
 def home():
-    return render_template_string(HTML_TEMPLATE, user=current_user)
+    if not current_user.pic:
+        current_user.pic = get_gravatar(current_user.email)
+        db.session.commit()
+    return render_template_string(HTML_TEMPLATE, user=current_user, get_gravatar=get_gravatar)
 
 @app.route('/generate', methods=['POST'])
 @login_required
@@ -991,7 +1030,6 @@ def save_chat():
     db.session.commit()
     return jsonify({'status': 'success'})
 
-@app.route('/delete_chat', methods=['Package', 'POST'])
 @app.route('/delete_chat', methods=['POST'])
 @login_required
 def delete_chat():
@@ -1011,7 +1049,7 @@ def update_profile():
     current_user.name = data.get('name', current_user.name)
     current_user.surname = data.get('surname', current_user.surname)
     current_user.dob = data.get('dob', current_user.dob)
-    current_user.pic = data.get('pic', current_user.pic)
+    current_user.pic = data.get('pic', current_user.pic) or get_gravatar(current_user.email)
     db.session.commit()
     return jsonify({'status': 'success'})
 
