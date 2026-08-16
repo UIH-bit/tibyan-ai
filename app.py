@@ -49,6 +49,201 @@ login_manager.login_view = 'login'
 
 api_key = os.environ.get("GROQ_API_KEY") or os.environ.get("GEMINI_API_KEY")
 
+# HTML Templates Definitions
+AUTH_TEMPLATE = """
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>{{ title }} - Tibyan AI</title>
+    <style>
+        body { font-family: Arial, sans-serif; background: #f4f7f6; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+        .auth-card { background: white; padding: 30px; border-radius: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); width: 100%; max-width: 400px; }
+        .auth-card h2 { text-align: center; margin-bottom: 20px; color: #1a5276; }
+        .form-group { margin-bottom: 15px; }
+        .form-group label { display: block; margin-bottom: 5px; font-weight: bold; }
+        .form-group input { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 5px; box-sizing: border-box; }
+        .btn { width: 100%; padding: 10px; background: #1a5276; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 16px; margin-top: 10px; }
+        .btn:hover { background: #154360; }
+        .links { text-align: center; margin-top: 15px; font-size: 14px; }
+        .links a { color: #1a5276; text-decoration: none; }
+        .flash-msg { color: red; text-align: center; margin-bottom: 15px; }
+    </style>
+</head>
+<body>
+    <div class="auth-card">
+        <h2>{{ title }}</h2>
+        {% with messages = get_flashed_messages() %}
+            {% if messages %}
+                {% for message in messages %}
+                    <div class="flash-msg">{{ message }}</div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+        
+        <form method="POST">
+            {% if is_signup %}
+                <div class="form-group">
+                    <label>First Name</label>
+                    <input type="text" name="name" required>
+                </div>
+                <div class="form-group">
+                    <label>Surname</label>
+                    <input type="text" name="surname">
+                </div>
+            {% endif %}
+            
+            <div class="form-group">
+                <label>Email</label>
+                <input type="email" name="email" required>
+            </div>
+            
+            {% if not is_forgot_request %}
+                <div class="form-group">
+                    <label>Password</label>
+                    <input type="password" name="password" required>
+                </div>
+            {% endif %}
+            
+            {% if is_signup %}
+                <div class="form-group">
+                    <label>Confirm Password</label>
+                    <input type="password" name="confirm_password" required>
+                </div>
+            {% endif %}
+            
+            <button type="submit" class="btn">{{ btn_text }}</button>
+        </form>
+
+        {% if not is_signup and not is_forgot_request %}
+            <a href="{{ url_for('google_login') }}"><button class="btn" style="background: #db4437;">Login with Google</button></a>
+        {% endif %}
+
+        <div class="links">
+            {% if is_signup %}
+                Already have an account? <a href="{{ url_for('login') }}">Login</a>
+            {% elif is_forgot_request %}
+                Remember password? <a href="{{ url_for('login') }}">Login</a>
+            {% else %}
+                <a href="{{ url_for('signup') }}">Create Account</a> | <a href="{{ url_for('forgot_password') }}">Forgot Password?</a>
+            {% endif %}
+        </div>
+    </div>
+</body>
+</html>
+"""
+
+OTP_VERIFY_TEMPLATE = """
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Verify OTP - Tibyan AI</title>
+    <style>
+        body { font-family: Arial, sans-serif; background: #f4f7f6; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+        .auth-card { background: white; padding: 30px; border-radius: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); width: 100%; max-width: 400px; }
+        .auth-card h2 { text-align: center; margin-bottom: 20px; color: #1a5276; }
+        .form-group { margin-bottom: 15px; }
+        .form-group label { display: block; margin-bottom: 5px; font-weight: bold; }
+        .form-group input { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 5px; box-sizing: border-box; }
+        .btn { width: 100%; padding: 10px; background: #1a5276; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 16px; margin-top: 10px; }
+        .flash-msg { color: red; text-align: center; margin-bottom: 15px; }
+    </style>
+</head>
+<body>
+    <div class="auth-card">
+        <h2>Verify OTP</h2>
+        {% with messages = get_flashed_messages() %}
+            {% if messages %}
+                {% for message in messages %}
+                    <div class="flash-msg">{{ message }}</div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+        <form method="POST">
+            <div class="form-group">
+                <label>Enter 6-Digit OTP</label>
+                <input type="text" name="otp" maxlength="6" required>
+            </div>
+            <div class="form-group">
+                <label>New Password</label>
+                <input type="password" name="new_password" required>
+            </div>
+            <button type="submit" class="btn">Reset Password</button>
+        </form>
+    </div>
+</body>
+</html>
+"""
+
+HTML_TEMPLATE = """
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Tibyan AI - Home</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 0; background: #eef2f5; display: flex; height: 100vh; }
+        .sidebar { width: 250px; background: #1a5276; color: white; padding: 20px; box-sizing: border-box; }
+        .main-content { flex: 1; padding: 30px; display: flex; flex-direction: column; justify-content: space-between; }
+        .profile { display: flex; align-items: center; gap: 10px; margin-bottom: 20px; }
+        .profile img { border-radius: 50%; width: 40px; height: 40px; }
+        .chat-area { background: white; flex: 1; border-radius: 8px; padding: 20px; overflow-y: auto; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+        .input-area { display: flex; gap: 10px; margin-top: 20px; }
+        .input-area input { flex: 1; padding: 12px; border: 1px solid #ccc; border-radius: 5px; }
+        .input-area button { padding: 12px 20px; background: #1a5276; color: white; border: none; border-radius: 5px; cursor: pointer; }
+        .logout-btn { color: #ff6b6b; text-decoration: none; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <div class="profile">
+            <img src="{{ user.pic }}" alt="Avatar">
+            <div>
+                <strong>{{ user.name }}</strong><br>
+                <a href="{{ url_for('logout') }}" class="logout-btn">Logout</a>
+            </div>
+        </div>
+        <hr>
+        <h3>Chat History</h3>
+        <p style="font-size: 13px; color: #bdc3c7;">Your chats will appear here.</p>
+    </div>
+    <div class="main-content">
+        <h2>Welcome to Tibyan AI</h2>
+        <div class="chat-area" id="chatArea">
+            <p><strong>Tibyan AI:</strong> Assalamu Alaikum! How can I help you today?</p>
+        </div>
+        <div class="input-area">
+            <input type="text" id="userInput" placeholder="Ask a question...">
+            <button onclick="sendMessage()">Send</button>
+        </div>
+    </div>
+
+    <script>
+        async function sendMessage() {
+            const input = document.getElementById('userInput');
+            const chatArea = document.getElementById('chatArea');
+            const text = input.value.trim();
+            if(!text) return;
+
+            chatArea.innerHTML += `<p><strong>You:</strong> ${text}</p>`;
+            input.value = '';
+
+            const response = await fetch('/generate', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ prompt: text })
+            });
+
+            const data = await response.json();
+            chatArea.innerHTML += `<p><strong>Tibyan AI:</strong> ${data.response}</p>`;
+            chatArea.scrollTop = chatArea.scrollHeight;
+        }
+    </script>
+</body>
+</html>
+"""
+
 def get_gravatar(email, size=200):
     if not email:
         return ""
