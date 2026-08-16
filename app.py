@@ -154,7 +154,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         .menu-btn { background: none; border: none; font-size: 26px; cursor: pointer; color: #1e3d2f; z-index: 1001; padding: 4px 8px; }
         .logo-img { height: 35px; width: auto; display: block; mix-blend-mode: multiply; }
         .header-right { display: flex; align-items: center; }
-        .new-chat-icon-btn { background: none; border: none; font-size: 22px; cursor: pointer; color: #1e3d2f; display: flex; align-items: center; justify-content: center; padding: 6px 10px; border-radius: 50%; transition: 0.2s; }
+        .new-chat-icon-btn { background: none; border: none; font-size: 22px; cursor: pointer; color: #1e3d2f; display: flex; align-items: center; justify-content: center; padding: 6px 10px; border-radius: 50%; transition: 0.2s; transform: rotate(-45deg); }
         .new-chat-icon-btn:hover { background: #f0f4f1; }
         
         .sidebar { position: fixed; top: 0; left: -280px; width: 280px; height: 100%; background: #fff; box-shadow: 2px 0 10px rgba(0,0,0,0.1); transition: 0.3s ease; z-index: 9999; display: flex; flex-direction: column; }
@@ -249,7 +249,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             <img src="{{ url_for('static', filename='logo.png') }}" alt="Tibyan AI" class="logo-img">
         </div>
         <div class="header-right">
-            <button class="new-chat-icon-btn" onclick="startNewChat()" title="New Chat">✏️</button>
+            <button class="new-chat-icon-btn" onclick="startNewChat()" title="New Chat">✏︎</button>
         </div>
     </header>
 
@@ -288,9 +288,8 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                     <div class="tibyan-logo-icon"><img src="{{ url_for('static', filename='logo.png') }}" alt="Tibyan Logo"></div>
                     <div class="welcome-title" id="welcomeTitle">Assalamu Alaikum, {{ user.name }}! How can I help you?</div>
                     <div class="suggestions">
-                        <div class="suggestions-row">
-                            <div class="suggestion-chip" onclick="sendPrompt('Quran Pak me Sabr ke bare me kya irshad hai?')">Quran Pak me Sabr ke bare me kya irshad hai?</div>
-                            <div class="suggestion-chip" onclick="sendPrompt('What are the rules of Fasting in Islam?')">What are the rules of Fasting in Islam?</div>
+                        <div class="suggestions-row" id="suggestionsRow">
+                            <!-- Dynamic Suggestions will load here -->
                         </div>
                     </div>
                 </div>
@@ -355,6 +354,29 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         let savedResponses = {};
         let activeContextMenuChatId = null;
 
+        const allSuggestions = [
+            "Quran Pak me Sabr ke bare me kya irshad hai?",
+            "What are the rules of Fasting in Islam?",
+            "Namaz ke Faraiz aur Wajibak kya hain?",
+            "Zakat nikalne ka sahi tariqa kya hai?",
+            "Tahajjud namaz ki kya fazilat hai?",
+            "What are the core pillars of Islam?",
+            "Dua qabool hone ke best times kaunse hain?",
+            "Hajj aur Umrah me kya farq hai?",
+            "What is the importance of Laylatul Qadr?"
+        ];
+
+        function loadRandomSuggestions() {
+            const container = document.getElementById('suggestionsRow');
+            if (!container) return;
+            let shuffled = [...allSuggestions].sort(() => 0.5 - Math.random());
+            let selected = shuffled.slice(0, 2);
+            container.innerHTML = `
+                <div class="suggestion-chip" onclick="sendPrompt('${selected[0]}')">${selected[0]}</div>
+                <div class="suggestion-chip" onclick="sendPrompt('${selected[1]}')">${selected[1]}</div>
+            `;
+        }
+
         function toggleSidebar() { document.getElementById('sidebar').classList.toggle('open'); document.getElementById('overlay').classList.toggle('active'); }
         function switchView(viewName) { document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active-view')); document.getElementById(viewName + '-view').classList.add('active-view'); }
         
@@ -364,6 +386,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             document.getElementById('chat-history').innerHTML = ''; 
             const ws = document.getElementById('welcome-screen'); 
             if(ws) ws.style.display = 'flex'; 
+            loadRandomSuggestions();
             switchView('home'); 
         }
 
@@ -630,7 +653,10 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         }
 
         function sendPrompt(text) { document.getElementById('userInput').value = text; submitQuery(); }
-        window.onload = function() { loadSidebarHistory(); };
+        window.onload = function() { 
+            loadSidebarHistory(); 
+            loadRandomSuggestions();
+        };
 
         function previewProfileImage(event) {
             const file = event.target.files[0];
