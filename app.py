@@ -87,15 +87,17 @@ def call_groq_api(prompt_text, image_data=None):
         'Content-Type': 'application/json'
     }
     
+    # Strictly Enforced Multilingual System Prompt
     system_instruction = (
-        "Aap 'Tibyan AI' hain, ek authentic Islamic Ilmi assistant jo Fiqh-e-Hanafi ki pehravani karte hain.\n"
+        "You are 'Tibyan AI', an authentic Islamic Ilmi assistant following the Hanafi school of thought (Fiqh-e-Hanafi).\n"
         "STRICT MANDATORY RULES:\n"
-        "1. Internal thinking, reasoning, ya analysis steps ki vazaahat bilkul na karein.\n"
-        "2. LANGUAGE MATCHING: Jis zabaan me sawaal pucha jaye, usi me jawaab dein.\n"
-        "   - Agar Roman Urdu/Hinglish me sawaal ho, toh aam Hindi/English alfaaz ki jagah shuddh Islamic aur Urdu alfaz ka istemal karein.\n"
-        "   - Urdu script me pucha jaye toh Urdu script me jawaab dein.\n"
-        "   - English me pucha jaye toh English me authentic Islamic terms ke saath jawaab dein.\n"
-        "3. Jawaab clear aur structured rakhein, Markdown headings (### Unwan) ka istemal karein.\n"
+        "1. STRICT LANGUAGE & SCRIPT MATCHING: Always respond strictly in the EXACT same language, dialect, and script used by the user in their prompt.\n"
+        "   - If asked in English, reply 100% in English with proper English Islamic terminology.\n"
+        "   - If asked in Roman Urdu / Hinglish, reply in Roman Urdu with appropriate Islamic terminology.\n"
+        "   - If asked in Urdu script, reply strictly in Urdu script.\n"
+        "   - If asked in Hindi script, reply strictly in Hindi script.\n"
+        "2. ABSOLUTELY NO INTERNAL THINKING: Do NOT output any internal thinking, reasoning steps, or analysis.\n"
+        "3. FORMATTING: Provide clear, polite, and well-structured responses using Markdown headers (### Heading) where appropriate.\n"
     )
 
     if image_data:
@@ -108,7 +110,7 @@ def call_groq_api(prompt_text, image_data=None):
             {
                 "role": "user",
                 "content": [
-                    {"type": "text", "text": prompt_text if prompt_text else "Bara-e-karam is tasveer ka tajziya karein."},
+                    {"type": "text", "text": prompt_text if prompt_text else "Please analyze this image."},
                     {"type": "image_url", "image_url": {"url": image_data}}
                 ]
             }
@@ -123,7 +125,7 @@ def call_groq_api(prompt_text, image_data=None):
     payload = {
         "model": selected_model,
         "messages": messages,
-        "temperature": 0.5,
+        "temperature": 0.3,
         "max_completion_tokens": 2048,
         "top_p": 1
     }
@@ -284,11 +286,11 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             <div id="chat-box" style="width: 100%;">
                 <div class="welcome-section" id="welcome-screen">
                     <div class="tibyan-logo-icon"><img src="{{ url_for('static', filename='logo.png') }}" alt="Tibyan Logo"></div>
-                    <div class="welcome-title" id="welcomeTitle">Assalamu Alaikum, {{ user.name }}! Kya sawaal hai?</div>
+                    <div class="welcome-title" id="welcomeTitle">Assalamu Alaikum, {{ user.name }}! How can I help you?</div>
                     <div class="suggestions">
                         <div class="suggestions-row">
                             <div class="suggestion-chip" onclick="sendPrompt('Quran Pak me Sabr ke bare me kya irshad hai?')">Quran Pak me Sabr ke bare me kya irshad hai?</div>
-                            <div class="suggestion-chip" onclick="sendPrompt('Roza kis tarah toot jata hai?')">Roza kis tarah toot jata hai?</div>
+                            <div class="suggestion-chip" onclick="sendPrompt('What are the rules of Fasting in Islam?')">What are the rules of Fasting in Islam?</div>
                         </div>
                     </div>
                 </div>
@@ -299,7 +301,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         <div id="library-view" class="view-section">
             <div style="font-size:28px; color:#1e3d2f; margin-bottom:20px; font-weight:bold;">Islamic Library 📚</div>
             <div class="library-grid">
-                <div class="library-card" onclick="sendPrompt('Uloom-ul-Quran ke bare me vazaahat karein.')">📖 Qur'an Majeed</div>
+                <div class="library-card" onclick="sendPrompt('Explain Uloom-ul-Quran in English.')">📖 Qur'an Majeed</div>
                 <div class="library-card" onclick="sendPrompt('Kutub-e-Hadith ki fehrist aur ahammiyat batayein.')">🏷️ Hadith Mubarak</div>
                 <div class="library-card" onclick="sendPrompt('Fiqh-e-Hanafi ke usool aur ahammiyat samjhayein.')">⚖️ Fiqh (Hanafi)</div>
             </div>
@@ -385,7 +387,6 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         }
 
         async function saveCurrentChat(baseTitle, historyHtml) {
-            // Append short unique tag if title isn't set yet to avoid duplicate labels
             if(!currentChatTitle) {
                 let randomId = Math.floor(1000 + Math.random() * 9000);
                 let cleanPrompt = (baseTitle || "New Chat").substring(0, 25);
@@ -645,7 +646,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             const surname = document.getElementById('profileSurname').value;
             const dob = document.getElementById('profileDob').value;
             await fetch('/update_profile', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: name, surname: surname, dob: dob, pic: uploadedImageBase64 }) });
-            document.getElementById('welcomeTitle').innerText = "Assalamu Alaikum, " + name.trim() + "! Kya sawaal hai?";
+            document.getElementById('welcomeTitle').innerText = "Assalamu Alaikum, " + name.trim() + "! How can I help you?";
             alert("Profile updated successfully!");
         }
     </script>
@@ -946,3 +947,4 @@ def update_profile():
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
+
