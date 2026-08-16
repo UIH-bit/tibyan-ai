@@ -1,63 +1,47 @@
 import os
-import re
+import requests
 import time
+import random
 import logging
 from datetime import timedelta
 from functools import wraps
 from dotenv import load_dotenv
-
-import requests
-import markupsafe
-from bleach import clean as sanitize_html
 
 from flask import Flask, request, jsonify, render_template_string, url_for, redirect, flash, session
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_mail import Mail, Message
-from flask_wtf.csrf import CSRFProtect
-from flask_limiter import Limiter
-from flask_limiter.util import get_remote_address
 from authlib.integrations.flask_client import OAuth
-from marshmallow import Schema, fields, validate, ValidationError
 
+# Load environment variables
 load_dotenv()
 
-# Setup logging
+# Logging Configuration (For Production Debugging)
 logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger("security_logger")
+logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
+app.permanent_session_lifetime = timedelta(days=30)
 
-# --- [A] SECRETS & CONFIGURATION ---
+# --- SECURITY FIX: REQUIRE SECRET KEY ---
 SECRET_KEY = os.environ.get('SECRET_KEY')
 if not SECRET_KEY:
-    raise RuntimeError("CRITICAL SECURITY RISK: SECRET_KEY environment variable is missing.")
-
+    raise RuntimeError("CRITICAL SECURITY RISK: SECRET_KEY environment variable is not set!")
 app.config['SECRET_KEY'] = SECRET_KEY
 
-# Fix for Render's PostgreSQL URL format (postgres:// -> postgresql://)
+# --- SECURITY FIX: DATABASE URL FIX FOR RENDER/POSTGRES ---
 db_url = os.environ.get('DATABASE_URL', 'sqlite:///database.db')
 if db_url.startswith("postgres://"):
     db_url = db_url.replace("postgres://", "postgresql://", 1)
-
 app.config['SQLALCHEMY_DATABASE_URI'] = db_url
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-
-# --- [D] COOKIE & SESSION SECURITY ---
-app.permanent_session_lifetime = timedelta(hours=12)
-app.config['SESSION_COOKIE_HTTPONLY'] = True
-app.config['SESSION_COOKIE_SECURE'] = os.environ.get('FLASK_ENV') == 'production' or os.environ.get('RENDER') is not None
-app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
-
-# --- [F] CSRF PROTECTION ---
-csrf = CSRFProtect(app)
 
 # Flask-Mail Configuration
 app.config['MAIL_SERVER'] = os.environ.get('MAIL_SERVER', 'smtp.gmail.com')
 app.config['MAIL_PORT'] = int(os.environ.get('MAIL_PORT', 587))
 app.config['MAIL_USE_TLS'] = os.environ.get('MAIL_USE_TLS', 'True') == 'True'
-app.config['MAIL_USE_SSL'] = os.environ.get('MAIL_USE_SSL', 'False') == 'True'
+app.config['MAIL_USE_SSL'] = os.environ.get('MAIL_USE_SSL', 'False') == 'False'
 app.config['MAIL_USERNAME'] = os.environ.get('MAIL_USERNAME')
 app.config['MAIL_PASSWORD'] = os.environ.get('MAIL_PASSWORD')
 
@@ -77,19 +61,6 @@ login_manager = LoginManager()
 login_manager.login_message = None
 login_manager.init_app(app)
 login_manager.login_view = 'login'
-
-# --- [B] RATE LIMITING SETUP ---
-def get_rate_limit_key():
-    if current_user and current_user.is_authenticated:
-        return f"user_{current_user.id}"
-    return get_remote_address()
-
-limiter = Limiter(
-    key_func=get_rate_limit_key,
-    app=app,
-    default_limits=["60 per minute"],
-    storage_uri=os.environ.get("REDIS_URL", "memory://")
-)
 
 api_key = os.environ.get("GROQ_API_KEY") or os.environ.get("GEMINI_API_KEY")
 
@@ -119,45 +90,13 @@ class CustomKnowledge(db.Model):
     content = db.Column(db.Text, nullable=False)
     updated_at = db.Column(db.Float, default=time.time)
 
-# --- [C] INPUT VALIDATION SCHEMAS (Marshmallow) ---
-class LoginSchema(Schema):
-    email = fields.Email(required=True, validate=validate.Length(max=120))
-    password = fields.Str(required=True, validate=validate.Length(min=8, max=128))
-
-class SignupSchema(Schema):
-    name = fields.Str(required=True, validate=validate.Length(min=1, max=100))
-    surname = fields.Str(validate=validate.Length(max=100))
-    email = fields.Email(required=True, validate=validate.Length(max=120))
-    password = fields.Str(required=True, validate=validate.Length(min=8, max=128))
-    confirm_password = fields.Str(required=True, validate=validate.Length(min=8, max=128))
-
-class GenerateSchema(Schema):
-    prompt = fields.Str(validate=validate.Length(max=4000))
-    image = fields.Str(validate=validate.Length(max=10000000))
-
-class SaveChatSchema(Schema):
-    chat_id = fields.Str(required=True, validate=validate.Length(max=100))
-    title = fields.Str(required=True, validate=validate.Length(max=200))
-    html = fields.Str(required=True, validate=validate.Length(max=500000))
-
-# --- [F] SECURITY HEADERS MIDDLEWARE ---
-@app.after_request
-def apply_security_headers(response):
-    response.headers["Content-Security-Policy"] = "default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline';"
-    response.headers["X-Frame-Options"] = "DENY"
-    response.headers["X-Content-Type-Options"] = "nosniff"
-    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
-    response.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()"
-    response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
-    return response
-
-# --- ADMIN DECORATOR ---
+# --- DECORATORS & HOOKS ---
 def admin_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
         if not current_user.is_authenticated or not current_user.is_admin:
-            flash("Unauthorized access.")
-            return redirect(url_for('login'))
+            flash("Aapko is page par jane ki ijazat nahi hai.")
+            return redirect(url_for('home'))
         return f(*args, **kwargs)
     return decorated_function
 
@@ -178,36 +117,14 @@ def make_session_permanent():
                 db.session.commit()
         app._database_checked = True
 
-# --- [G] ERROR HANDLING FIXES ---
 @app.errorhandler(Exception)
 def handle_exception(e):
-    logger.error(f"Internal Error: {str(e)}", exc_info=True)
-    if request.path.startswith('/generate') or request.is_json:
-        return jsonify({'error': 'An internal error occurred. Please try again later.'}), 500
-    return "<h3>An unexpected error occurred. Please contact support.</h3>", 500
-
-@app.errorhandler(429)
-def ratelimit_handler(e):
-    return jsonify({"error": "Rate limit exceeded", "retry_after": e.description}), 429
-
-# --- [E] PROMPT INJECTION SANITIZER ---
-def sanitize_prompt_input(text):
-    if not text:
-        return ""
-    forbidden_patterns = [
-        r"ignore\s+previous\s+instructions",
-        r"system\s*:",
-        r"assistant\s*:",
-        r"you\s+are\s+now\s+a"
-    ]
-    for pattern in forbidden_patterns:
-        if re.search(pattern, text, re.IGNORECASE):
-            raise ValueError("Invalid prompt content detected.")
-    return text
+    logger.error(f"Internal Server Error: {str(e)}", exc_info=True)
+    return jsonify({"error": "Internal Server Error. Please contact support."}), 500
 
 def call_groq_api(prompt_text, image_data=None):
     if not api_key:
-        return "Error: API Service Configuration Missing."
+        return "Error: API Key is missing. Please set GROQ_API_KEY in Environment Variables."
         
     url = "https://api.groq.com/openai/v1/chat/completions"
     headers = {
@@ -220,24 +137,18 @@ def call_groq_api(prompt_text, image_data=None):
     if custom_records:
         knowledge_text = "\n--- OFFICIAL KNOWLEDGE BASE DATA ---\n"
         for rec in custom_records:
-            knowledge_text += f"Topic: {markupsafe.escape(rec.title)}\nContent: {markupsafe.escape(rec.content)}\n\n"
+            knowledge_text += f"Topic: {rec.title}\nContent: {rec.content}\n\n"
         knowledge_text += "--- END OF KNOWLEDGE BASE ---\n"
 
     system_instruction = (
         "You are 'Tibyan AI', an authentic Islamic Ilmi assistant following the Hanafi school of thought (Fiqh-e-Hanafi).\n"
         "STRICT MANDATORY RULES:\n"
-        "1. KNOWLEDGE BASE PRIORITIZATION: Strictly check provided custom knowledge base data first.\n"
-        "2. LANGUAGE MATCHING: Respond strictly in the exact same language/script used by the user.\n"
-        "3. NO INTERNAL THINKING: Output direct answers only.\n"
+        "1. KNOWLEDGE BASE PRIORITIZATION: If custom knowledge base data is provided below, strictly check it first to answer user questions.\n"
+        "2. STRICT LANGUAGE & SCRIPT MATCHING: Always respond strictly in the EXACT same language, dialect, and script used by the user in their prompt.\n"
+        "3. ABSOLUTELY NO INTERNAL THINKING: Do NOT output any internal thinking, reasoning steps, or analysis.\n"
+        "4. FORMATTING: Provide clear, polite, and well-structured responses using Markdown headers (### Heading) where appropriate.\n"
         f"{knowledge_text}"
     )
-
-    try:
-        clean_prompt = sanitize_prompt_input(prompt_text)
-    except ValueError:
-        return "Security Alert: Input contained disallowed characters or prompt manipulation patterns."
-
-    delimited_user_prompt = f"[USER_INPUT_START]\n{clean_prompt}\n[USER_INPUT_END]"
 
     if image_data:
         selected_model = "llama-3.2-11b-vision-preview"
@@ -249,7 +160,7 @@ def call_groq_api(prompt_text, image_data=None):
             {
                 "role": "user",
                 "content": [
-                    {"type": "text", "text": delimited_user_prompt},
+                    {"type": "text", "text": prompt_text if prompt_text else "Please analyze this image."},
                     {"type": "image_url", "image_url": {"url": image_data}}
                 ]
             }
@@ -258,109 +169,181 @@ def call_groq_api(prompt_text, image_data=None):
         selected_model = "llama-3.3-70b-versatile"
         messages = [
             {"role": "system", "content": system_instruction},
-            {"role": "user", "content": delimited_user_prompt}
+            {"role": "user", "content": prompt_text}
         ]
     
     payload = {
         "model": selected_model,
         "messages": messages,
         "temperature": 0.3,
-        "max_tokens": 1024,
+        "max_completion_tokens": 2048,
         "top_p": 1
     }
     
     try:
-        response = requests.post(url, headers=headers, json=payload, timeout=30)
+        response = requests.post(url, headers=headers, json=payload, timeout=45)
         if response.status_code == 200:
             return response.json()['choices'][0]['message']['content']
         else:
-            logger.error(f"Groq API Error Status: {response.status_code}")
-            return "Unable to process request at this time."
+            return f"API Error ({response.status_code}): {response.text}"
     except Exception as e:
-        logger.error(f"Groq Connection Exception: {str(e)}")
-        return "Service temporarily unavailable."
+        return f"API Connection Error: {str(e)}"
+
+# Templates (ADMIN_TEMPLATE, HTML_TEMPLATE, AUTH_TEMPLATE, OTP_VERIFY_TEMPLATE) match your configuration.
 
 # --- ROUTES ---
 @app.route('/login', methods=['GET', 'POST'])
-@limiter.limit("5 per minute")
 def login():
     if request.method == 'POST':
-        try:
-            data = LoginSchema().load(request.form.to_dict())
-        except ValidationError:
-            flash('Invalid input structure.')
-            return redirect(url_for('login'))
-
-        user = User.query.filter_by(email=data['email'].lower()).first()
-        if user and user.password and check_password_hash(user.password, data['password']):
+        email = request.form.get('email', '').strip().lower()
+        password = request.form.get('password', '')
+        user = User.query.filter_by(email=email).first()
+        if user and user.password and check_password_hash(user.password, password):
             login_user(user, remember=True)
-            return redirect(url_for('generate'))
+            return redirect(url_for('home'))
         flash('Invalid email or password!')
-    return "Login Page" # Apne template ke sath replace karein
+    return render_template_string(AUTH_TEMPLATE, title='Login', is_signup=False, is_forgot_request=False, btn_text='Login')
+
+@app.route('/google-login')
+def google_login():
+    redirect_uri = url_for('google_authorize', _external=True)
+    return google.authorize_redirect(redirect_uri)
+
+@app.route('/google-authorize')
+def google_authorize():
+    token = google.authorize_access_token()
+    resp = google.get('https://www.googleapis.com/oauth2/v3/userinfo')
+    user_info = resp.json()
+    
+    email = user_info.get('email')
+    name = user_info.get('given_name', user_info.get('name', 'User'))
+    surname = user_info.get('family_name', '')
+    picture = user_info.get('picture', '')
+
+    user = User.query.filter_by(email=email).first()
+    if not user:
+        user = User(name=name, surname=surname, email=email, pic=picture, password=None)
+        db.session.add(user)
+        db.session.commit()
+    
+    login_user(user, remember=True)
+    return redirect(url_for('home'))
 
 @app.route('/signup', methods=['GET', 'POST'])
-@limiter.limit("5 per minute")
 def signup():
     if request.method == 'POST':
-        try:
-            data = SignupSchema().load(request.form.to_dict())
-        except ValidationError:
-            flash('Invalid parameters submitted.')
-            return redirect(url_for('signup'))
-
-        if data['password'] != data['confirm_password']:
+        name = request.form.get('name')
+        surname = request.form.get('surname')
+        email = request.form.get('email', '').strip().lower()
+        password = request.form.get('password')
+        confirm_password = request.form.get('confirm_password')
+        
+        if password != confirm_password:
             flash('Passwords do not match!')
             return redirect(url_for('signup'))
 
-        if User.query.filter_by(email=data['email'].lower()).first():
-            flash('Email is already registered!')
+        user_exists = User.query.filter_by(email=email).first()
+        if user_exists:
+            flash('Email is already registered! Please login.')
             return redirect(url_for('login'))
             
-        hashed_password = generate_password_hash(data['password'], method='pbkdf2:sha256')
+        hashed_password = generate_password_hash(password, method='pbkdf2:sha256')
         first_user = User.query.first() is None
-        new_user = User(name=data['name'], surname=data.get('surname'), email=data['email'].lower(), password=hashed_password, is_admin=first_user)
+        new_user = User(name=name, surname=surname, email=email, password=hashed_password, is_admin=first_user)
         
         db.session.add(new_user)
         db.session.commit()
         login_user(new_user, remember=True)
-        return redirect(url_for('generate'))
-    return "Signup Page" # Apne template ke sath replace karein
+        return redirect(url_for('home'))
+    return render_template_string(AUTH_TEMPLATE, title='Create Account', is_signup=True, is_forgot_request=False, btn_text='Sign Up')
 
-@app.route('/generate', methods=['POST'])
+@app.route('/forgot_password', methods=['GET', 'POST'])
+def forgot_password():
+    if request.method == 'POST':
+        email = request.form.get('email', '').strip().lower()
+        user = User.query.filter_by(email=email).first()
+        if not user:
+            flash('Email not found in our records!')
+            return redirect(url_for('forgot_password'))
+        
+        otp = str(random.randint(100000, 999999))
+        session['reset_email'] = email
+        session['reset_otp'] = otp
+        
+        try:
+            msg = Message('Tibyan AI - Password Reset OTP',
+                          sender=os.environ.get('MAIL_USERNAME'),
+                          recipients=[email])
+            msg.body = f"Assalamu Alaikum,\n\nYour OTP code to reset your Tibyan AI password is: {otp}\n\nThis is for single-use only."
+            mail.send(msg)
+            return redirect(url_for('verify_otp'))
+        except Exception as e:
+            flash(f'Failed to send email: {str(e)}')
+            
+    return render_template_string(AUTH_TEMPLATE, title='Reset Password', is_signup=False, is_forgot_request=True, btn_text='Send OTP')
+
+@app.route('/verify_otp', methods=['GET', 'POST'])
+def verify_otp():
+    if 'reset_email' not in session:
+        return redirect(url_for('forgot_password'))
+        
+    if request.method == 'POST':
+        entered_otp = request.form.get('otp', '').strip()
+        new_password = request.form.get('new_password', '').strip()
+        
+        if entered_otp == session.get('reset_otp'):
+            email = session.get('reset_email')
+            user = User.query.filter_by(email=email).first()
+            if user:
+                user.password = generate_password_hash(new_password, method='pbkdf2:sha256')
+                db.session.commit()
+            
+            session.pop('reset_email', None)
+            session.pop('reset_otp', None)
+            
+            flash('Password changed successfully! Please login.')
+            return redirect(url_for('login'))
+        else:
+            flash('Invalid OTP! Please try again.')
+            
+    return render_template_string(OTP_VERIFY_TEMPLATE)
+
+@app.route('/logout')
 @login_required
-@limiter.limit("10 per minute")
-def generate():
-    try:
-        data = GenerateSchema().load(request.json or {})
-    except ValidationError:
-        return jsonify({'error': 'Invalid payload size or format'}), 400
+def logout():
+    logout_user()
+    return redirect(url_for('login'))
 
-    ai_response = call_groq_api(data.get('prompt', ''), data.get('image'))
-    return jsonify({'response': ai_response})
-
-@app.route('/save_chat', methods=['POST'])
+@app.route('/')
 @login_required
-@limiter.limit("30 per minute")
-def save_chat():
-    try:
-        data = SaveChatSchema().load(request.json or {})
-    except ValidationError:
-        return jsonify({'status': 'invalid input'}), 400
+def home():
+    return render_template_string(HTML_TEMPLATE, user=current_user)
 
-    clean_html = sanitize_html(data['html'], tags=['div', 'span', 'p', 'br', 'strong', 'em', 'img', 'h1', 'h2', 'h3'], attributes={'img': ['src', 'class']})
+# --- ADMIN PANEL ROUTES ---
+@app.route('/admin')
+@login_required
+@admin_required
+def admin_dashboard():
+    users = User.query.order_by(User.id.desc()).all()
+    total_users = User.query.count()
+    total_admins = User.query.filter_by(is_admin=True).count()
+    knowledge_items = CustomKnowledge.query.order_by(CustomKnowledge.id.desc()).all()
+    return render_template_string(ADMIN_TEMPLATE, users=users, total_users=total_users, total_admins=total_admins, knowledge_items=knowledge_items)
 
-    chat = ChatHistory.query.filter_by(user_id=current_user.id, chat_id=data['chat_id']).first()
-    if chat:
-        chat.title = data['title']
-        chat.html_content = clean_html
-        chat.timestamp = time.time()
-    else:
-        new_chat = ChatHistory(user_id=current_user.id, chat_id=data['chat_id'], title=data['title'], html_content=clean_html, timestamp=time.time())
-        db.session.add(new_chat)
-    db.session.commit()
-    return jsonify({'status': 'success'})
+@app.route('/admin/edit_user/<int:user_id>', methods=['POST'])
+@login_required
+@admin_required
+def edit_user(user_id):
+    user = db.session.get(User, user_id)
+    if user:
+        user.name = request.form.get('name', user.name)
+        user.surname = request.form.get('surname', user.surname)
+        user.email = request.form.get('email', user.email)
+        user.dob = request.form.get('dob', user.dob)
+        db.session.commit()
+    return redirect(url_for('admin_dashboard'))
 
-@app.route('/admin/toggle_admin/<int:user_id>', methods=['POST'])
+@app.route('/admin/toggle_admin/<int:user_id>')
 @login_required
 @admin_required
 def toggle_admin(user_id):
@@ -368,9 +351,9 @@ def toggle_admin(user_id):
     if user and user.id != current_user.id:
         user.is_admin = not user.is_admin
         db.session.commit()
-    return jsonify({'status': 'success'})
+    return redirect(url_for('admin_dashboard'))
 
-@app.route('/admin/delete_user/<int:user_id>', methods=['POST'])
+@app.route('/admin/delete_user/<int:user_id>')
 @login_required
 @admin_required
 def delete_user(user_id):
@@ -378,10 +361,103 @@ def delete_user(user_id):
     if user and user.id != current_user.id:
         db.session.delete(user)
         db.session.commit()
+    return redirect(url_for('admin_dashboard'))
+
+# --- ADMIN KNOWLEDGE BASE ROUTES ---
+@app.route('/admin/add_knowledge', methods=['POST'])
+@login_required
+@admin_required
+def add_knowledge():
+    title = request.form.get('title')
+    content = request.form.get('content')
+    if title and content:
+        new_record = CustomKnowledge(title=title, content=content, updated_at=time.time())
+        db.session.add(new_record)
+        db.session.commit()
+    return redirect(url_for('admin_dashboard'))
+
+@app.route('/admin/edit_knowledge/<int:item_id>', methods=['POST'])
+@login_required
+@admin_required
+def edit_knowledge(item_id):
+    record = db.session.get(CustomKnowledge, item_id)
+    if record:
+        record.title = request.form.get('title', record.title)
+        record.content = request.form.get('content', record.content)
+        record.updated_at = time.time()
+        db.session.commit()
+    return redirect(url_for('admin_dashboard'))
+
+@app.route('/admin/delete_knowledge/<int:item_id>')
+@login_required
+@admin_required
+def delete_knowledge(item_id):
+    record = db.session.get(CustomKnowledge, item_id)
+    if record:
+        db.session.delete(record)
+        db.session.commit()
+    return redirect(url_for('admin_dashboard'))
+
+@app.route('/generate', methods=['POST'])
+@login_required
+def generate():
+    data = request.json or {}
+    ai_response = call_groq_api(data.get('prompt', ''), data.get('image'))
+    return jsonify({'response': ai_response})
+
+@app.get('/get_chats')
+@login_required
+def get_chats():
+    chats = ChatHistory.query.filter_by(user_id=current_user.id).all()
+    chats_dict = {}
+    for chat in chats:
+        chats_dict[chat.chat_id] = {
+            'title': chat.title,
+            'html': chat.html_content,
+            'time': chat.timestamp
+        }
+    return jsonify(chats_dict)
+
+@app.route('/save_chat', methods=['POST'])
+@login_required
+def save_chat():
+    data = request.json or {}
+    c_id = data.get('chat_id')
+    if not c_id: return jsonify({'status': 'error'}), 400
+    chat = ChatHistory.query.filter_by(user_id=current_user.id, chat_id=c_id).first()
+    if chat:
+        chat.title = data.get('title')
+        chat.html_content = data.get('html')
+        chat.timestamp = time.time()
+    else:
+        new_chat = ChatHistory(user_id=current_user.id, chat_id=c_id, title=data.get('title'), html_content=data.get('html'), timestamp=time.time())
+        db.session.add(new_chat)
+    db.session.commit()
     return jsonify({'status': 'success'})
 
-# --- RENDER ENTRYPOINT ---
+@app.route('/delete_chat', methods=['POST'])
+@login_required
+def delete_chat():
+    data = request.json or {}
+    c_id = data.get('chat_id')
+    if not c_id: return jsonify({'status': 'error'}), 400
+    chat = ChatHistory.query.filter_by(user_id=current_user.id, chat_id=c_id).first()
+    if chat:
+        db.session.delete(chat)
+        db.session.commit()
+    return jsonify({'status': 'success'})
+
+@app.route('/update_profile', methods=['POST'])
+@login_required
+def update_profile():
+    data = request.json or {}
+    current_user.name = data.get('name', current_user.name)
+    current_user.surname = data.get('surname', current_user.surname)
+    current_user.dob = data.get('dob', current_user.dob)
+    current_user.pic = data.get('pic', current_user.pic)
+    db.session.commit()
+    return jsonify({'status': 'success'})
+
 if __name__ == '__main__':
-    port = int(os.environ.get('PORT', 5000))
-    app.run(host='0.0.0.0', port=port)
+    app.run(host='0.0.0.0', port=5000)
 
