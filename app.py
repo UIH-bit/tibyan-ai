@@ -11,6 +11,7 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_mail import Mail, Message
+from authlib.integrations.flask_client import OAuth
 
 load_dotenv()
 
@@ -31,6 +32,15 @@ app.config['MAIL_PASSWORD'] = os.environ.get('MAIL_PASSWORD')
 db = SQLAlchemy(app)
 mail = Mail(app)
 
+oauth = OAuth(app)
+google = oauth.register(
+    name='google',
+    client_id=os.environ.get('GOOGLE_CLIENT_ID'),
+    client_secret=os.environ.get('GOOGLE_CLIENT_SECRET'),
+    server_metadata_url='https://accounts.google.com/.well-known/openid-configuration',
+    client_kwargs={'scope': 'openid email profile'}
+)
+
 login_manager = LoginManager()
 login_manager.login_message = None
 login_manager.init_app(app)
@@ -43,7 +53,7 @@ class User(UserMixin, db.Model):
     name = db.Column(db.String(100), nullable=False)
     surname = db.Column(db.String(100), nullable=True)
     email = db.Column(db.String(120), unique=True, nullable=False)
-    password = db.Column(db.String(200), nullable=False)
+    password = db.Column(db.String(200), nullable=True)
     dob = db.Column(db.String(20), nullable=True)
     pic = db.Column(db.Text, nullable=True)
 
@@ -87,15 +97,10 @@ def call_groq_api(prompt_text, image_data=None):
         'Content-Type': 'application/json'
     }
     
-    # Strictly Enforced Multilingual System Prompt
     system_instruction = (
         "You are 'Tibyan AI', an authentic Islamic Ilmi assistant following the Hanafi school of thought (Fiqh-e-Hanafi).\n"
         "STRICT MANDATORY RULES:\n"
         "1. STRICT LANGUAGE & SCRIPT MATCHING: Always respond strictly in the EXACT same language, dialect, and script used by the user in their prompt.\n"
-        "   - If asked in English, reply 100% in English with proper English Islamic terminology.\n"
-        "   - If asked in Roman Urdu / Hinglish, reply in Roman Urdu with appropriate Islamic terminology.\n"
-        "   - If asked in Urdu script, reply strictly in Urdu script.\n"
-        "   - If asked in Hindi script, reply strictly in Hindi script.\n"
         "2. ABSOLUTELY NO INTERNAL THINKING: Do NOT output any internal thinking, reasoning steps, or analysis.\n"
         "3. FORMATTING: Provide clear, polite, and well-structured responses using Markdown headers (### Heading) where appropriate.\n"
     )
@@ -154,7 +159,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         .menu-btn { background: none; border: none; font-size: 26px; cursor: pointer; color: #1e3d2f; z-index: 1001; padding: 4px 8px; }
         .logo-img { height: 35px; width: auto; display: block; mix-blend-mode: multiply; }
         .header-right { display: flex; align-items: center; }
-        .new-chat-icon-btn { background: none; border: none; font-size: 22px; cursor: pointer; color: #1e3d2f; display: flex; align-items: center; justify-content: center; padding: 6px 10px; border-radius: 50%; transition: 0.2s; transform: rotate(-45deg); }
+        .new-chat-icon-btn { background: none; border: none; font-size: 22px; cursor: pointer; color: #1e3d2f; display: flex; align-items: center; justify-content: center; padding: 6px 10px; border-radius: 50%; transition: 0.2s; transform: rotate(180deg); }
         .new-chat-icon-btn:hover { background: #f0f4f1; }
         
         .sidebar { position: fixed; top: 0; left: -280px; width: 280px; height: 100%; background: #fff; box-shadow: 2px 0 10px rgba(0,0,0,0.1); transition: 0.3s ease; z-index: 9999; display: flex; flex-direction: column; }
@@ -288,9 +293,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                     <div class="tibyan-logo-icon"><img src="{{ url_for('static', filename='logo.png') }}" alt="Tibyan Logo"></div>
                     <div class="welcome-title" id="welcomeTitle">Assalamu Alaikum, {{ user.name }}! How can I help you?</div>
                     <div class="suggestions">
-                        <div class="suggestions-row" id="suggestionsRow">
-                            <!-- Dynamic Suggestions will load here -->
-                        </div>
+                        <div class="suggestions-row" id="suggestionsRow"></div>
                     </div>
                 </div>
                 <div id="chat-history"></div>
@@ -698,9 +701,16 @@ AUTH_TEMPLATE = """<!DOCTYPE html>
         .toggle-password { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; width: 24px; height: 24px; color: #666; }
         .toggle-password svg { width: 20px; height: 20px; fill: currentColor; }
         .auth-btn { background: #1e3d2f; color: white; border: none; border-radius: 8px; padding: 12px; width: 100%; font-size: 16px; font-weight: bold; cursor: pointer; margin-top: 10px; }
+        .google-btn { display: flex; align-items: center; justify-content: center; gap: 10px; background: #ffffff; color: #333; border: 1px solid #ddd; border-radius: 8px; padding: 12px; width: 100%; font-size: 15px; font-weight: 600; cursor: pointer; margin-top: 12px; text-decoration: none; transition: 0.2s; }
+        .google-btn:hover { background: #f9f9f9; border-color: #ccc; }
+        .google-btn svg { width: 18px; height: 18px; }
         .auth-link { text-align: center; margin-top: 15px; font-size: 14px; color: #555; }
         .auth-link a { color: #1e3d2f; text-decoration: none; font-weight: bold; }
         .flash-msg { background: #ffe6e6; color: #d9534f; padding: 10px; border-radius: 6px; margin-bottom: 15px; font-size: 14px; text-align: center; }
+        .divider { display: flex; align-items: center; text-align: center; margin: 15px 0; color: #888; font-size: 13px; }
+        .divider::before, .divider::after { content: ''; flex: 1; border-bottom: 1px solid #ddd; }
+        .divider::before { margin-right: 10px; }
+        .divider::after { margin-left: 10px; }
     </style>
 </head>
 <body>
@@ -743,6 +753,14 @@ AUTH_TEMPLATE = """<!DOCTYPE html>
 
             <button type="submit" class="auth-btn">{{ btn_text }}</button>
         </form>
+
+        {% if not is_forgot_request %}
+        <div class="divider">OR</div>
+        <a href="{{ url_for('google_login') }}" class="google-btn">
+            <svg viewBox="0 0 24 24"><path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.66-5.17 3.66-9.17z"/><path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.13 0-5.78-2.11-6.73-4.96H1.19v3.14C3.18 21.31 7.23 24 12 24z"/><path fill="#FBBC05" d="M5.27 14.24c-.25-.72-.38-1.49-.38-2.24s.13-1.52.38-2.24V6.62H1.19C.43 8.15 0 9.87 0 12s.43 3.85 1.19 5.38l4.08-3.14z"/><path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.23 0 3.18 2.69 1.19 6.62l4.08 3.14c.95-2.85 3.6-4.96 6.73-4.96z"/></svg>
+            Continue with Google
+        </a>
+        {% endif %}
         
         <div class="auth-link">
             {% if is_signup %}
@@ -817,11 +835,36 @@ def login():
         email = request.form.get('email', '').strip().lower()
         password = request.form.get('password', '')
         user = User.query.filter_by(email=email).first()
-        if user and check_password_hash(user.password, password):
+        if user and user.password and check_password_hash(user.password, password):
             login_user(user, remember=True)
             return redirect(url_for('home'))
         flash('Invalid email or password!')
     return render_template_string(AUTH_TEMPLATE, title='Login', is_signup=False, is_forgot_request=False, btn_text='Login')
+
+@app.route('/google-login')
+def google_login():
+    redirect_uri = url_for('google_authorize', _external=True)
+    return google.authorize_redirect(redirect_uri)
+
+@app.route('/google-authorize')
+def google_authorize():
+    token = google.authorize_access_token()
+    resp = google.get('https://www.googleapis.com/oauth2/v3/userinfo')
+    user_info = resp.json()
+    
+    email = user_info.get('email')
+    name = user_info.get('given_name', user_info.get('name', 'User'))
+    surname = user_info.get('family_name', '')
+    picture = user_info.get('picture', '')
+
+    user = User.query.filter_by(email=email).first()
+    if not user:
+        user = User(name=name, surname=surname, email=email, pic=picture, password=None)
+        db.session.add(user)
+        db.session.commit()
+    
+    login_user(user, remember=True)
+    return redirect(url_for('home'))
 
 @app.route('/signup', methods=['GET', 'POST'])
 def signup():
@@ -948,6 +991,7 @@ def save_chat():
     db.session.commit()
     return jsonify({'status': 'success'})
 
+@app.route('/delete_chat', methods=['Package', 'POST'])
 @app.route('/delete_chat', methods=['POST'])
 @login_required
 def delete_chat():
