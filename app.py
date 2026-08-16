@@ -58,11 +58,12 @@ class User(UserMixin, db.Model):
     password = db.Column(db.String(200), nullable=True)
     dob = db.Column(db.String(20), nullable=True)
     pic = db.Column(db.Text, nullable=True)
-    is_admin = db.Column(db.Boolean, default=False)  # Admin control field
+    is_admin = db.Column(db.Boolean, default=False)
+    chats = db.relationship('ChatHistory', backref='user', cascade="all, delete-orphan", lazy=True)
 
 class ChatHistory(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id', ondelete='CASCADE'), nullable=False)
     chat_id = db.Column(db.String(100), nullable=False)
     title = db.Column(db.String(200), nullable=False)
     html_content = db.Column(db.Text, nullable=False)
@@ -87,7 +88,6 @@ def make_session_permanent():
     session.permanent = True
     if not getattr(app, '_database_checked', False):
         db.create_all()
-        # Pehle user ko automatically Admin banane ke liye check (Optional)
         admin_email = os.environ.get('ADMIN_EMAIL')
         if admin_email:
             first_admin = User.query.filter_by(email=admin_email).first()
@@ -164,83 +164,204 @@ def call_groq_api(prompt_text, image_data=None):
     except Exception as e:
         return f"API Connection Error: {str(e)}"
 
-# --- TEMPLATES ---
+# --- MODERN SPATIAL ADMIN TEMPLATE WITH HORIZONTAL SCROLL ---
 ADMIN_TEMPLATE = """<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin Panel - Tibyan AI</title>
+    <title>Spatial Admin Panel - Tibyan AI</title>
     <style>
+        :root {
+            --bg-color: #0d1310;
+            --card-bg: rgba(30, 61, 47, 0.25);
+            --border-color: rgba(208, 222, 212, 0.15);
+            --accent-green: #2ecc71;
+            --primary-green: #1e3d2f;
+            --text-light: #f4f6f5;
+            --text-muted: #a0b2a6;
+            --danger-color: #e74c3c;
+        }
+
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
-        body { background: #f4f6f5; color: #1e3d2f; padding: 20px; }
-        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; background: #fff; padding: 15px 20px; border-radius: 10px; border: 1px solid #d0ded4; }
-        .stats { display: flex; gap: 15px; margin-bottom: 20px; }
-        .card { background: #fff; padding: 20px; border-radius: 10px; flex: 1; border: 1px solid #d0ded4; }
-        .card h3 { font-size: 14px; color: #666; margin-bottom: 8px; }
-        .card p { font-size: 24px; font-weight: bold; }
-        table { width: 100%; border-collapse: collapse; background: #fff; border-radius: 10px; overflow: hidden; border: 1px solid #d0ded4; }
-        th, td { padding: 12px 15px; text-align: left; border-bottom: 1px solid #eee; }
-        th { background: #1e3d2f; color: white; }
-        .badge { padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: bold; }
-        .badge-admin { background: #d4edda; color: #155724; }
-        .badge-user { background: #e2e3e5; color: #383d41; }
-        .btn { padding: 6px 12px; border: none; border-radius: 6px; cursor: pointer; text-decoration: none; font-size: 13px; font-weight: bold; }
-        .btn-toggle { background: #1e3d2f; color: white; }
-        .btn-danger { background: #d9534f; color: white; }
+        body { background: var(--bg-color); color: var(--text-light); padding: 24px; min-height: 100vh; }
+
+        .admin-wrapper { max-width: 1200px; margin: 0 auto; }
+        
+        .header { 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            margin-bottom: 30px; 
+            background: var(--card-bg); 
+            backdrop-filter: blur(12px); 
+            padding: 20px 24px; 
+            border-radius: 16px; 
+            border: 1px solid var(--border-color); 
+        }
+        .header h2 { font-size: 22px; font-weight: 700; letter-spacing: -0.5px; }
+
+        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 20px; margin-bottom: 30px; }
+        .stat-card { 
+            background: var(--card-bg); 
+            backdrop-filter: blur(12px); 
+            padding: 20px; 
+            border-radius: 14px; 
+            border: 1px solid var(--border-color);
+        }
+        .stat-card h3 { font-size: 13px; text-transform: uppercase; letter-spacing: 0.8px; color: var(--text-muted); margin-bottom: 10px; }
+        .stat-card p { font-size: 28px; font-weight: 800; color: var(--accent-green); }
+
+        .controls-row { 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            gap: 15px; 
+            margin-bottom: 18px; 
+            flex-wrap: wrap; 
+        }
+        .search-box { 
+            padding: 10px 16px; 
+            border-radius: 10px; 
+            border: 1px solid var(--border-color); 
+            background: rgba(255,255,255,0.05); 
+            color: #fff; 
+            outline: none; 
+            min-width: 280px; 
+            font-size: 14px; 
+        }
+        .search-box:focus { border-color: var(--accent-green); }
+
+        /* Spatial Table Canvas with Forced Horizontal Scroll */
+        .table-canvas { 
+            background: var(--card-bg); 
+            backdrop-filter: blur(12px); 
+            border-radius: 16px; 
+            border: 1px solid var(--border-color); 
+            overflow-x: auto; 
+            width: 100%;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+
+        table { 
+            width: 100%; 
+            min-width: 800px; /* Ensures table columns won't shrink on mobile */
+            border-collapse: collapse; 
+            text-align: left; 
+        }
+
+        th { 
+            background: rgba(30, 61, 47, 0.6); 
+            padding: 16px 20px; 
+            font-size: 13px; 
+            text-transform: uppercase; 
+            color: var(--text-muted); 
+            letter-spacing: 0.5px;
+            white-space: nowrap; 
+        }
+
+        td { 
+            padding: 16px 20px; 
+            border-bottom: 1px solid var(--border-color); 
+            font-size: 14px; 
+            white-space: nowrap; 
+        }
+
+        tr:last-child td { border-bottom: none; }
+        tr:hover td { background: rgba(255, 255, 255, 0.02); }
+
+        .badge { padding: 6px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; display: inline-block; }
+        .badge-admin { background: rgba(46, 204, 113, 0.15); color: var(--accent-green); border: 1px solid var(--accent-green); }
+        .badge-user { background: rgba(160, 178, 166, 0.15); color: var(--text-muted); border: 1px solid var(--text-muted); }
+
+        .btn { 
+            padding: 8px 14px; 
+            border-radius: 8px; 
+            text-decoration: none; 
+            font-size: 13px; 
+            font-weight: 600; 
+            display: inline-block; 
+            transition: all 0.2s ease; 
+            border: none;
+            cursor: pointer;
+        }
+        .btn-toggle { background: var(--primary-green); color: #fff; border: 1px solid var(--border-color); margin-right: 6px; }
+        .btn-toggle:hover { background: #254d3b; }
+        .btn-danger { background: rgba(231, 76, 60, 0.2); color: var(--danger-color); border: 1px solid var(--danger-color); }
+        .btn-danger:hover { background: var(--danger-color); color: #fff; }
+        .btn-secondary { background: rgba(255, 255, 255, 0.1); color: #fff; }
+        .btn-secondary:hover { background: rgba(255, 255, 255, 0.2); }
     </style>
 </head>
 <body>
-    <div class="header">
-        <h2>Tibyan AI - Admin Dashboard</h2>
-        <a href="/" class="btn btn-toggle">Back to App</a>
+    <div class="admin-wrapper">
+        <div class="header">
+            <h2>Spatial Admin Control Panel</h2>
+            <a href="/" class="btn btn-secondary">← Back to App</a>
+        </div>
+
+        <div class="stats-grid">
+            <div class="stat-card"><h3>Registered Users</h3><p>{{ total_users }}</p></div>
+            <div class="stat-card"><h3>Active Admins</h3><p>{{ total_admins }}</p></div>
+            <div class="stat-card"><h3>Saved Chats</h3><p>{{ total_chats }}</p></div>
+        </div>
+
+        <div class="controls-row">
+            <h3 style="font-size: 18px;">User Management</h3>
+            <input type="text" id="adminUserSearch" class="search-box" placeholder="Search user name or email..." onkeyup="filterAdminTable()">
+        </div>
+
+        <div class="table-canvas">
+            <table id="adminUsersTable">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>User Name</th>
+                        <th>Email Address</th>
+                        <th>Account Role</th>
+                        <th>Management Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for u in users %}
+                    <tr>
+                        <td>#{{ u.id }}</td>
+                        <td style="font-weight: 600;">{{ u.name }} {{ u.surname or '' }}</td>
+                        <td>{{ u.email }}</td>
+                        <td>
+                            {% if u.is_admin %}
+                            <span class="badge badge-admin">Admin</span>
+                            {% else %}
+                            <span class="badge badge-user">User</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if u.id != current_user.id %}
+                            <a href="/admin/toggle_admin/{{ u.id }}" class="btn btn-toggle">
+                                {% if u.is_admin %}Demote{% else %}Promote to Admin{% endif %}
+                            </a>
+                            <a href="/admin/delete_user/{{ u.id }}" class="btn btn-danger" onclick="return confirm('Are you sure? User data will be erased.')">Delete User</a>
+                            {% else %}
+                            <span style="color: var(--text-muted); font-size: 13px;">(Current Session)</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
     </div>
 
-    <div class="stats">
-        <div class="card"><h3>Total Users</h3><p>{{ total_users }}</p></div>
-        <div class="card"><h3>Total Admins</h3><p>{{ total_admins }}</p></div>
-        <div class="card"><h3>Total Chats Saved</h3><p>{{ total_chats }}</p></div>
-    </div>
-
-    <h3>User Management</h3>
-    <br>
-    <table>
-        <thead>
-            <tr>
-                <th>ID</th>
-                <th>Name</th>
-                <th>Email</th>
-                <th>Role</th>
-                <th>Actions</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for u in users %}
-            <tr>
-                <td>{{ u.id }}</td>
-                <td>{{ u.name }} {{ u.surname or '' }}</td>
-                <td>{{ u.email }}</td>
-                <td>
-                    {% if u.is_admin %}
-                    <span class="badge badge-admin">Admin</span>
-                    {% else %}
-                    <span class="badge badge-user">User</span>
-                    {% endif %}
-                </td>
-                <td>
-                    {% if u.id != current_user.id %}
-                    <a href="/admin/toggle_admin/{{ u.id }}" class="btn btn-toggle">
-                        {% if u.is_admin %}Remove Admin{% else %}Make Admin{% endif %}
-                    </a>
-                    <a href="/admin/delete_user/{{ u.id }}" class="btn btn-danger" onclick="return confirm('Are you sure?')">Delete</a>
-                    {% else %}
-                    <i style="color:#888;">Logged In</i>
-                    {% endif %}
-                </td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+    <script>
+        function filterAdminTable() {
+            let input = document.getElementById('adminUserSearch').value.toLowerCase();
+            let rows = document.querySelectorAll('#adminUsersTable tbody tr');
+            rows.forEach(row => {
+                let text = row.innerText.toLowerCase();
+                row.style.display = text.includes(input) ? '' : 'none';
+            });
+        }
+    </script>
 </body>
 </html>
 """
@@ -991,7 +1112,6 @@ def signup():
             
         hashed_password = generate_password_hash(password, method='pbkdf2:sha256')
         
-        # Check if first user ever created, automatically make Admin
         first_user = User.query.first() is None
         new_user = User(name=name, surname=surname, email=email, password=hashed_password, is_admin=first_user)
         
@@ -1068,7 +1188,7 @@ def home():
 @login_required
 @admin_required
 def admin_dashboard():
-    users = User.query.all()
+    users = User.query.order_by(User.id.desc()).all()
     total_users = User.query.count()
     total_admins = User.query.filter_by(is_admin=True).count()
     total_chats = ChatHistory.query.count()
@@ -1102,7 +1222,6 @@ def delete_user(user_id):
         flash("Aap khud ka account yahan se delete nahi kar sakte!")
         return redirect(url_for('admin_dashboard'))
     
-    ChatHistory.query.filter_by(user_id=user.id).delete()
     db.session.delete(user)
     db.session.commit()
     return redirect(url_for('admin_dashboard'))
