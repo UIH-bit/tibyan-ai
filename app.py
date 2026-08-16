@@ -1081,7 +1081,7 @@ def toggle_admin(user_id):
     user = db.session.get(User, user_id)
     if not user:
         flash("User not found", "warning")
-        return redirect(url_for("admin"))
+        return redirect(url_for("admin_dashboard"))
     if user.id == current_user.id:
         flash("Aap khud ki admin authority nahi hata sakte!")
         return redirect(url_for('admin_dashboard'))
@@ -1097,7 +1097,7 @@ def delete_user(user_id):
     user = db.session.get(User, user_id)
     if not user:
         flash("User not found", "warning")
-        return redirect(url_for("admin"))
+        return redirect(url_for("admin_dashboard"))
     if user.id == current_user.id:
         flash("Aap khud ka account yahan se delete nahi kar sakte!")
         return redirect(url_for('admin_dashboard'))
