@@ -11,3 +11,6 @@ Werkzeug==3.1.8
 gunicorn
 marshmallow
 bleach
+authlib==1.7.2
+joserfc==1.7.4
+
