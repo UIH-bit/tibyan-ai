@@ -1,7 +1,6 @@
 import os
 import requests
 import time
-import random
 import logging
 from datetime import timedelta
 from functools import wraps
@@ -11,8 +10,8 @@ from flask import Flask, request, jsonify, render_template_string, url_for, redi
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
-from flask_mail import Mail, Message
-from authlib.integrations.flask_client import OAuth
+from flask_mail import Mail
+from flask_wtf.csrf import CSRFProtect, generate_csrf
 
 # Load environment variables
 load_dotenv()
@@ -23,17 +22,25 @@ logger = logging.getLogger(__name__)
 app = Flask(__name__)
 app.permanent_session_lifetime = timedelta(days=30)
 
-# Secret Key Security Setup
-app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'tibyan_secure_fallback_secret_key_2026')
+# Security: Enforce strong SECRET_KEY in Production
+SECRET_KEY = os.environ.get('SECRET_KEY')
+if not SECRET_KEY:
+    if os.environ.get('FLASK_ENV') == 'production':
+        raise RuntimeError("CRITICAL: SECRET_KEY environment variable is not set!")
+    SECRET_KEY = os.urandom(32).hex()
+app.config['SECRET_KEY'] = SECRET_KEY
 
-# PostgreSQL Fix for Render (postgres:// -> postgresql://)
+# CSRF Protection Setup
+csrf = CSRFProtect(app)
+
+# Database Configuration
 db_url = os.environ.get('DATABASE_URL', 'sqlite:///database.db')
 if db_url.startswith("postgres://"):
     db_url = db_url.replace("postgres://", "postgresql://", 1)
 app.config['SQLALCHEMY_DATABASE_URI'] = db_url
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
-# Flask-Mail Configuration
+# Flask-Mail Setup
 app.config['MAIL_SERVER'] = os.environ.get('MAIL_SERVER', 'smtp.gmail.com')
 app.config['MAIL_PORT'] = int(os.environ.get('MAIL_PORT', 587))
 app.config['MAIL_USE_TLS'] = os.environ.get('MAIL_USE_TLS', 'True') == 'True'
@@ -44,42 +51,21 @@ app.config['MAIL_PASSWORD'] = os.environ.get('MAIL_PASSWORD')
 db = SQLAlchemy(app)
 mail = Mail(app)
 
-# OAuth Setup
-oauth = OAuth(app)
-google = oauth.register(
-    name='google',
-    client_id=os.environ.get('GOOGLE_CLIENT_ID', 'dummy_client_id'),
-    client_secret=os.environ.get('GOOGLE_CLIENT_SECRET', 'dummy_client_secret'),
-    server_metadata_url='https://accounts.google.com/.well-known/openid-configuration',
-    client_kwargs={'scope': 'openid email profile'}
-)
-
 login_manager = LoginManager()
 login_manager.login_message = None
 login_manager.init_app(app)
 login_manager.login_view = 'login'
-
-api_key = os.environ.get("GROQ_API_KEY") or os.environ.get("GEMINI_API_KEY")
 
 # --- DATABASE MODELS ---
 class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False)
     surname = db.Column(db.String(100), nullable=True)
-    email = db.Column(db.String(120), unique=True, nullable=False)
+    email = db.Column(db.String(120), unique=True, nullable=False, index=True)
     password = db.Column(db.String(200), nullable=True)
     dob = db.Column(db.String(20), nullable=True)
     pic = db.Column(db.Text, nullable=True)
     is_admin = db.Column(db.Boolean, default=False)
-    chats = db.relationship('ChatHistory', backref='user', cascade="all, delete-orphan", lazy=True)
-
-class ChatHistory(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id', ondelete='CASCADE'), nullable=False)
-    chat_id = db.Column(db.String(100), nullable=False)
-    title = db.Column(db.String(200), nullable=False)
-    html_content = db.Column(db.Text, nullable=False)
-    timestamp = db.Column(db.Float, nullable=False)
 
 class CustomKnowledge(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -87,7 +73,6 @@ class CustomKnowledge(db.Model):
     content = db.Column(db.Text, nullable=False)
     updated_at = db.Column(db.Float, default=time.time)
 
-# Auto Initialize DB Tables Safely
 with app.app_context():
     try:
         db.create_all()
@@ -124,6 +109,7 @@ def make_session_permanent():
             pass
 
 def call_groq_api(prompt_text, image_data=None):
+    api_key = os.environ.get("GROQ_API_KEY") or os.environ.get("GEMINI_API_KEY")
     if not api_key:
         return "Error: API Key is missing. Please set GROQ_API_KEY in Environment Variables."
         
@@ -144,10 +130,10 @@ def call_groq_api(prompt_text, image_data=None):
     system_instruction = (
         "You are 'Tibyan AI', an authentic Islamic Ilmi assistant following the Hanafi school of thought (Fiqh-e-Hanafi).\n"
         "STRICT MANDATORY RULES:\n"
-        "1. KNOWLEDGE BASE PRIORITIZATION: If custom knowledge base data is provided below, strictly check it first to answer user questions.\n"
-        "2. STRICT LANGUAGE & SCRIPT MATCHING: Always respond strictly in the EXACT same language, dialect, and script used by the user in their prompt.\n"
-        "3. ABSOLUTELY NO INTERNAL THINKING: Do NOT output any internal thinking, reasoning steps, or analysis.\n"
-        "4. FORMATTING: Provide clear, polite, and well-structured responses using Markdown headers (### Heading) where appropriate.\n"
+        "1. KNOWLEDGE BASE PRIORITIZATION: Strictly check custom knowledge base data first.\n"
+        "2. STRICT LANGUAGE MATCHING: Respond strictly in the EXACT same language/script used by the user.\n"
+        "3. ABSOLUTELY NO INTERNAL THINKING: Do NOT output any internal thinking.\n"
+        "4. FORMATTING: Provide clear Markdown headers (### Heading) where appropriate.\n"
         f"{knowledge_text}"
     )
 
@@ -155,16 +141,9 @@ def call_groq_api(prompt_text, image_data=None):
         selected_model = "llama-3.2-11b-vision-preview"
         if not image_data.startswith("data:image"):
             image_data = f"data:image/jpeg;base64,{image_data}"
-        
         messages = [
             {"role": "system", "content": system_instruction},
-            {
-                "role": "user",
-                "content": [
-                    {"type": "text", "text": prompt_text if prompt_text else "Please analyze this image."},
-                    {"type": "image_url", "image_url": {"url": image_data}}
-                ]
-            }
+            {"role": "user", "content": [{"type": "text", "text": prompt_text or "Please analyze this image."}, {"type": "image_url", "image_url": {"url": image_data}}]}
         ]
     else:
         selected_model = "llama-3.3-70b-versatile"
@@ -185,8 +164,7 @@ def call_groq_api(prompt_text, image_data=None):
         response = requests.post(url, headers=headers, json=payload, timeout=45)
         if response.status_code == 200:
             return response.json()['choices'][0]['message']['content']
-        else:
-            return f"API Error ({response.status_code}): {response.text}"
+        return f"API Error ({response.status_code}): {response.text}"
     except Exception as e:
         return f"API Connection Error: {str(e)}"
 
@@ -249,6 +227,7 @@ ADMIN_TEMPLATE = """<!DOCTYPE html>
                     {% for u in users %}
                     <tr>
                         <form method="POST" action="/admin/edit_user/{{ u.id }}">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                             <td>#{{ u.id }}</td>
                             <td><input type="text" name="name" class="input-inline" value="{{ u.name }}" required></td>
                             <td><input type="text" name="surname" class="input-inline" value="{{ u.surname or '' }}"></td>
@@ -272,6 +251,7 @@ ADMIN_TEMPLATE = """<!DOCTYPE html>
         <div class="form-card">
             <h4 style="margin-bottom: 10px; color: var(--accent-green);">+ Add New Knowledge Topic</h4>
             <form method="POST" action="/admin/add_knowledge">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                 <input type="text" name="title" placeholder="Topic Title" required>
                 <textarea name="content" placeholder="Enter full detail that AI should know..." required></textarea>
                 <button type="submit" class="btn btn-success">+ Save to AI Data</button>
@@ -286,6 +266,7 @@ ADMIN_TEMPLATE = """<!DOCTYPE html>
                     {% for item in knowledge_items %}
                     <tr>
                         <form method="POST" action="/admin/edit_knowledge/{{ item.id }}">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                             <td><input type="text" name="title" class="input-inline" value="{{ item.title }}" style="width:100%;" required></td>
                             <td><textarea name="content" class="input-inline" style="width:100%; height:50px;" required>{{ item.content }}</textarea></td>
                             <td>
@@ -309,6 +290,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Tibyan AI</title>
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.0.6/purify.min.js"></script>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
         body { background-color: #ffffff; color: #111; display: flex; flex-direction: column; height: 100vh; overflow: hidden; font-size: 17px; }
@@ -317,26 +299,35 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         .menu-btn { background: none; border: none; font-size: 26px; cursor: pointer; color: #1e3d2f; padding: 4px 8px; }
         .logo-title { font-size: 22px; font-weight: bold; color: #1e3d2f; }
         .header-right { display: flex; align-items: center; }
-        .new-chat-icon-btn { background: none; border: none; font-size: 22px; cursor: pointer; color: #1e3d2f; padding: 6px 10px; border-radius: 50%; }
-        .sidebar { position: fixed; top: 0; left: -280px; width: 280px; height: 100%; background: #fff; box-shadow: 2px 0 10px rgba(0,0,0,0.1); transition: 0.3s ease; z-index: 9999; display: flex; flex-direction: column; }
+        .pencil-btn { background: none; border: none; font-size: 22px; cursor: pointer; color: #1e3d2f; padding: 6px 10px; transform: rotate(180deg); display: inline-block; }
+        .sidebar { position: fixed; top: 0; left: -300px; width: 300px; height: 100%; background: #fff; box-shadow: 2px 0 10px rgba(0,0,0,0.1); transition: 0.3s ease; z-index: 9999; display: flex; flex-direction: column; }
         .sidebar.open { left: 0; }
-        .sidebar-header { padding: 20px; font-size: 20px; font-weight: bold; color: #1e3d2f; border-bottom: 1px solid #eaeaea; display: flex; justify-content: space-between; align-items: center; }
+        .sidebar-header { padding: 20px; font-size: 22px; font-weight: bold; color: #1e3d2f; border-bottom: 1px solid #eaeaea; display: flex; justify-content: space-between; align-items: center; }
         .close-sidebar { background: none; border: none; font-size: 20px; cursor: pointer; color: #555; }
-        .sidebar-menu { list-style: none; padding: 10px 0; overflow-y: auto; flex: 1; border-bottom: 1px solid #eaeaea; }
-        .sidebar-menu li { padding: 14px 20px; font-size: 17px; color: #333; cursor: pointer; display: flex; align-items: center; gap: 14px; border-bottom: 1px solid #f7f7f7; }
+        .sidebar-menu { list-style: none; padding: 10px 0; overflow-y: auto; flex: 1; }
+        .sidebar-menu li { padding: 14px 20px; font-size: 18px; font-weight: bold; color: #1e3d2f; cursor: pointer; display: flex; align-items: center; gap: 12px; border-bottom: 1px solid #f7f7f7; }
         .sidebar-menu li a { text-decoration: none; color: inherit; width: 100%; }
         .overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.4); display: none; z-index: 998; }
         .overlay.active { display: block; }
-        .main-content { flex: 1; display: flex; flex-direction: column; overflow-y: auto; position: relative; margin-top: 60px; }
+        .main-content { flex: 1; display: flex; flex-direction: column; overflow-y: auto; position: relative; margin-top: 60px; scroll-behavior: smooth; }
         .view-section { display: none; flex: 1; padding: 20px 20px 120px 20px; max-width: 800px; width: 100%; margin: 0 auto; }
         .view-section.active-view { display: flex; flex-direction: column; }
-        .welcome-section { display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; margin: auto 0; width: 100%; padding: 25px 20px; background: linear-gradient(180deg, rgba(240,244,241,0.6) 0%, rgba(255,255,255,1) 100%); border-radius: 24px; border: 1px solid #e2ece4; }
-        .welcome-title { font-size: 28px; color: #1e3d2f; font-weight: bold; margin-bottom: 25px; }
+        .welcome-section { display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; margin: 40px 0; width: 100%; padding: 25px 20px; background: linear-gradient(180deg, rgba(240,244,241,0.6) 0%, rgba(255,255,255,1) 100%); border-radius: 24px; border: 1px solid #e2ece4; }
+        .welcome-title { font-size: 28px; color: #1e3d2f; font-weight: bold; margin-bottom: 15px; }
+        .suggestions-container { display: flex; flex-direction: column; gap: 10px; width: 100%; margin-top: 15px; }
+        .suggestion-bar { background: #f4f8f5; border: 1px solid #c8dcd0; border-radius: 12px; padding: 12px 16px; font-size: 15px; font-weight: 600; color: #1e3d2f; cursor: pointer; text-align: left; transition: all 0.2s ease; }
+        .suggestion-bar:hover { background: #e2ece4; }
         #chat-history { width: 100%; display: flex; flex-direction: column; gap: 18px; padding-bottom: 40px; }
         .message-wrapper { display: flex; flex-direction: column; width: 100%; margin-bottom: 12px; }
-        .message { padding: 16px 20px; border-radius: 14px; max-width: 85%; line-height: 1.6; font-size: 17px; }
-        .user-msg { background: #f0f4f1; color: #1e3d2f; align-self: flex-end; margin-left: auto; }
-        .ai-msg { background: #ffffff; border: 1px solid #e0e0e0; color: #222; align-self: flex-start; width: 100%; }
+        .message { padding: 16px 20px; border-radius: 14px; max-width: 90%; line-height: 1.6; font-size: 17px; }
+        .user-msg { background: #f0f4f1; color: #1e3d2f; align-self: flex-end; margin-left: auto; border-radius: 18px 18px 4px 18px; }
+        .ai-msg { background: #ffffff; border: 1px solid #e0e0e0; color: #222; align-self: flex-start; width: 100%; border-radius: 18px 18px 18px 4px; }
+        .action-bar { display: flex; gap: 12px; margin-top: 10px; padding-left: 5px; align-items: center; }
+        .action-btn { background: #f4f6f5; border: 1px solid #ddd; padding: 6px 12px; border-radius: 8px; font-size: 14px; cursor: pointer; font-weight: bold; color: #1e3d2f; display: flex; align-items: center; gap: 4px; position: relative; }
+        .action-btn:hover { background: #e2ece4; }
+        .menu-options { display: none; position: absolute; bottom: 35px; left: 0; background: #fff; border: 1px solid #ccc; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.15); z-index: 10; width: 100px; flex-direction: column; }
+        .menu-options div { padding: 8px 12px; font-size: 13px; font-weight: normal; cursor: pointer; color: #333; text-align: left; }
+        .menu-options div:hover { background: #f0f0f0; }
         .input-area { display: flex; flex-direction: column; padding: 10px 16px; border-top: 1px solid #eaeaea; background: #fff; max-width: 800px; width: 100%; margin: 0 auto; position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); }
         .input-top-row { display: flex; align-items: center; gap: 10px; width: 100%; }
         .text-input { flex: 1; border: 1px solid #e0e0e0; border-radius: 24px; padding: 12px 18px; font-size: 16px; outline: none; background: #f9f9f9; resize: none; }
@@ -350,7 +341,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             <div class="logo-title">Tibyan AI</div>
         </div>
         <div class="header-right">
-            <button class="new-chat-icon-btn" onclick="startNewChat()">✏︎</button>
+            <button class="pencil-btn" onclick="startNewChat()">✏︎</button>
         </div>
     </header>
 
@@ -363,19 +354,24 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         </div>
         <ul class="sidebar-menu">
             {% if user.is_admin %}
-            <li><a href="/admin" style="color: #1e3d2f; font-weight: bold;">🛠️ Admin Panel</a></li>
+            <li><a href="/admin" style="color: #1e3d2f;">🛠️ Admin Panel</a></li>
             {% endif %}
             <li onclick="switchView('profile')">👤 Profile</li>
+            <li>📚 Library</li>
+            <li>📜 Saved</li>
+            <li>❕ About us</li>
+            <li>💬 Recent chats</li>
             <li><a href="/logout" style="color: #d9534f;">🚪 Logout</a></li>
         </ul>
     </div>
 
-    <div class="main-content">
+    <div class="main-content" id="mainScroll">
         <div id="home-view" class="view-section active-view">
             <div id="chat-box" style="width: 100%;">
                 <div class="welcome-section" id="welcome-screen">
                     <div class="welcome-title">Assalamu Alaikum, {{ user.name }}!</div>
                     <p style="color:#555;">How can I assist you today?</p>
+                    <div class="suggestions-container" id="suggestionsBox"></div>
                 </div>
                 <div id="chat-history"></div>
             </div>
@@ -396,9 +392,41 @@ HTML_TEMPLATE = """<!DOCTYPE html>
     </div>
 
     <script>
+        const csrfToken = "{{ csrf_token() }}";
+        const sampleQuestions = [
+            "Namaz ke sharaait kya hain?",
+            "Roze ke ahkam aur masail bataiye",
+            "Wazu ka tariqa Hanafi fiqh ke mutabiq",
+            "Zakat ada karne ka shari tariqa kya hai?",
+            "Jumu'ah ki namaz ki fazilat aur tareeqa",
+            "Safar me namaz qasr kab hoti hai?"
+        ];
+
+        function loadRandomSuggestions() {
+            const box = document.getElementById('suggestionsBox');
+            box.innerHTML = '';
+            const shuffled = sampleQuestions.sort(() => 0.5 - Math.random());
+            const selected = shuffled.slice(0, 2);
+            selected.forEach(q => {
+                const btn = document.createElement('button');
+                btn.className = 'suggestion-bar';
+                btn.innerText = q;
+                btn.onclick = () => {
+                    document.getElementById('userInput').value = q;
+                    submitQuery();
+                };
+                box.appendChild(btn);
+            });
+        }
+
         function toggleSidebar() { document.getElementById('sidebar').classList.toggle('open'); document.getElementById('overlay').classList.toggle('active'); }
         function switchView(viewName) { document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active-view')); document.getElementById(viewName + '-view').classList.add('active-view'); toggleSidebar(); }
-        function startNewChat() { document.getElementById('chat-history').innerHTML = ''; document.getElementById('welcome-screen').style.display = 'flex'; }
+        
+        function startNewChat() { 
+            document.getElementById('chat-history').innerHTML = ''; 
+            document.getElementById('welcome-screen').style.display = 'flex'; 
+            loadRandomSuggestions();
+        }
         
         async function submitQuery() {
             const inputField = document.getElementById('userInput');
@@ -408,20 +436,78 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             document.getElementById('welcome-screen').style.display = 'none';
             const historyBox = document.getElementById('chat-history');
             
-            historyBox.innerHTML += `<div class="message-wrapper"><div class="message user-msg">${query}</div></div>`;
+            historyBox.innerHTML += `<div class="message-wrapper"><div class="message user-msg">${DOMPurify.sanitize(query)}</div></div>`;
             inputField.value = '';
 
             const uniqueId = 'msg-' + Date.now();
-            historyBox.innerHTML += `<div class="message-wrapper"><div class="message ai-msg" id="${uniqueId}">Generating answer...</div></div>`;
+            historyBox.innerHTML += `
+                <div class="message-wrapper">
+                    <div class="message ai-msg" id="${uniqueId}">Generating answer...</div>
+                    <div class="action-bar" id="action-${uniqueId}" style="display:none;">
+                        <button class="action-btn" onclick="likeAnswer(this)">👍 Like</button>
+                        <button class="action-btn" onclick="dislikeAnswer(this)">👎 Dislike</button>
+                        <button class="action-btn" onclick="saveAnswer(this)">📜 Saved</button>
+                        <div class="action-btn" onclick="toggleMoreMenu(this)">•••
+                            <div class="menu-options">
+                                <div onclick="copyAnswer('${uniqueId}')">📋 Copy</div>
+                                <div onclick="shareAnswer('${uniqueId}')">🔗 Share</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>`;
             
+            scrollToBottom();
+
             try {
-                const res = await fetch('/generate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ prompt: query }) });
+                const res = await fetch('/generate', { 
+                    method: 'POST', 
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': csrfToken
+                    }, 
+                    body: JSON.stringify({ prompt: query }) 
+                });
                 const data = await res.json();
-                document.getElementById(uniqueId).innerHTML = marked.parse(data.response || "Error");
+                const rawHtml = marked.parse(data.response || "Error");
+                document.getElementById(uniqueId).innerHTML = DOMPurify.sanitize(rawHtml);
+                document.getElementById(`action-${uniqueId}`).style.display = 'flex';
+                scrollToBottom();
             } catch(e) {
                 document.getElementById(uniqueId).innerText = "Connection error.";
             }
         }
+
+        function scrollToBottom() {
+            const container = document.getElementById('mainScroll');
+            container.scrollTop = container.scrollHeight;
+        }
+
+        function likeAnswer(btn) { btn.innerText = "👍 Liked"; }
+        function dislikeAnswer(btn) { btn.innerText = "👎 Disliked"; }
+        function saveAnswer(btn) { btn.innerText = "📜 Saved!"; }
+        
+        function toggleMoreMenu(element) {
+            const menu = element.querySelector('.menu-options');
+            menu.style.display = (menu.style.display === 'flex') ? 'none' : 'flex';
+        }
+
+        function copyAnswer(id) {
+            const text = document.getElementById(id).innerText;
+            navigator.clipboard.writeText(text);
+            alert("Answer copied to clipboard!");
+        }
+
+        function shareAnswer(id) {
+            const text = document.getElementById(id).innerText;
+            if (navigator.share) {
+                navigator.share({ title: 'Tibyan AI Answer', text: text });
+            } else {
+                navigator.clipboard.writeText(text);
+                alert("Share link/text copied!");
+            }
+        }
+
+        window.onload = loadRandomSuggestions;
     </script>
 </body>
 </html>"""
@@ -453,6 +539,7 @@ AUTH_TEMPLATE = """<!DOCTYPE html>
           {% if messages %}<div class="flash-msg">{{ messages[0] }}</div>{% endif %}
         {% endwith %}
         <form method="POST">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
             {% if is_signup %}
             <div class="form-group"><label class="form-label">First Name</label><input type="text" name="name" class="form-control" required></div>
             <div class="form-group"><label class="form-label">Surname</label><input type="text" name="surname" class="form-control"></div>
@@ -507,8 +594,7 @@ def signup():
             flash('Passwords do not match!')
             return redirect(url_for('signup'))
 
-        user_exists = User.query.filter_by(email=email).first()
-        if user_exists:
+        if User.query.filter_by(email=email).first():
             flash('Email is already registered!')
             return redirect(url_for('login'))
             
@@ -540,6 +626,7 @@ def generate():
     ai_response = call_groq_api(data.get('prompt', ''), data.get('image'))
     return jsonify({'response': ai_response})
 
+# --- ADMIN ROUTES ---
 @app.route('/admin')
 @login_required
 @admin_required
@@ -550,6 +637,41 @@ def admin_dashboard():
     knowledge_items = CustomKnowledge.query.order_by(CustomKnowledge.id.desc()).all()
     return render_template_string(ADMIN_TEMPLATE, users=users, total_users=total_users, total_admins=total_admins, knowledge_items=knowledge_items)
 
+@app.route('/admin/edit_user/<int:user_id>', methods=['POST'])
+@login_required
+@admin_required
+def edit_user(user_id):
+    user = db.session.get(User, user_id)
+    if user:
+        user.name = request.form.get('name', user.name)
+        user.surname = request.form.get('surname')
+        user.email = request.form.get('email', user.email).strip().lower()
+        user.dob = request.form.get('dob')
+        db.session.commit()
+    return redirect(url_for('admin_dashboard'))
+
+@app.route('/admin/toggle_admin/<int:user_id>')
+@login_required
+@admin_required
+def toggle_admin(user_id):
+    if user_id != current_user.id:
+        user = db.session.get(User, user_id)
+        if user:
+            user.is_admin = not user.is_admin
+            db.session.commit()
+    return redirect(url_for('admin_dashboard'))
+
+@app.route('/admin/delete_user/<int:user_id>')
+@login_required
+@admin_required
+def delete_user(user_id):
+    if user_id != current_user.id:
+        user = db.session.get(User, user_id)
+        if user:
+            db.session.delete(user)
+            db.session.commit()
+    return redirect(url_for('admin_dashboard'))
+
 @app.route('/admin/add_knowledge', methods=['POST'])
 @login_required
 @admin_required
@@ -559,6 +681,28 @@ def add_knowledge():
     if title and content:
         new_record = CustomKnowledge(title=title, content=content, updated_at=time.time())
         db.session.add(new_record)
+        db.session.commit()
+    return redirect(url_for('admin_dashboard'))
+
+@app.route('/admin/edit_knowledge/<int:item_id>', methods=['POST'])
+@login_required
+@admin_required
+def edit_knowledge(item_id):
+    item = db.session.get(CustomKnowledge, item_id)
+    if item:
+        item.title = request.form.get('title', item.title)
+        item.content = request.form.get('content', item.content)
+        item.updated_at = time.time()
+        db.session.commit()
+    return redirect(url_for('admin_dashboard'))
+
+@app.route('/admin/delete_knowledge/<int:item_id>')
+@login_required
+@admin_required
+def delete_knowledge(item_id):
+    item = db.session.get(CustomKnowledge, item_id)
+    if item:
+        db.session.delete(item)
         db.session.commit()
     return redirect(url_for('admin_dashboard'))
 
