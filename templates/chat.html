@@ -6,198 +6,79 @@
     <title>Tibyan AI</title>
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <style>
-        * { box-sizing: border-box; }
-        body { background-color: #fcfbf9; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; margin: 0; display: flex; flex-direction: column; height: 100vh; color: #111827; }
-        
-        /* Header */
-        header { display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; background: white; border-bottom: 1px solid #e5e7eb; position: sticky; top: 0; z-index: 10; }
-        .menu-btn, .reset-btn { background: none; border: none; font-size: 20px; cursor: pointer; padding: 6px; border-radius: 8px; display: flex; align-items: center; justify-content: center; }
-        .menu-btn:hover, .reset-btn:hover { background: #f3f4f6; }
-        .logo-title { display: flex; align-items: center; gap: 8px; font-weight: bold; color: #022c22; font-size: 18px; }
-        .badge { background: #ecfdf5; color: #064e3b; padding: 2px 10px; border-radius: 99px; border: 1px solid #d1fae5; font-size: 14px; }
-        
-        /* Mirror Image Pencil */
-        .mirror-pencil { transform: scaleX(-1); display: inline-block; }
-
-        /* Sidebar / Drawer Menu */
-        .sidebar-overlay { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.4); z-index: 100; display: none; backdrop-filter: blur(2px); }
-        .sidebar-overlay.active { display: block; }
-        .sidebar { position: fixed; top: 0; left: -280px; width: 280px; height: 100%; background: white; z-index: 101; transition: left 0.3s ease; box-shadow: 4px 0 15px rgba(0,0,0,0.1); display: flex; flex-direction: column; }
-        .sidebar.active { left: 0; }
-        .sidebar-header { padding: 20px; border-bottom: 1px solid #e5e7eb; display: flex; justify-content: space-between; align-items: center; font-weight: bold; font-size: 18px; color: #022c22; }
-        .sidebar-links { padding: 16px; flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; }
-        .sidebar-item { padding: 12px 16px; border-radius: 10px; color: #374151; text-decoration: none; font-size: 14px; font-weight: 500; transition: background 0.2s; display: block; }
-        .sidebar-item:hover { background: #f0fdf4; color: #064e3b; }
-        .close-sidebar { background: none; border: none; font-size: 18px; cursor: pointer; color: #6b7280; }
-
-        /* Chat Container */
-        #chat-container { flex: 1; overflow-y: auto; padding: 16px; max-width: 650px; margin: 0 auto; width: 100%; padding-bottom: 100px; }
-        
-        /* Welcome Screen */
-        .welcome-screen { display: flex; flex-direction: column; align-items: center; text-align: center; margin-top: 20px; }
-        .welcome-logo { background: #ecfdf5; width: 70px; height: 70px; display: flex; align-items: center; justify-content: center; border-radius: 20px; border: 1px solid #d1fae5; margin-bottom: 16px; font-size: 30px; font-weight: bold; color: #064e3b; }
-        h1 { font-size: 22px; color: #022c22; margin: 0 0 6px 0; font-weight: 800; }
-        p { color: #4b5563; font-size: 14px; margin: 0 0 24px 0; }
-
-        /* Presets */
-        .presets-grid { width: 100%; display: flex; flex-direction: column; gap: 10px; }
-        .preset-card { background: white; border: 1px solid #e5e7eb; padding: 14px; border-radius: 14px; text-align: left; cursor: pointer; box-shadow: 0 1px 2px rgba(0,0,0,0.02); transition: border-color 0.2s; }
-        .preset-card:hover { border-color: #022c22; }
-        .preset-title { font-weight: 600; color: #022c22; font-size: 14px; margin-bottom: 2px; }
-        .preset-desc { font-size: 12px; color: #6b7280; }
-
-        /* Message Bubbles */
-        .message-row { margin: 12px 0; display: flex; flex-direction: column; }
-        .message-row.user { align-items: flex-end; }
-        .message-row.ai { align-items: flex-start; }
-        .bubble { padding: 12px 16px; border-radius: 16px; max-width: 85%; font-size: 14px; line-height: 1.5; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
-        .user .bubble { background: #022c22; color: white; border-bottom-right-radius: 4px; }
-        .ai .bubble { background: white; color: #111827; border: 1px solid #e5e7eb; border-bottom-left-radius: 4px; }
-
-        /* Footer Chat Bar */
-        footer { position: fixed; bottom: 0; left: 0; right: 0; background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(8px); padding: 12px; border-top: 1px solid #e5e7eb; }
-        .chat-form { max-width: 650px; margin: 0 auto; display: flex; align-items: center; gap: 8px; background: #f9fafb; border: 1px solid #d1d5db; border-radius: 14px; padding: 4px 8px; }
-        .chat-form:focus-within { border-color: #022c22; box-shadow: 0 0 0 2px rgba(2, 44, 34, 0.1); }
-        .attach-btn { background: none; border: none; font-size: 18px; cursor: pointer; padding: 8px; color: #6b7280; transform: rotate(45deg); }
-        .chat-input { flex: 1; border: none; background: transparent; padding: 10px; font-size: 14px; outline: none; color: #111827; }
-        .send-btn { background: #022c22; color: white; border: none; padding: 10px 18px; border-radius: 10px; font-weight: 600; font-size: 14px; cursor: pointer; transition: background 0.2s; }
-        .send-btn:hover { background: #064e3b; }
-        .send-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+        body { font-family: sans-serif; background: #fcfbf9; margin: 0; display: flex; flex-direction: column; height: 100vh; }
+        header { display: flex; justify-content: space-between; padding: 15px; background: white; border-bottom: 1px solid #ddd; }
+        .menu-btn { font-size: 24px; cursor: pointer; border: none; background: none; }
+        .mirror-pencil { transform: scaleX(-1); display: inline-block; font-size: 20px; }
+        /* Sidebar */
+        #menu-drawer { position: fixed; left: -280px; top: 0; width: 250px; height: 100%; background: white; z-index: 1000; transition: 0.3s; box-shadow: 2px 0 5px rgba(0,0,0,0.2); padding: 20px; }
+        #menu-drawer.open { left: 0; }
+        .menu-item { display: block; padding: 15px; text-decoration: none; color: #333; font-weight: bold; border-bottom: 1px solid #eee; }
+        /* Chat */
+        #chat-window { flex: 1; overflow-y: auto; padding: 20px; }
+        .msg { margin: 10px 0; padding: 10px; border-radius: 10px; }
+        .user-msg { background: #022c22; color: white; align-self: flex-end; }
+        .ai-msg { background: #eee; }
+        /* Input */
+        footer { padding: 15px; background: white; border-top: 1px solid #ddd; display: flex; gap: 10px; }
+        input { flex: 1; padding: 10px; border: 1px solid #ccc; border-radius: 8px; }
+        button#send-btn { background: #022c22; color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; }
     </style>
 </head>
 <body>
 
-    <!-- Sidebar Overlay & Menu Drawer -->
-    <div id="sidebar-overlay" class="sidebar-overlay" onclick="toggleMenu()"></div>
-    <div id="sidebar" class="sidebar">
-        <div class="sidebar-header">
-            <span>Tibyan Options</span>
-            <button class="close-sidebar" onclick="toggleMenu()">✕</button>
-        </div>
-        <div class="sidebar-links">
-            <a href="/" class="sidebar-item">🏠 New Chat / Home</a>
-            <a href="#" onclick="sendPreset('Fiqh-e-Hanafi ke buniyadi usool kya hain?'); toggleMenu();" class="sidebar-item">📚 Fiqh Principles</a>
-            <a href="#" onclick="sendPreset('Namaz ke faraiz aur wajibat batayein.'); toggleMenu();" class="sidebar-item">🕌 Namaz Guidelines</a>
-            <a href="#" onclick="sendPreset('Roza rakhne aur todne wale masail.'); toggleMenu();" class="sidebar-item">🌙 Roza Masail</a>
-            <a href="#" onclick="alert('Tibyan AI v1.0 - Secure Hanafi Assistant'); toggleMenu();" class="sidebar-item">ℹ️ About Tibyan</a>
-        </div>
+<div id="menu-drawer">
+    <button onclick="toggleMenu()" style="float:right; border:none; background:none; font-size:20px;">✕</button>
+    <h3 style="margin-top:40px;">Menu</h3>
+    <a class="menu-item" href="/profile">👤 Profile</a>
+    <a class="menu-item" href="/library">📚 Library</a>
+    <a class="menu-item" href="/saved">📜 Saved</a>
+    <a class="menu-item" href="/about">❕️ About Us</a>
+    {% if current_user.is_authenticated and current_user.is_admin %}
+    <a class="menu-item" href="/admin" style="color:red;">⚙️ Admin Login</a>
+    {% endif %}
+</div>
+
+<header>
+    <button class="menu-btn" onclick="toggleMenu()">☰</button>
+    <div style="font-weight:bold; font-size:18px;">Tibyan</div>
+    <span class="mirror-pencil">✏️</span>
+</header>
+
+<div id="chat-window">
+    <div id="welcome">
+        <h2>Assalamu Alaikum, Jameel!</h2>
+        <button class="menu-item" onclick="sendMessage('Tell me about Jumu\'ah prayer')">Jumu'ah Prayers</button>
+        <button class="menu-item" onclick="sendMessage('Rules of Qirat in Namaz')">Rules of Qirat</button>
     </div>
+    <div id="chat-logs"></div>
+</div>
 
-    <!-- Header -->
-    <header>
-        <button onclick="toggleMenu()" class="menu-btn">☰</button>
-        <div class="logo-title">
-            <span class="badge">تيان</span> Tibyan
-        </div>
-        <a href="/" class="reset-btn" title="New Chat">
-            <span class="mirror-pencil">✏️</span>
-        </a>
-    </header>
+<footer>
+    <input type="text" id="msg-input" placeholder="Ask Tibyan...">
+    <button id="send-btn" onclick="sendMessage()">Send</button>
+</footer>
 
-    <!-- Chat Area -->
-    <main id="chat-container">
-        <div id="welcome-screen" class="welcome-screen">
-            <div class="welcome-logo">تيان</div>
-            <h1>Assalamu Alaikum, {{ current_user.name.title() if current_user and current_user.is_authenticated else 'Jameel' }}!</h1>
-            <p>How can I assist you in matters of Fiqh-e-Hanafi today?</p>
-            
-            <div class="presets-grid">
-                <div onclick="sendPreset('Tell me about the virtues and method of Jumu\'ah prayer.')" class="preset-card">
-                    <div class="preset-title">Jumu'ah Prayers</div>
-                    <div class="preset-desc">Explain the virtues, rules, and method of performing Jumu'ah prayer according to Hanafi Fiqh.</div>
-                </div>
-                <div onclick="sendPreset('What are the essential conditions (Sharaait) for Namaz?')" class="preset-card">
-                    <div class="preset-title">Rules of Qirat in Namaz</div>
-                    <div class="preset-desc">What are the guidelines for reciting Quran (Qirat) during prayers in Hanafi school?</div>
-                </div>
-            </div>
-        </div>
-    </main>
+<script>
+    function toggleMenu() { document.getElementById('menu-drawer').classList.toggle('open'); }
+    
+    async function sendMessage(presetText) {
+        let input = document.getElementById('msg-input');
+        let text = presetText || input.value;
+        if (!text) return;
+        
+        document.getElementById('welcome').style.display = 'none';
+        document.getElementById('chat-logs').innerHTML += '<div class="msg user-msg">' + text + '</div>';
+        input.value = '';
 
-    <!-- Input Footer -->
-    <footer>
-        <form onsubmit="handleSendMessage(event)" class="chat-form">
-            <input type="hidden" id="csrf_token" value="{{ csrf_token() }}">
-            <button type="button" onclick="alert('Attachment feature ready!')" class="attach-btn" title="Attach file">📎</button>
-            <input type="text" id="user-prompt" class="chat-input" placeholder="Ask Tibyan... (e.g., Roza ke masail)" required autocomplete="off">
-            <button type="submit" id="send-btn" class="send-btn">Send</button>
-        </form>
-    </footer>
-
-    <script>
-        const csrfToken = document.getElementById('csrf_token').value;
-        const chatContainer = document.getElementById('chat-container');
-        const welcomeScreen = document.getElementById('welcome-screen');
-        const promptInput = document.getElementById('user-prompt');
-        const sendBtn = document.getElementById('send-btn');
-        const sidebar = document.getElementById('sidebar');
-        const sidebarOverlay = document.getElementById('sidebar-overlay');
-
-        // Toggle Sidebar Menu
-        function toggleMenu() {
-            sidebar.classList.toggle('active');
-            sidebarOverlay.classList.toggle('active');
-        }
-
-        function sendPreset(text) {
-            promptInput.value = text;
-            handleSendMessage(new Event('submit'));
-        }
-
-        async function handleSendMessage(event) {
-            event.preventDefault();
-            const message = promptInput.value.trim();
-            if (!message) return;
-
-            // Hide welcome screen smoothly
-            if (welcomeScreen) welcomeScreen.style.display = 'none';
-            
-            promptInput.value = '';
-            sendBtn.disabled = true;
-
-            // Append User Message
-            appendMessage('user', message);
-
-            try {
-                const response = await fetch('/generate', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRFToken': csrfToken
-                    },
-                    body: JSON.stringify({ prompt: message })
-                });
-
-                if (!response.ok) throw new Error('Network error');
-
-                const data = await response.json();
-                appendMessage('ai', data.response || data.answer || "Jawab dastiyab nahi ho saka.");
-
-            } catch (err) {
-                appendMessage('ai', "Ma'zirat, connection mein kharabi hai. Dobara koshish karein.");
-            } finally {
-                sendBtn.disabled = false;
-                promptInput.focus();
-            }
-        }
-
-        function appendMessage(sender, text) {
-            const row = document.createElement('div');
-            row.className = `message-row ${sender}`;
-            
-            const bubble = document.createElement('div');
-            bubble.className = 'bubble';
-            
-            if (sender === 'ai') {
-                bubble.innerHTML = marked.parse(text);
-            } else {
-                bubble.innerText = text;
-            }
-            
-            row.appendChild(bubble);
-            chatContainer.appendChild(row);
-            chatContainer.scrollTop = chatContainer.scrollHeight;
-        }
-    </script>
+        const response = await fetch('/generate', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ prompt: text })
+        });
+        const data = await response.json();
+        document.getElementById('chat-logs').innerHTML += '<div class="msg ai-msg">' + marked.parse(data.response || "No response") + '</div>';
+    }
+</script>
 </body>
 </html>
