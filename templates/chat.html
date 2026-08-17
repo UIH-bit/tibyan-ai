@@ -6,210 +6,71 @@
     <title>Tibyan AI - Islamic Ilmi Assistant</title>
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-    <style>
-        body { background-color: #fcfbf9; color: #1e293b; }
-        #sidebar {
-            transition: transform 0.3s ease-in-out;
-            z-index: 100;
-        }
-        #sidebar-backdrop {
-            transition: opacity 0.3s ease-in-out;
-            z-index: 99;
-        }
-    </style>
 </head>
-<body class="flex h-screen overflow-hidden relative font-sans antialiased">
+<body class="flex h-screen flex-col bg-[#fcfbf9] font-sans text-slate-900">
 
-    <!-- Mobile Sidebar Backdrop -->
-    <div id="sidebar-backdrop" onclick="toggleSidebar()" class="fixed inset-0 bg-black/50 opacity-0 pointer-events-none md:hidden"></div>
-
-    <!-- Sidebar / Menu -->
-    <div id="sidebar" class="fixed inset-y-0 left-0 w-80 bg-white border-r border-slate-100 flex flex-col justify-between p-6 transform -translate-x-full md:translate-x-0 md:static shadow-2xl md:shadow-none">
-        <div>
-            <div class="flex items-center justify-between mb-8">
-                <h2 class="text-2xl font-bold text-emerald-950 tracking-tight">Menu</h2>
-                <button type="button" onclick="toggleSidebar()" aria-label="Close menu" class="md:hidden text-slate-400 hover:text-emerald-900 focus:outline-none cursor-pointer text-3xl">&times;</button>
-            </div>
-
-            <!-- Navigation Links -->
-            <div class="space-y-2 text-slate-700 font-medium text-sm">
-                {% if current_user.is_admin %}
-                <a href="{{ url_for('admin_dashboard') }}" class="flex items-center gap-3.5 px-4 py-3 rounded-xl bg-emerald-50 text-emerald-900 font-semibold mb-3 border border-emerald-100">
-                    <span class="text-lg">🛠️</span> Admin Panel
-                </a>
-                {% endif %}
-                <a href="#" class="flex items-center gap-3.5 px-4 py-3 rounded-xl hover:bg-slate-100 transition-colors duration-150"><span>👤</span> Profile</a>
-                <a href="{{ url_for('home') }}" class="flex items-center gap-3.5 px-4 py-3 rounded-xl hover:bg-slate-100 transition-colors duration-150"><span>📚</span> Library</a>
-                <a href="#" class="flex items-center gap-3.5 px-4 py-3 rounded-xl hover:bg-slate-100 transition-colors duration-150"><span>📜</span> Saved</a>
-                <a href="#" class="flex items-center gap-3.5 px-4 py-3 rounded-xl hover:bg-slate-100 transition-colors duration-150"><span>❕</span> About us</a>
-                <a href="#" class="flex items-center gap-3.5 px-4 py-3 rounded-xl hover:bg-slate-100 transition-colors duration-150"><span>💬</span> Recent chats</a>
-                <a href="{{ url_for('logout') }}" class="flex items-center gap-3.5 px-4 py-3 rounded-xl text-red-600 hover:bg-red-50 transition-colors duration-150"><span>🚪</span> Logout</a>
-            </div>
+    <!-- Header -->
+    <header class="flex items-center justify-between p-4 border-b border-slate-100">
+        <button onclick="toggleSidebar()" class="p-2 hover:bg-slate-100 rounded-lg">☰</button>
+        <div class="flex items-center gap-2">
+            <img src="{{ url_for('static', filename='logo.png') }}" alt="Tibyan Logo" class="w-8 h-8 object-contain">
+            <span class="font-bold text-xl text-emerald-950">Tibyan</span>
         </div>
+        <a href="{{ url_for('home') }}" class="p-2 hover:bg-slate-100 rounded-lg">✏️</a>
+    </header>
 
-        <div class="border-t border-slate-100 pt-5 mt-5 text-center">
-            <p class="text-xs text-slate-400">Tibyan AI - Fiqh-e-Hanafi</p>
-            <p class="text-[10px] text-slate-300 mt-1">v1.0.4 (Secure)</p>
+    <!-- Chat Area -->
+    <main id="chat-container" class="flex-1 overflow-y-auto p-4 md:p-6 space-y-6 max-w-3xl mx-auto w-full">
+        <div id="welcome-screen" class="flex flex-col items-center justify-center h-full text-center">
+            <img src="{{ url_for('static', filename='logo.png') }}" alt="Tibyan" class="w-24 h-24 mb-6">
+            <h1 class="text-3xl font-extrabold text-emerald-950">Assalamu Alaikum, {{ current_user.name.title() }}!</h1>
+            <p class="text-slate-600 mt-2 mb-10">How can I assist you in Fiqh-e-Hanafi today?</p>
         </div>
-    </div>
+    </main>
 
-    <!-- Main Chat Area -->
-    <div class="flex-1 flex flex-col h-full w-full overflow-hidden bg-[#fcfbf9]">
-        
-        <!-- Top Navbar -->
-        <header class="flex items-center justify-between p-4 bg-transparent border-b border-slate-100 shrink-0">
-            <button type="button" onclick="toggleSidebar()" aria-label="Toggle menu" class="text-slate-600 focus:outline-none p-2 rounded-lg hover:bg-slate-100 z-30 cursor-pointer md:hidden">
-                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
-            </button>
-            <div class="flex items-center gap-3">
-                <div class="w-9 h-9 flex items-center justify-center rounded-full bg-emerald-50 border border-emerald-100">
-                    <span class="text-lg font-extrabold text-emerald-900 font-serif">تيان</span>
-                </div>
-                <span class="font-bold text-emerald-950 text-xl tracking-tight">Tibyan</span>
-            </div>
-            <a href="{{ url_for('home') }}" aria-label="New chat" class="p-2.5 text-slate-500 hover:text-emerald-900 hover:bg-slate-100 rounded-xl transition-colors duration-150">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
-            </a>
-        </header>
-
-        <!-- Messages & Welcome Screen Container -->
-        <main id="chat-container" class="flex-1 overflow-y-auto p-4 md:p-6 space-y-8 max-w-4xl mx-auto w-full scroll-smooth">
-            <div id="welcome-screen" class="flex flex-col items-center justify-center h-full text-center px-4 py-10">
-                <div class="w-24 h-24 flex items-center justify-center mb-6 bg-emerald-50 border border-emerald-100 rounded-3xl shadow-inner">
-                    <span class="text-6xl font-extrabold text-emerald-950 font-serif tracking-tighter">تيان</span>
-                </div>
-                <h1 class="text-3xl md:text-4xl font-extrabold text-emerald-950 mb-3 tracking-tighter">Assalamu Alaikum, {{ current_user.name.title() }}!</h1>
-                <p class="text-base md:text-lg text-slate-600 mb-12 max-w-lg">How can I assist you in matters of Fiqh-e-Hanafi today?</p>
-                
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full max-w-2xl">
-                    <button type="button" onclick="sendSuggestion('Jumu\'ah ki namaz ki fazilat aur tareeqa')" class="p-5 bg-white border border-slate-100 hover:border-emerald-300 hover:bg-emerald-50/50 rounded-2xl text-left text-sm font-semibold text-slate-800 shadow-sm transition-all duration-150 cursor-pointer group">
-                        <span class="block text-emerald-900 mb-1">Jumu'ah</span>
-                        Tell me about the virtues and method of Jumu'ah prayer.
-                        <span class="block text-emerald-600 text-xs mt-3 opacity-0 group-hover:opacity-100 transition-opacity">Ask →</span>
-                    </button>
-                    <button type="button" onclick="sendSuggestion('Namaz ke sharaait kya hain?')" class="p-5 bg-white border border-slate-100 hover:border-emerald-300 hover:bg-emerald-50/50 rounded-2xl text-left text-sm font-semibold text-slate-800 shadow-sm transition-all duration-150 cursor-pointer group">
-                        <span class="block text-emerald-900 mb-1">Salah</span>
-                        What are the essential conditions (Sharaait) for Namaz?
-                        <span class="block text-emerald-600 text-xs mt-3 opacity-0 group-hover:opacity-100 transition-opacity">Ask →</span>
-                    </button>
-                </div>
-            </div>
-        </main>
-
-        <!-- Input Box Area -->
-        <footer class="p-4 md:p-6 bg-transparent sticky bottom-0 shrink-0 mt-auto">
-            <div class="max-w-4xl mx-auto w-full">
-                <form onsubmit="event.preventDefault(); sendMessage();" class="relative bg-white border border-slate-100 rounded-2xl shadow-lg p-2.5 flex items-center gap-2 focus-within:border-emerald-400 focus-within:ring-2 focus-within:ring-emerald-100 transition-all">
-                    <button type="button" aria-label="Attach file" class="p-2 text-slate-400 hover:text-emerald-900 transition-colors rounded-lg cursor-pointer">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"></path></svg>
-                    </button>
-                    <input type="text" id="user-prompt" placeholder="Ask Tibyan about Islamic Ilm..." class="flex-1 bg-transparent border-none px-2 py-2 text-sm focus:outline-none text-slate-900 placeholder:text-slate-400" aria-label="Chat input">
-                    <button type="submit" id="send-btn" aria-label="Send message" class="bg-emerald-950 hover:bg-emerald-800 text-white p-3 rounded-xl transition-all duration-150 flex items-center justify-center cursor-pointer disabled:opacity-50">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 10l7-7m0 0l7 7m-7-7v18"></path></svg>
-                    </button>
-                </form>
-            </div>
-        </footer>
-    </div>
+    <!-- Chat Bar (Lifted Up) -->
+    <footer class="p-4 bg-transparent border-t border-slate-100">
+        <form onsubmit="event.preventDefault(); sendMessage();" class="max-w-3xl mx-auto flex items-center gap-2 bg-white border border-slate-200 rounded-2xl p-2 shadow-sm focus-within:ring-2 focus-within:ring-emerald-500">
+            <input type="text" id="user-prompt" required class="flex-1 bg-transparent px-3 py-2 outline-none" placeholder="Ask Tibyan...">
+            <button type="submit" id="send-btn" class="bg-emerald-950 text-white px-5 py-2.5 rounded-xl font-medium">Send</button>
+        </form>
+    </footer>
 
     <script>
         const csrfToken = "{{ csrf_token() }}";
-        const sidebar = document.getElementById('sidebar');
-        const backdrop = document.getElementById('sidebar-backdrop');
         const promptInput = document.getElementById('user-prompt');
         const chatContainer = document.getElementById('chat-container');
         const welcomeScreen = document.getElementById('welcome-screen');
-        const sendBtn = document.getElementById('send-btn');
-
-        function toggleSidebar() {
-            sidebar.classList.toggle('-translate-x-full');
-            backdrop.classList.toggle('opacity-0');
-            backdrop.classList.toggle('pointer-events-none');
-            document.body.style.overflow = backdrop.classList.contains('opacity-0') ? '' : 'hidden';
-        }
-
-        function sendSuggestion(text) {
-            promptInput.value = text;
-            sendMessage();
-        }
 
         async function sendMessage() {
             const text = promptInput.value.trim();
-            if (!text || sendBtn.disabled) return;
-
-            sendBtn.disabled = true;
-            promptInput.value = '';
-            promptInput.blur();
-
-            if (welcomeScreen) {
-                welcomeScreen.style.display = 'none';
-            }
-
+            if (!text) return;
+            
+            welcomeScreen.style.display = 'none';
             appendMessage('user', text);
-            scrollToBottom();
+            promptInput.value = '';
 
             try {
                 const response = await fetch('/generate', {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRFToken': csrfToken
-                    },
+                    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
                     body: JSON.stringify({ prompt: text })
                 });
-
-                if (!response.ok) {
-                    throw new Error('Server error: ' + response.status);
-                }
-
                 const data = await response.json();
-                appendMessage('ai', data.response || data.answer || "Jawab dastiyab nahi ho saka.");
-
-            } catch (error) {
-                console.error(error);
-                appendMessage('system', '⚠️ Ma\'zirat, connection mein kharabi ki wajah se jawab nahi aa saka.');
-            } finally {
-                sendBtn.disabled = false;
-                promptInput.focus();
+                appendMessage('ai', data.response || "Error...");
+            } catch (e) {
+                appendMessage('system', "Connection error.");
             }
         }
 
         function appendMessage(sender, text) {
-            const msgDiv = document.createElement('div');
-            if (sender === 'user') {
-                msgDiv.className = "flex flex-col my-5 w-full items-end";
-                msgDiv.innerHTML = `
-                    <div class="font-semibold text-emerald-800 text-xs mb-1 mr-3 uppercase tracking-wider">Aap</div>
-                    <div class="p-4 rounded-2xl max-w-[85%] md:max-w-[75%] bg-emerald-950 text-white text-sm leading-relaxed shadow-sm">
-                        <p>${escapeHtml(text)}</p>
-                    </div>`;
-            } else if (sender === 'ai') {
-                msgDiv.className = "flex flex-col my-5 w-full items-start space-y-2";
-                msgDiv.innerHTML = `
-                    <div class="p-4 bg-white border border-slate-100 rounded-2xl w-full text-slate-800 text-sm md:text-base shadow-sm space-y-2">
-                        <div class="font-semibold text-emerald-900 text-xs tracking-wider uppercase">Tibyan AI (Fiqh-e-Hanafi Scholar)</div>
-                        <div class="leading-relaxed space-y-2">${marked.parse(text)}</div>
-                    </div>
-                    <div class="flex items-center gap-4 text-xs text-slate-500 px-2 font-medium">
-                        <button onclick="alert('Liked!')" class="hover:text-emerald-800 transition cursor-pointer">👍 Like</button>
-                        <button onclick="alert('Disliked!')" class="hover:text-red-600 transition cursor-pointer">👎 Dislike</button>
-                        <button onclick="alert('Saved!')" class="hover:text-emerald-800 transition cursor-pointer">📜 Save</button>
-                        <button onclick="navigator.clipboard.writeText(this.closest('.flex-col').querySelector('.leading-relaxed').innerText); alert('Copied!');" class="hover:text-slate-800 transition cursor-pointer">••• Copy</button>
-                    </div>`;
-            } else {
-                msgDiv.className = "flex flex-col my-3 w-full items-center";
-                msgDiv.innerHTML = `<div class="p-3 bg-red-50 text-red-700 text-xs rounded-xl">${escapeHtml(text)}</div>`;
-            }
-            chatContainer.appendChild(msgDiv);
-            scrollToBottom();
-        }
-
-        function scrollToBottom() {
+            const div = document.createElement('div');
+            div.className = sender === 'user' ? 'text-right' : 'text-left';
+            div.innerHTML = `<div class="inline-block p-4 my-2 rounded-2xl ${sender === 'user' ? 'bg-emerald-950 text-white' : 'bg-white border border-slate-200'}">
+                ${sender === 'ai' ? marked.parse(text) : text}
+            </div>`;
+            chatContainer.appendChild(div);
             chatContainer.scrollTop = chatContainer.scrollHeight;
-        }
-
-        function escapeHtml(string) {
-            return String(string).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
         }
     </script>
 </body>
