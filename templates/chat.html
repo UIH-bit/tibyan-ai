@@ -4,85 +4,38 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Tibyan AI</title>
+    <!-- Stable CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 </head>
-<body class="bg-[#fcfbf9] min-h-screen flex flex-col">
+<body class="bg-gray-50 h-screen flex flex-col">
 
-    <!-- Header -->
-    <header class="flex items-center justify-between p-4 border-b border-gray-100">
-        <button onclick="alert('Menu clicked!')" class="p-2 cursor-pointer">☰</button>
-        <div class="flex items-center gap-2 font-bold text-lg text-emerald-900">
-            <img src="{{ url_for('static', filename='logo.png') }}" class="w-8 h-8 object-contain"> Tibyan
-        </div>
-        <a href="/" class="p-2">✏️</a>
+    <header class="p-4 bg-white shadow-sm flex justify-between items-center">
+        <div class="font-bold text-emerald-900">Tibyan</div>
     </header>
 
-    <!-- Chat Area -->
-    <main id="chat-container" class="flex-1 overflow-y-auto p-4 space-y-4 max-w-2xl mx-auto w-full">
-        <div id="welcome-screen" class="flex flex-col items-center justify-center mt-6">
-            <img src="{{ url_for('static', filename='logo.png') }}" class="w-20 h-20 mb-4 object-contain">
-            <h1 class="text-2xl font-bold text-emerald-950">Assalamu Alaikum, {{ current_user.name.title() }}!</h1>
-            <p class="text-gray-600 mb-6">How can I assist you in Fiqh-e-Hanafi today?</p>
-            
-            <!-- Suggested Questions -->
-            <div class="grid gap-3 w-full">
-                <button onclick="sendPreset('Jumu\'ah ki namaz ki fazilat aur tareeqa')" class="p-4 border border-gray-200 rounded-xl text-left hover:bg-emerald-50 cursor-pointer">
-                    <div class="font-semibold text-emerald-900">Jumu'ah</div>
-                    <div class="text-sm text-gray-600">Tell me about the virtues and method of Jumu'ah prayer.</div>
-                </button>
-                <button onclick="sendPreset('Namaz ke sharaait kya hain?')" class="p-4 border border-gray-200 rounded-xl text-left hover:bg-emerald-50 cursor-pointer">
-                    <div class="font-semibold text-emerald-900">Salah</div>
-                    <div class="text-sm text-gray-600">What are the essential conditions (Sharaait) for Namaz?</div>
-                </button>
-            </div>
+    <div id="chat-container" class="flex-1 p-4 overflow-y-auto">
+        <div class="max-w-md mx-auto text-center mt-10">
+            <h1 class="text-2xl font-bold text-emerald-950">Assalamu Alaikum!</h1>
+            <p class="text-gray-600">How can I assist you today?</p>
         </div>
-    </main>
+    </div>
 
-    <!-- Chat Bar -->
-    <footer class="p-4 bg-white border-t border-gray-100">
-        <form onsubmit="event.preventDefault(); sendMessage();" class="max-w-2xl mx-auto flex gap-2">
-            <input type="text" id="user-prompt" class="flex-1 p-3 border rounded-xl outline-none" placeholder="Ask Tibyan...">
-            <button type="submit" class="bg-emerald-950 text-white px-6 py-2 rounded-xl cursor-pointer">Send</button>
-        </form>
-    </footer>
+    <div class="p-4 bg-white border-t">
+        <div class="max-w-md mx-auto flex gap-2">
+            <input type="text" id="user-prompt" class="w-full p-2 border rounded-lg" placeholder="Ask anything...">
+            <button onclick="sendMessage()" class="bg-emerald-900 text-white px-4 py-2 rounded-lg">Send</button>
+        </div>
+    </div>
 
     <script>
-        const csrfToken = "{{ csrf_token() }}";
-        
-        async function sendMessage(text = null) {
+        async function sendMessage() {
             const input = document.getElementById('user-prompt');
-            const message = text || input.value.trim();
-            if (!message) return;
-
-            const welcome = document.getElementById('welcome-screen');
-            if (welcome) welcome.style.display = 'none';
-            input.value = '';
+            const msg = input.value;
+            if(!msg) return;
             
-            appendMessage('user', message);
-
-            try {
-                const res = await fetch('/generate', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
-                    body: JSON.stringify({ prompt: message })
-                });
-                const data = await res.json();
-                appendMessage('ai', data.response || data.answer || "Jawab dastiyab nahi ho saka.");
-            } catch (err) {
-                appendMessage('ai', "Ma'zirat, connection mein kharabi hai.");
-            }
-        }
-
-        function sendPreset(topic) { sendMessage(topic); }
-
-        function appendMessage(sender, text) {
-            const chat = document.getElementById('chat-container');
-            const div = document.createElement('div');
-            div.className = sender === 'user' ? 'text-right my-2' : 'text-left my-2';
-            div.innerHTML = `<div class="inline-block p-3 rounded-xl max-w-[85%] ${sender === 'user' ? 'bg-emerald-950 text-white text-left' : 'bg-gray-100 text-gray-900'}">${marked.parse(text)}</div>`;
-            chat.appendChild(div);
-            chat.scrollTop = chat.scrollHeight;
+            // Simple logic check
+            alert("Sending: " + msg);
+            input.value = '';
         }
     </script>
 </body>
