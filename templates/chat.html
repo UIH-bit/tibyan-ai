@@ -4,38 +4,95 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Tibyan AI</title>
-    <!-- Stable CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 </head>
-<body class="bg-gray-50 h-screen flex flex-col">
+<body class="bg-[#fcfbf9] min-h-screen flex flex-col justify-between">
 
-    <header class="p-4 bg-white shadow-sm flex justify-between items-center">
-        <div class="font-bold text-emerald-900">Tibyan</div>
+    <!-- Header -->
+    <header class="flex items-center justify-between p-4 bg-white border-b border-gray-100 shadow-sm">
+        <button onclick="alert('Menu clicked!')" class="p-2 cursor-pointer text-xl">☰</button>
+        <div class="flex items-center gap-2 font-bold text-lg text-emerald-900">
+            <span class="bg-emerald-50 px-3 py-1 rounded-full text-emerald-900 border border-emerald-100 font-bold">تيان</span> Tibyan
+        </div>
+        <a href="/" class="p-2 text-xl">✏️</a>
     </header>
 
-    <div id="chat-container" class="flex-1 p-4 overflow-y-auto">
-        <div class="max-w-md mx-auto text-center mt-10">
-            <h1 class="text-2xl font-bold text-emerald-950">Assalamu Alaikum!</h1>
-            <p class="text-gray-600">How can I assist you today?</p>
+    <!-- Chat & Welcome Area -->
+    <main id="chat-container" class="flex-1 overflow-y-auto p-4 space-y-4 max-w-xl mx-auto w-full mb-20">
+        <div id="welcome-screen" class="flex flex-col items-center text-center mt-6">
+            <div class="bg-emerald-50 p-4 rounded-2xl border border-emerald-100 mb-3 shadow-sm">
+                <span class="text-4xl font-bold text-emerald-900">تيان</span>
+            </div>
+            <h1 class="text-2xl font-bold text-emerald-950 mb-1">Assalamu Alaikum, {{ current_user.name.title() if current_user and current_user.is_authenticated else 'Jameel' }}!</h1>
+            <p class="text-gray-600 text-sm mb-6">How can I assist you in matters of Fiqh-e-Hanafi today?</p>
+            
+            <!-- Suggested Questions Cards -->
+            <div class="grid gap-3 w-full text-left">
+                <button onclick="sendPreset('Tell me about the virtues and method of Jumu\'ah prayer.')" class="p-4 bg-white border border-gray-200 rounded-2xl shadow-sm hover:border-emerald-800 transition cursor-pointer">
+                    <div class="font-semibold text-emerald-900 text-sm">Jumu'ah</div>
+                    <div class="text-xs text-gray-600 mt-0.5">Tell me about the virtues and method of Jumu'ah prayer.</div>
+                </button>
+                <button onclick="sendPreset('What are the essential conditions (Sharaait) for Namaz?')" class="p-4 bg-white border border-gray-200 rounded-2xl shadow-sm hover:border-emerald-800 transition cursor-pointer">
+                    <div class="font-semibold text-emerald-900 text-sm">Salah</div>
+                    <div class="text-xs text-gray-600 mt-0.5">What are the essential conditions (Sharaait) for Namaz?</div>
+                </button>
+            </div>
         </div>
-    </div>
+    </main>
 
-    <div class="p-4 bg-white border-t">
-        <div class="max-w-md mx-auto flex gap-2">
-            <input type="text" id="user-prompt" class="w-full p-2 border rounded-lg" placeholder="Ask anything...">
-            <button onclick="sendMessage()" class="bg-emerald-900 text-white px-4 py-2 rounded-lg">Send</button>
-        </div>
-    </div>
+    <!-- Chat Bar (Fixed nicely above bottom) -->
+    <footer class="fixed bottom-0 left-0 right-0 p-3 bg-white/90 backdrop-blur-md border-t border-gray-100 shadow-lg">
+        <form onsubmit="event.preventDefault(); sendMessage();" class="max-w-xl mx-auto flex gap-2 items-center">
+            <input type="text" id="user-prompt" class="flex-1 p-3 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:border-emerald-900 text-sm" placeholder="Ask Tibyan...">
+            <button type="submit" class="bg-emerald-950 text-white px-5 py-3 rounded-xl font-medium text-sm hover:bg-emerald-900 transition cursor-pointer">Send</button>
+        </form>
+    </footer>
 
     <script>
-        async function sendMessage() {
+        const csrfToken = "{{ csrf_token() if csrf_token else '' }}";
+        
+        async function sendMessage(text = null) {
             const input = document.getElementById('user-prompt');
-            const msg = input.value;
-            if(!msg) return;
-            
-            // Simple logic check
-            alert("Sending: " + msg);
+            const message = text || input.value.trim();
+            if (!message) return;
+
+            const welcome = document.getElementById('welcome-screen');
+            if (welcome) welcome.style.display = 'none';
             input.value = '';
+            
+            appendMessage('user', message);
+
+            try {
+                const headers = { 'Content-Type': 'application/json' };
+                if (csrfToken) headers['X-CSRFToken'] = csrfToken;
+
+                const res = await fetch('/generate', {
+                    method: 'POST',
+                    headers: headers,
+                    body: JSON.stringify({ prompt: message })
+                });
+                const data = await res.json();
+                appendMessage('ai', data.response || data.answer || "Jawab dastiyab nahi ho saka.");
+            } catch (err) {
+                appendMessage('ai', "Ma'zirat, connection mein kharabi hai.");
+            }
+        }
+
+        function sendPreset(topic) { sendMessage(topic); }
+
+        function appendMessage(sender, text) {
+            const chat = document.getElementById('chat-container');
+            const div = document.createElement('div');
+            div.className = sender === 'user' ? 'text-right my-3' : 'text-left my-3';
+            
+            const bubbleStyle = sender === 'user' 
+                ? 'inline-block p-3 rounded-2xl max-w-[85%] bg-emerald-950 text-white text-left text-sm shadow-sm' 
+                : 'inline-block p-3 rounded-2xl max-w-[85%] bg-white border border-gray-200 text-gray-900 text-sm shadow-sm';
+            
+            div.innerHTML = `<div class="${bubbleStyle}">${sender === 'ai' ? marked.parse(text) : text}</div>`;
+            chat.appendChild(div);
+            chat.scrollTop = chat.scrollHeight;
         }
     </script>
 </body>
