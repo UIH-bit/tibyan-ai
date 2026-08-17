@@ -6,46 +6,59 @@
     <title>Tibyan AI</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <style>
+        /* Fallback safety styles agar CDN load na ho */
+        body { background-color: #fcfbf9; font-family: sans-serif; margin: 0; display: flex; flex-direction: column; height: 100vh; }
+        .app-header { display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; background: white; border-bottom: 1px solid #f3f4f6; }
+        .chat-main { flex: 1; overflow-y: auto; padding: 16px; max-width: 600px; margin: 0 auto; width: 100%; box-sizing: border-box; padding-bottom: 90px; }
+        .welcome-box { display: flex; flex-direction: column; align-items: center; text-align: center; margin-top: 20px; }
+        .preset-btn { width: 100%; padding: 14px; background: white; border: 1px solid #e5e7eb; border-radius: 14px; text-align: left; margin-bottom: 10px; cursor: pointer; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
+        .preset-btn:hover { border-color: #064e3b; }
+        .chat-footer { position: fixed; bottom: 0; left: 0; right: 0; background: rgba(255,255,255,0.95); padding: 12px; border-top: 1px solid #e5e7eb; backdrop-filter: blur(5px); }
+        .chat-form { max-width: 600px; margin: 0 auto; display: flex; gap: 8px; }
+        .chat-input { flex: 1; padding: 12px; border: 1px solid #d1d5db; border-radius: 12px; outline: none; font-size: 14px; background: #f9fafb; }
+        .chat-submit { background: #022c22; color: white; border: none; padding: 0 20px; border-radius: 12px; font-weight: 500; cursor: pointer; }
+    </style>
 </head>
-<body class="bg-[#fcfbf9] min-h-screen flex flex-col justify-between">
+<body>
 
     <!-- Header -->
-    <header class="flex items-center justify-between p-4 bg-white border-b border-gray-100 shadow-sm">
-        <button onclick="alert('Menu clicked!')" class="p-2 cursor-pointer text-xl">☰</button>
-        <div class="flex items-center gap-2 font-bold text-lg text-emerald-900">
-            <span class="bg-emerald-50 px-3 py-1 rounded-full text-emerald-900 border border-emerald-100 font-bold">تيان</span> Tibyan
+    <header class="app-header">
+        <button onclick="alert('Menu clicked!')" style="background:none; border:none; font-size:20px; cursor:pointer;">☰</button>
+        <div style="display:flex; align-items:center; gap:8px; font-weight:bold; color:#064e3b; font-size:18px;">
+            <span style="background:#ecfdf5; padding:2px 10px; border-radius:99px; border:1px solid #d1fae5;">تيان</span> Tibyan
         </div>
-        <a href="/" class="p-2 text-xl">✏️</a>
+        <a href="/" style="text-decoration:none; font-size:18px;">✏️</a>
     </header>
 
-    <!-- Chat & Welcome Area -->
-    <main id="chat-container" class="flex-1 overflow-y-auto p-4 space-y-4 max-w-xl mx-auto w-full mb-20">
-        <div id="welcome-screen" class="flex flex-col items-center text-center mt-6">
-            <div class="bg-emerald-50 p-4 rounded-2xl border border-emerald-100 mb-3 shadow-sm">
-                <span class="text-4xl font-bold text-emerald-900">تيان</span>
+    <!-- Chat Area -->
+    <main id="chat-container" class="chat-main">
+        <div id="welcome-screen" class="welcome-box">
+            <div style="background:#ecfdf5; padding:16px; border-radius:20px; border:1px solid #d1fae5; margin-bottom:12px;">
+                <span style="font-size:36px; font-weight:bold; color:#064e3b;">تيان</span>
             </div>
-            <h1 class="text-2xl font-bold text-emerald-950 mb-1">Assalamu Alaikum, {{ current_user.name.title() if current_user and current_user.is_authenticated else 'Jameel' }}!</h1>
-            <p class="text-gray-600 text-sm mb-6">How can I assist you in matters of Fiqh-e-Hanafi today?</p>
+            <h1 style="font-size:22px; font-weight:bold; color:#022c22; margin:0 0 4px 0;">Assalamu Alaikum, {{ current_user.name.title() if current_user and current_user.is_authenticated else 'Jameel' }}!</h1>
+            <p style="color:#4b5563; font-size:13px; margin:0 0 20px 0;">How can I assist you in matters of Fiqh-e-Hanafi today?</p>
             
-            <!-- Suggested Questions Cards -->
-            <div class="grid gap-3 w-full text-left">
-                <button onclick="sendPreset('Tell me about the virtues and method of Jumu\'ah prayer.')" class="p-4 bg-white border border-gray-200 rounded-2xl shadow-sm hover:border-emerald-800 transition cursor-pointer">
-                    <div class="font-semibold text-emerald-900 text-sm">Jumu'ah</div>
-                    <div class="text-xs text-gray-600 mt-0.5">Tell me about the virtues and method of Jumu'ah prayer.</div>
+            <!-- Suggested Questions -->
+            <div style="width:100%;">
+                <button onclick="sendPreset('Tell me about the virtues and method of Jumu\'ah prayer.')" class="preset-btn">
+                    <div style="font-weight:600; color:#064e3b; font-size:14px;">Jumu'ah</div>
+                    <div style="font-size:12px; color:#4b5563; margin-top:2px;">Tell me about the virtues and method of Jumu'ah prayer.</div>
                 </button>
-                <button onclick="sendPreset('What are the essential conditions (Sharaait) for Namaz?')" class="p-4 bg-white border border-gray-200 rounded-2xl shadow-sm hover:border-emerald-800 transition cursor-pointer">
-                    <div class="font-semibold text-emerald-900 text-sm">Salah</div>
-                    <div class="text-xs text-gray-600 mt-0.5">What are the essential conditions (Sharaait) for Namaz?</div>
+                <button onclick="sendPreset('What are the essential conditions (Sharaait) for Namaz?')" class="preset-btn">
+                    <div style="font-weight:600; color:#064e3b; font-size:14px;">Salah</div>
+                    <div style="font-size:12px; color:#4b5563; margin-top:2px;">What are the essential conditions (Sharaait) for Namaz?</div>
                 </button>
             </div>
         </div>
     </main>
 
-    <!-- Chat Bar (Fixed nicely above bottom) -->
-    <footer class="fixed bottom-0 left-0 right-0 p-3 bg-white/90 backdrop-blur-md border-t border-gray-100 shadow-lg">
-        <form onsubmit="event.preventDefault(); sendMessage();" class="max-w-xl mx-auto flex gap-2 items-center">
-            <input type="text" id="user-prompt" class="flex-1 p-3 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:border-emerald-900 text-sm" placeholder="Ask Tibyan...">
-            <button type="submit" class="bg-emerald-950 text-white px-5 py-3 rounded-xl font-medium text-sm hover:bg-emerald-900 transition cursor-pointer">Send</button>
+    <!-- Chat Bar -->
+    <footer class="chat-footer">
+        <form onsubmit="event.preventDefault(); sendMessage();" class="chat-form">
+            <input type="text" id="user-prompt" class="chat-input" placeholder="Ask Tibyan...">
+            <button type="submit" class="chat-submit">Send</button>
         </form>
     </footer>
 
@@ -84,13 +97,30 @@
         function appendMessage(sender, text) {
             const chat = document.getElementById('chat-container');
             const div = document.createElement('div');
-            div.className = sender === 'user' ? 'text-right my-3' : 'text-left my-3';
+            div.style.margin = '12px 0';
+            div.style.textAlign = sender === 'user' ? 'right' : 'left';
             
-            const bubbleStyle = sender === 'user' 
-                ? 'inline-block p-3 rounded-2xl max-w-[85%] bg-emerald-950 text-white text-left text-sm shadow-sm' 
-                : 'inline-block p-3 rounded-2xl max-w-[85%] bg-white border border-gray-200 text-gray-900 text-sm shadow-sm';
+            const bubble = document.createElement('div');
+            bubble.style.display = 'inline-block';
+            bubble.style.padding = '12px 16px';
+            bubble.style.borderRadius = '16px';
+            bubble.style.maxWidth = '85%';
+            bubble.style.fontSize = '14px';
+            bubble.style.textAlign = 'left';
+            bubble.style.boxShadow = '0 1px 2px rgba(0,0,0,0.05)';
             
-            div.innerHTML = `<div class="${bubbleStyle}">${sender === 'ai' ? marked.parse(text) : text}</div>`;
+            if (sender === 'user') {
+                bubble.style.background = '#022c22';
+                bubble.style.color = 'white';
+                bubble.innerText = text;
+            } else {
+                bubble.style.background = 'white';
+                bubble.style.border = '1px solid #e5e7eb';
+                bubble.style.color = '#111827';
+                bubble.innerHTML = marked.parse(text);
+            }
+            
+            div.appendChild(bubble);
             chat.appendChild(div);
             chat.scrollTop = chat.scrollHeight;
         }
