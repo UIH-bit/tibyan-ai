@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tibyan AI - Islamic Ilmi Assistant</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+</head>
+<body class="bg-slate-950 text-slate-100 flex h-screen overflow-hidden">
+    <div class="w-64 bg-slate-900 border-r border-slate-800 flex flex-col justify-between p-4">
+        <div>
+            <h1 class="text-xl font-bold text-emerald-400 mb-6">Tibyan AI</h1>
+            <a href="{{ url_for('home') }}" class="block w-full bg-emerald-600/20 border border-emerald-500/30 text-emerald-400 text-center py-2 rounded-lg mb-4 hover:bg-emerald-600/30">+ New Chat</a>
+            {% if current_user.is_admin %}
+            <a href="{{ url_for('admin_dashboard') }}" class="block w-full bg-slate-800 text-slate-300 text-center py-2 rounded-lg mb-4 hover:bg-slate-700">Admin Panel</a>
+            {% endif %}
+        </div>
+        <div class="border-t border-slate-800 pt-4">
+            <p class="text-sm text-slate-400 truncate mb-2">{{ current_user.email }}</p>
+            <a href="{{ url_for('logout') }}" class="block text-center text-red-400 hover:bg-red-950/30 py-2 rounded-lg transition">Logout</a>
+        </div>
+    </div>
+
+    <div class="flex-1 flex flex-col justify-between">
+        <div id="chat-container" class="flex-1 overflow-y-auto p-6 space-y-6">
+            <div class="text-center text-slate-500 my-auto">
+                <h2 class="text-2xl font-semibold text-slate-300">Assalamu Alaikum, {{ current_user.name }}</h2>
+                <p>Aap Fiqh-e-Hanafi ke mutabiq apne sawalat pooch sakte hain.</p>
+            </div>
+        </div>
+
+        <div class="p-4 bg-slate-900 border-t border-slate-800">
+            <div class="max-w-4xl mx-auto flex gap-2">
+                <input type="text" id="user-prompt" placeholder="Apna sawal yahan likhein..." class="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 focus:outline-none focus:border-emerald-500">
+                <button onclick="sendMessage()" class="bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-semibold px-6 py-3 rounded-xl transition">Bhejein</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const csrfToken = "{{ csrf_token() }}";
+
+        async function sendMessage() {
+            const promptInput = document.getElementById('user-prompt');
+            const promptText = promptInput.value.trim();
+            if(!promptText) return;
+
+            const chatContainer = document.getElementById('chat-container');
+            if(chatContainer.querySelector('.text-center')) chatContainer.innerHTML = '';
+
+            chatContainer.innerHTML += `<div class="p-4 bg-slate-900 rounded-xl ml-auto max-w-xl text-right"><b>Aap:</b><p>${promptText}</p></div>`;
+            promptInput.value = '';
+
+            try {
+                const response = await fetch('/generate', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': csrfToken
+                    },
+                    body: JSON.stringify({ prompt: promptText })
+                });
+                const data = await response.json();
+                
+                chatContainer.innerHTML += `<div class="p-4 bg-slate-900/50 border border-slate-800 rounded-xl max-w-xl"><b>Tibyan AI:</b><div>${marked.parse(data.response)}</div></div>`;
+                chatContainer.scrollTop = chatContainer.scrollHeight;
+            } catch (err) {
+                alert('Connection error occurred.');
+            }
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard - Tibyan AI</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen p-8">
+    <div class="max-w-6xl mx-auto">
+        <div class="flex justify-between items-center mb-8">
+            <h1 class="text-3xl font-bold text-emerald-400">Admin Control Panel</h1>
+            <a href="{{ url_for('home') }}" class="bg-slate-800 hover:bg-slate-700 px-4 py-2 rounded-lg text-sm">Back to Chat</a>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+            <div class="bg-slate-900 border border-slate-800 p-6 rounded-xl">
+                <h3 class="text-lg font-semibold text-slate-400">Total Users</h3>
+                <p class="text-3xl font-bold text-emerald-400 mt-2">{{ total_users }}</p>
+            </div>
+            <div class="bg-slate-900 border border-slate-800 p-6 rounded-xl">
+                <h3 class="text-lg font-semibold text-slate-400">Total Admins</h3>
+                <p class="text-3xl font-bold text-emerald-400 mt-2">{{ total_admins }}</p>
+            </div>
+        </div>
+
+        <div class="bg-slate-900 border border-slate-800 p-6 rounded-xl mb-8">
+            <h2 class="text-xl font-bold mb-4 text-emerald-400">Add Custom Knowledge Base</h2>
+            <form action="{{ url_for('add_knowledge') }}" method="POST" class="space-y-4">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                <input type="text" name="title" placeholder="Topic Title" required class="w-full bg-slate-950 border border-slate-800 rounded-lg px-4 py-2">
+                <textarea name="content" placeholder="Knowledge Content..." required rows="4" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-4 py-2"></textarea>
+                <button type="submit" class="bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-semibold px-6 py-2 rounded-lg">Add Record</button>
+            </form>
+        </div>
+
+        <div class="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden">
+            <h2 class="text-xl font-bold p-6 border-b border-slate-800 text-emerald-400">Manage Users</h2>
+            <table class="w-full text-left border-collapse">
+                <thead>
+                    <tr class="bg-slate-950/50 border-b border-slate-800 text-slate-400 text-sm">
+                        <th class="p-4">Name</th>
+                        <th class="p-4">Email</th>
+                        <th class="p-4">Role</th>
+                        <th class="p-4">Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-800">
+                    {% for u in users %}
+                    <tr>
+                        <td class="p-4">{{ u.name }}</td>
+                        <td class="p-4 text-slate-400">{{ u.email }}</td>
+                        <td class="p-4">
+                            {% if u.is_admin %}<span class="text-emerald-400 font-semibold">Admin</span>{% else %}<span class="text-slate-500">User</span>{% endif %}
+                        </td>
+                        <td class="p-4 space-x-2">
+                            {% if u.id != current_user.id %}
+                            <a href="{{ url_for('toggle_admin', user_id=u.id) }}" class="text-blue-400 hover:underline text-sm">Toggle Admin</a>
+                            <a href="{{ url_for('delete_user', user_id=u.id) }}" class="text-red-400 hover:underline text-sm">Delete</a>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</body>
+</html>
