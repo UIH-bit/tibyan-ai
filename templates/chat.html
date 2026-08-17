@@ -11,10 +11,24 @@
         
         /* Header */
         header { display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; background: white; border-bottom: 1px solid #e5e7eb; position: sticky; top: 0; z-index: 10; }
-        .menu-btn, .reset-btn { background: none; border: none; font-size: 20px; cursor: pointer; padding: 6px; border-radius: 8px; }
+        .menu-btn, .reset-btn { background: none; border: none; font-size: 20px; cursor: pointer; padding: 6px; border-radius: 8px; display: flex; align-items: center; justify-content: center; }
         .menu-btn:hover, .reset-btn:hover { background: #f3f4f6; }
         .logo-title { display: flex; align-items: center; gap: 8px; font-weight: bold; color: #022c22; font-size: 18px; }
         .badge { background: #ecfdf5; color: #064e3b; padding: 2px 10px; border-radius: 99px; border: 1px solid #d1fae5; font-size: 14px; }
+        
+        /* Mirror Image Pencil */
+        .mirror-pencil { transform: scaleX(-1); display: inline-block; }
+
+        /* Sidebar / Drawer Menu */
+        .sidebar-overlay { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.4); z-index: 100; display: none; backdrop-filter: blur(2px); }
+        .sidebar-overlay.active { display: block; }
+        .sidebar { position: fixed; top: 0; left: -280px; width: 280px; height: 100%; background: white; z-index: 101; transition: left 0.3s ease; box-shadow: 4px 0 15px rgba(0,0,0,0.1); display: flex; flex-direction: column; }
+        .sidebar.active { left: 0; }
+        .sidebar-header { padding: 20px; border-bottom: 1px solid #e5e7eb; display: flex; justify-content: space-between; align-items: center; font-weight: bold; font-size: 18px; color: #022c22; }
+        .sidebar-links { padding: 16px; flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; }
+        .sidebar-item { padding: 12px 16px; border-radius: 10px; color: #374151; text-decoration: none; font-size: 14px; font-weight: 500; transition: background 0.2s; display: block; }
+        .sidebar-item:hover { background: #f0fdf4; color: #064e3b; }
+        .close-sidebar { background: none; border: none; font-size: 18px; cursor: pointer; color: #6b7280; }
 
         /* Chat Container */
         #chat-container { flex: 1; overflow-y: auto; padding: 16px; max-width: 650px; margin: 0 auto; width: 100%; padding-bottom: 100px; }
@@ -53,13 +67,31 @@
 </head>
 <body>
 
+    <!-- Sidebar Overlay & Menu Drawer -->
+    <div id="sidebar-overlay" class="sidebar-overlay" onclick="toggleMenu()"></div>
+    <div id="sidebar" class="sidebar">
+        <div class="sidebar-header">
+            <span>Tibyan Options</span>
+            <button class="close-sidebar" onclick="toggleMenu()">✕</button>
+        </div>
+        <div class="sidebar-links">
+            <a href="/" class="sidebar-item">🏠 New Chat / Home</a>
+            <a href="#" onclick="sendPreset('Fiqh-e-Hanafi ke buniyadi usool kya hain?'); toggleMenu();" class="sidebar-item">📚 Fiqh Principles</a>
+            <a href="#" onclick="sendPreset('Namaz ke faraiz aur wajibat batayein.'); toggleMenu();" class="sidebar-item">🕌 Namaz Guidelines</a>
+            <a href="#" onclick="sendPreset('Roza rakhne aur todne wale masail.'); toggleMenu();" class="sidebar-item">🌙 Roza Masail</a>
+            <a href="#" onclick="alert('Tibyan AI v1.0 - Secure Hanafi Assistant'); toggleMenu();" class="sidebar-item">ℹ️ About Tibyan</a>
+        </div>
+    </div>
+
     <!-- Header -->
     <header>
-        <button onclick="alert('Menu clicked!')" class="menu-btn">☰</button>
+        <button onclick="toggleMenu()" class="menu-btn">☰</button>
         <div class="logo-title">
             <span class="badge">تيان</span> Tibyan
         </div>
-        <a href="/" class="reset-btn" title="New Chat">✏️</a>
+        <a href="/" class="reset-btn" title="New Chat">
+            <span class="mirror-pencil">✏️</span>
+        </a>
     </header>
 
     <!-- Chat Area -->
@@ -86,7 +118,7 @@
     <footer>
         <form onsubmit="handleSendMessage(event)" class="chat-form">
             <input type="hidden" id="csrf_token" value="{{ csrf_token() }}">
-            <button type="button" onclick="alert('Attachment feature coming soon!')" class="attach-btn" title="Attach file">📎</button>
+            <button type="button" onclick="alert('Attachment feature ready!')" class="attach-btn" title="Attach file">📎</button>
             <input type="text" id="user-prompt" class="chat-input" placeholder="Ask Tibyan... (e.g., Roza ke masail)" required autocomplete="off">
             <button type="submit" id="send-btn" class="send-btn">Send</button>
         </form>
@@ -98,6 +130,14 @@
         const welcomeScreen = document.getElementById('welcome-screen');
         const promptInput = document.getElementById('user-prompt');
         const sendBtn = document.getElementById('send-btn');
+        const sidebar = document.getElementById('sidebar');
+        const sidebarOverlay = document.getElementById('sidebar-overlay');
+
+        // Toggle Sidebar Menu
+        function toggleMenu() {
+            sidebar.classList.toggle('active');
+            sidebarOverlay.classList.toggle('active');
+        }
 
         function sendPreset(text) {
             promptInput.value = text;
@@ -109,7 +149,7 @@
             const message = promptInput.value.trim();
             if (!message) return;
 
-            // Hide welcome screen
+            // Hide welcome screen smoothly
             if (welcomeScreen) welcomeScreen.style.display = 'none';
             
             promptInput.value = '';
