@@ -4,103 +4,100 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Tibyan AI</title>
-    <!-- Use Tailwind CDN for robust UI -->
-    <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    colors: {
-                        'emerald-tibyan': '#022c22',
-                        'bg-tibyan': '#fcfbf9'
-                    }
-                }
-            }
-        }
-    </script>
+    <style>
+        * { box-sizing: border-box; }
+        body { background-color: #fcfbf9; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; margin: 0; display: flex; flex-direction: column; height: 100vh; color: #111827; }
+        
+        /* Header */
+        header { display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; background: white; border-bottom: 1px solid #e5e7eb; position: sticky; top: 0; z-index: 10; }
+        .menu-btn, .reset-btn { background: none; border: none; font-size: 20px; cursor: pointer; padding: 6px; border-radius: 8px; }
+        .menu-btn:hover, .reset-btn:hover { background: #f3f4f6; }
+        .logo-title { display: flex; align-items: center; gap: 8px; font-weight: bold; color: #022c22; font-size: 18px; }
+        .badge { background: #ecfdf5; color: #064e3b; padding: 2px 10px; border-radius: 99px; border: 1px solid #d1fae5; font-size: 14px; }
+
+        /* Chat Container */
+        #chat-container { flex: 1; overflow-y: auto; padding: 16px; max-width: 650px; margin: 0 auto; width: 100%; padding-bottom: 100px; }
+        
+        /* Welcome Screen */
+        .welcome-screen { display: flex; flex-direction: column; align-items: center; text-align: center; margin-top: 20px; }
+        .welcome-logo { background: #ecfdf5; width: 70px; height: 70px; display: flex; align-items: center; justify-content: center; border-radius: 20px; border: 1px solid #d1fae5; margin-bottom: 16px; font-size: 30px; font-weight: bold; color: #064e3b; }
+        h1 { font-size: 22px; color: #022c22; margin: 0 0 6px 0; font-weight: 800; }
+        p { color: #4b5563; font-size: 14px; margin: 0 0 24px 0; }
+
+        /* Presets */
+        .presets-grid { width: 100%; display: flex; flex-direction: column; gap: 10px; }
+        .preset-card { background: white; border: 1px solid #e5e7eb; padding: 14px; border-radius: 14px; text-align: left; cursor: pointer; box-shadow: 0 1px 2px rgba(0,0,0,0.02); transition: border-color 0.2s; }
+        .preset-card:hover { border-color: #022c22; }
+        .preset-title { font-weight: 600; color: #022c22; font-size: 14px; margin-bottom: 2px; }
+        .preset-desc { font-size: 12px; color: #6b7280; }
+
+        /* Message Bubbles */
+        .message-row { margin: 12px 0; display: flex; flex-direction: column; }
+        .message-row.user { align-items: flex-end; }
+        .message-row.ai { align-items: flex-start; }
+        .bubble { padding: 12px 16px; border-radius: 16px; max-width: 85%; font-size: 14px; line-height: 1.5; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
+        .user .bubble { background: #022c22; color: white; border-bottom-right-radius: 4px; }
+        .ai .bubble { background: white; color: #111827; border: 1px solid #e5e7eb; border-bottom-left-radius: 4px; }
+
+        /* Footer Chat Bar */
+        footer { position: fixed; bottom: 0; left: 0; right: 0; background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(8px); padding: 12px; border-top: 1px solid #e5e7eb; }
+        .chat-form { max-width: 650px; margin: 0 auto; display: flex; align-items: center; gap: 8px; background: #f9fafb; border: 1px solid #d1d5db; border-radius: 14px; padding: 4px 8px; }
+        .chat-form:focus-within { border-color: #022c22; box-shadow: 0 0 0 2px rgba(2, 44, 34, 0.1); }
+        .attach-btn { background: none; border: none; font-size: 18px; cursor: pointer; padding: 8px; color: #6b7280; transform: rotate(45deg); }
+        .chat-input { flex: 1; border: none; background: transparent; padding: 10px; font-size: 14px; outline: none; color: #111827; }
+        .send-btn { background: #022c22; color: white; border: none; padding: 10px 18px; border-radius: 10px; font-weight: 600; font-size: 14px; cursor: pointer; transition: background 0.2s; }
+        .send-btn:hover { background: #064e3b; }
+        .send-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+    </style>
 </head>
-<body class="bg-bg-tibyan h-screen flex flex-col font-sans antialiased">
+<body>
 
     <!-- Header -->
-    <header class="sticky top-0 z-50 bg-white border-b border-gray-200 shadow-sm">
-        <div class="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
-            <button onclick="toggleMenu()" class="p-2 rounded-lg text-gray-600 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-emerald-900 transition-colors">
-                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
-            </button>
-            
-            <div class="flex items-center gap-3 font-bold text-emerald-tibyan text-lg">
-                <span class="bg-emerald-50 text-emerald-900 px-4 py-1.5 rounded-full text-sm border border-emerald-100 font-semibold shadow-inner">تيان</span>
-                Tibyan
-            </div>
-            
-            <a href="/reset" class="p-2 rounded-lg text-gray-600 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-emerald-900 transition-colors">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>
-            </a>
+    <header>
+        <button onclick="alert('Menu clicked!')" class="menu-btn">☰</button>
+        <div class="logo-title">
+            <span class="badge">تيان</span> Tibyan
         </div>
+        <a href="/" class="reset-btn" title="New Chat">✏️</a>
     </header>
 
-    <!-- Welcome Screen / Chat History -->
-    <main id="chat-container" class="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8 space-y-6 scroll-smooth">
-        <!-- Welcome Screen (Shown by default, hidden after first message) -->
-        <div id="welcome-screen" class="max-w-3xl mx-auto text-center mt-10 md:mt-16">
-            <div class="inline-block bg-emerald-50 p-6 rounded-3xl border border-emerald-100 shadow-lg mb-6">
-                <span class="text-6xl font-bold text-emerald-tibyan">تيان</span>
-            </div>
-            <h1 class="text-3xl md:text-4xl font-extrabold text-emerald-950 tracking-tight mb-2">
-                Assalamu Alaikum, <span class="text-emerald-tibyan">{{ current_user.name.title() if current_user and current_user.is_authenticated else 'Jameel' }}</span>!
-            </h1>
-            <p class="text-lg text-gray-600 max-w-xl mx-auto mb-12">How can I assist you in matters of Fiqh-e-Hanafi today?</p>
+    <!-- Chat Area -->
+    <main id="chat-container">
+        <div id="welcome-screen" class="welcome-screen">
+            <div class="welcome-logo">تيان</div>
+            <h1>Assalamu Alaikum, {{ current_user.name.title() if current_user and current_user.is_authenticated else 'Jameel' }}!</h1>
+            <p>How can I assist you in matters of Fiqh-e-Hanafi today?</p>
             
-            <!-- Suggested Questions -->
-            <div class="grid md:grid-cols-2 gap-4 text-left">
-                <button onclick="sendPreset('Jumu\'ah ki namaz ki fazilat aur ahkam batayein.')" class="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm hover:border-emerald-900 hover:shadow-md transition-all group">
-                    <h3 class="font-semibold text-emerald-tibyan text-lg mb-1.5">Jumu'ah Prayers</h3>
-                    <p class="text-gray-700 text-sm leading-relaxed">Explain the virtues, rules, and method of performing Jumu'ah prayer according to Hanafi Fiqh.</p>
-                    <span class="text-emerald-800 text-xs font-medium mt-3 inline-block group-hover:underline">Ask this →</span>
-                </button>
-                <button onclick="sendPreset('Namaz mein qirat ka kya hukam hai?') " class="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm hover:border-emerald-900 hover:shadow-md transition-all group">
-                    <h3 class="font-semibold text-emerald-tibyan text-lg mb-1.5">Rules of Qirat in Namaz</h3>
-                    <p class="text-gray-700 text-sm leading-relaxed">What are the guidelines for reciting Quran (Qirat) during Fard and Nafl prayers in Hanafi school?</p>
-                    <span class="text-emerald-800 text-xs font-medium mt-3 inline-block group-hover:underline">Ask this →</span>
-                </button>
+            <div class="presets-grid">
+                <div onclick="sendPreset('Tell me about the virtues and method of Jumu\'ah prayer.')" class="preset-card">
+                    <div class="preset-title">Jumu'ah Prayers</div>
+                    <div class="preset-desc">Explain the virtues, rules, and method of performing Jumu'ah prayer according to Hanafi Fiqh.</div>
+                </div>
+                <div onclick="sendPreset('What are the essential conditions (Sharaait) for Namaz?')" class="preset-card">
+                    <div class="preset-title">Rules of Qirat in Namaz</div>
+                    <div class="preset-desc">What are the guidelines for reciting Quran (Qirat) during prayers in Hanafi school?</div>
+                </div>
             </div>
         </div>
     </main>
 
-    <!-- Chat Input Bar -->
-    <footer class="sticky bottom-0 bg-white border-t border-gray-200 p-4 mt-auto">
-        <form onsubmit="handleSendMessage(event)" class="max-w-4xl mx-auto flex items-center gap-3 bg-gray-50 border border-gray-200 rounded-2xl p-1.5 focus-within:ring-2 focus-within:ring-emerald-900 focus-within:border-emerald-900 transition-all shadow-inner">
-            <!-- Secure CSRF Token -->
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            
-            <!-- Fancy Attachment Button -->
-            <button type="button" onclick="alert('Attachment clicked!')" class="p-3 rounded-xl text-gray-500 hover:bg-gray-200 hover:text-gray-700 focus:outline-none transition-colors group">
-                <span class="text-xl transform rotate-45 inline-block group-hover:scale-110 transition-transform">📎</span>
-            </button>
-            
-            <input type="text" id="user-prompt" name="prompt" class="flex-1 bg-transparent py-3 px-2 text-gray-900 placeholder-gray-500 focus:outline-none text-base" placeholder="Ask Tibyan... (e.g., Roza ke masail)" required>
-            
-            <!-- Send Button -->
-            <button type="submit" id="send-btn" class="bg-emerald-tibyan text-white px-6 py-3.5 rounded-xl font-semibold text-sm hover:bg-emerald-900 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-900 transition-all disabled:opacity-60 flex items-center gap-2">
-                <span>Send</span>
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
-            </button>
+    <!-- Input Footer -->
+    <footer>
+        <form onsubmit="handleSendMessage(event)" class="chat-form">
+            <input type="hidden" id="csrf_token" value="{{ csrf_token() }}">
+            <button type="button" onclick="alert('Attachment feature coming soon!')" class="attach-btn" title="Attach file">📎</button>
+            <input type="text" id="user-prompt" class="chat-input" placeholder="Ask Tibyan... (e.g., Roza ke masail)" required autocomplete="off">
+            <button type="submit" id="send-btn" class="send-btn">Send</button>
         </form>
-        <div class="text-xs text-center text-gray-400 mt-2">Powered by Tibyan AI v1.0</div>
     </footer>
 
-    <!-- JavaScript Logic -->
     <script>
-        const csrfToken = document.querySelector('input[name="csrf_token"]').value;
+        const csrfToken = document.getElementById('csrf_token').value;
         const chatContainer = document.getElementById('chat-container');
         const welcomeScreen = document.getElementById('welcome-screen');
         const promptInput = document.getElementById('user-prompt');
         const sendBtn = document.getElementById('send-btn');
-
-        function toggleMenu() {
-            alert("Menu functionality will be connected next. Site is secure.");
-        }
 
         function sendPreset(text) {
             promptInput.value = text;
@@ -112,13 +109,13 @@
             const message = promptInput.value.trim();
             if (!message) return;
 
-            // UI Updates
-            welcomeScreen.style.display = 'none'; // Hide welcome after first msg
+            // Hide welcome screen
+            if (welcomeScreen) welcomeScreen.style.display = 'none';
+            
             promptInput.value = '';
-            promptInput.blur();
             sendBtn.disabled = true;
 
-            // Add User Message
+            // Append User Message
             appendMessage('user', message);
 
             try {
@@ -131,15 +128,13 @@
                     body: JSON.stringify({ prompt: message })
                 });
 
-                if (!response.ok) throw new Error('Network response was not ok');
+                if (!response.ok) throw new Error('Network error');
 
                 const data = await response.json();
-                // Add AI Response (rendered with markdown)
-                appendMessage('ai', data.response || data.answer || "I am sorry, I could not generate a response.");
+                appendMessage('ai', data.response || data.answer || "Jawab dastiyab nahi ho saka.");
 
-            } catch (error) {
-                console.error('Error:', error);
-                appendMessage('ai', "Sorry, something went wrong. Please try again.");
+            } catch (err) {
+                appendMessage('ai', "Ma'zirat, connection mein kharabi hai. Dobara koshish karein.");
             } finally {
                 sendBtn.disabled = false;
                 promptInput.focus();
@@ -147,41 +142,22 @@
         }
 
         function appendMessage(sender, text) {
-            const messageDiv = document.createElement('div');
-            messageDiv.className = `flex items-start gap-3 mb-4 ${sender === 'user' ? 'justify-end' : ''}`;
-
-            const avatar = `<div class="flex-shrink-0 w-9 h-9 rounded-full flex items-center justify-center ${sender === 'user' ? 'bg-emerald-950 text-white' : 'bg-gray-100 border border-gray-200'}">
-                ${sender === 'user' ? 
-                    '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>' : 
-                    '<span class="font-bold text-emerald-800 text-xs">تيان</span>'}
-            </div>`;
-
-            const bubble = `<div class="flex flex-col ${sender === 'user' ? 'items-end' : 'items-start'}">
-                <div class={`px-5 py-3.5 rounded-3xl max-w-xl md:max-w-2xl prose prose-sm ${sender === 'user' ? 'bg-emerald-tibyan text-white rounded-br-lg' : 'bg-white text-gray-900 rounded-bl-lg border border-gray-200 shadow-sm'}`}>
-                    ${sender === 'ai' ? marked.parse(text) : escapeHtml(text)}
-                </div>
-            </div>`;
-
-            messageDiv.innerHTML = sender === 'user' ? bubble + avatar : avatar + bubble;
+            const row = document.createElement('div');
+            row.className = `message-row ${sender}`;
             
-            chatContainer.appendChild(messageDiv);
-            // Auto-scroll to bottom
+            const bubble = document.createElement('div');
+            bubble.className = 'bubble';
+            
+            if (sender === 'ai') {
+                bubble.innerHTML = marked.parse(text);
+            } else {
+                bubble.innerText = text;
+            }
+            
+            row.appendChild(bubble);
+            chatContainer.appendChild(row);
             chatContainer.scrollTop = chatContainer.scrollHeight;
         }
-
-        // Security: Basic HTML escape to prevent XSS
-        function escapeHtml(text) {
-            if (!text) return text;
-            return text
-                .replace(/&/g, "&amp;")
-                .replace(/</g, "&lt;")
-                .replace(/>/g, "&gt;")
-                .replace(/"/g, "&quot;")
-                .replace(/'/g, "&#039;");
-        }
-
-        // Focus input on load
-        promptInput.focus();
     </script>
 </body>
 </html>
