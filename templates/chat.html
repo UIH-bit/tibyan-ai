@@ -1,74 +1,213 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+    <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Tibyan AI</title>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <style>
-        body { margin: 0; font-family: sans-serif; background: #fcfbf9; }
-        #header { display: flex; align-items: center; justify-content: space-between; padding: 15px; background: white; border-bottom: 1px solid #ddd; }
-        .menu-btn { cursor: pointer; font-size: 24px; border: none; background: none; }
-        .mirror-pencil { transform: scaleX(-1); display: inline-block; }
-        /* Drawer */
-        #drawer { position: fixed; top: 0; left: -250px; width: 250px; height: 100%; background: white; z-index: 1000; transition: 0.3s; box-shadow: 2px 0 5px rgba(0,0,0,0.2); }
-        .drawer-item { display: block; padding: 15px; border-bottom: 1px solid #eee; text-decoration: none; color: #333; }
-        /* Chat */
-        #container { padding: 20px; }
-        .preset-btn { display: block; width: 100%; padding: 15px; margin: 10px 0; background: white; border: 1px solid #ccc; border-radius: 8px; cursor: pointer; text-align: left; }
-        #input-area { position: fixed; bottom: 0; width: 100%; padding: 10px; background: white; border-top: 1px solid #ddd; display: flex; gap: 5px; }
-        input { flex: 1; padding: 10px; border: 1px solid #ccc; border-radius: 5px; }
+        * { box-sizing: border-box; }
+        body { background-color: #fcfbf9; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; margin: 0; display: flex; flex-direction: column; height: 100vh; color: #111827; }
+        
+        /* Header */
+        header { display: flex; justify-content: space-between; align-items: center; padding: 12px 20px; background: white; border-bottom: 1px solid #e5e7eb; position: sticky; top: 0; z-index: 50; }
+        .menu-btn, .reset-btn { background: none; border: none; font-size: 22px; cursor: pointer; padding: 6px; border-radius: 8px; display: flex; align-items: center; justify-content: center; color: #374151; }
+        .menu-btn:hover, .reset-btn:hover { background: #f3f4f6; }
+        .logo-area { display: flex; align-items: center; gap: 10px; font-weight: 700; color: #022c22; font-size: 18px; }
+        .arabic-badge { background: #ecfdf5; color: #064e3b; padding: 3px 12px; border-radius: 99px; border: 1px solid #d1fae5; font-size: 15px; font-weight: 600; }
+        .mirror-pencil { transform: scaleX(-1); display: inline-block; font-size: 18px; }
+
+        /* Sidebar Drawer */
+        .sidebar-overlay { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.4); z-index: 1000; display: none; backdrop-filter: blur(2px); }
+        .sidebar-overlay.active { display: block; }
+        .sidebar { position: fixed; top: 0; left: -300px; width: 280px; height: 100%; background: white; z-index: 1001; transition: left 0.3s ease; box-shadow: 4px 0 15px rgba(0,0,0,0.1); display: flex; flex-direction: column; }
+        .sidebar.active { left: 0; }
+        .sidebar-header { padding: 20px; border-bottom: 1px solid #e5e7eb; display: flex; justify-content: space-between; align-items: center; font-weight: bold; font-size: 18px; color: #022c22; }
+        .sidebar-links { padding: 16px; flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; }
+        .sidebar-item { padding: 12px 16px; border-radius: 10px; color: #374151; text-decoration: none; font-size: 14px; font-weight: 500; transition: background 0.2s; display: flex; align-items: center; gap: 10px; }
+        .sidebar-item:hover { background: #f0fdf4; color: #064e3b; }
+        .close-sidebar { background: none; border: none; font-size: 18px; cursor: pointer; color: #6b7280; }
+
+        /* Main Container */
+        #chat-container { flex: 1; overflow-y: auto; padding: 24px 16px; max-width: 680px; margin: 0 auto; width: 100%; padding-bottom: 110px; }
+        
+        /* Welcome Screen matching Image 2 */
+        .welcome-screen { display: flex; flex-direction: column; align-items: center; text-align: center; margin-top: 10px; }
+        .welcome-logo-box { background: #ecfdf5; width: 85px; height: 85px; display: flex; align-items: center; justify-content: center; border-radius: 24px; border: 1px solid #d1fae5; margin-bottom: 20px; font-size: 38px; font-weight: bold; color: #064e3b; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); }
+        h1 { font-size: 24px; color: #022c22; margin: 0 0 8px 0; font-weight: 800; letter-spacing: -0.025em; }
+        p.welcome-sub { color: #4b5563; font-size: 15px; margin: 0 0 28px 0; }
+
+        /* Presets matching Image 2 */
+        .presets-grid { width: 100%; display: flex; flex-direction: column; gap: 12px; }
+        .preset-card { background: white; border: 1px solid #e5e7eb; padding: 16px; border-radius: 16px; text-align: left; cursor: pointer; box-shadow: 0 1px 3px rgba(0,0,0,0.02); transition: all 0.2s; }
+        .preset-card:hover { border-color: #022c22; box-shadow: 0 4px 6px -1px rgba(2,44,34,0.05); }
+        .preset-title { font-weight: 600; color: #022c22; font-size: 15px; margin-bottom: 4px; }
+        .preset-desc { font-size: 13px; color: #6b7280; line-height: 1.4; }
+
+        /* Dynamic Chat Messages */
+        .message-row { margin: 16px 0; display: flex; flex-direction: column; width: 100%; }
+        .message-row.user { align-items: flex-end; }
+        .message-row.ai { align-items: flex-start; }
+        .bubble { padding: 14px 18px; border-radius: 18px; max-width: 88%; font-size: 14px; line-height: 1.6; word-break: break-word; }
+        .user .bubble { background: #022c22; color: white; border-bottom-right-radius: 4px; }
+        .ai .bubble { background: white; color: #111827; border: 1px solid #e5e7eb; border-bottom-left-radius: 4px; box-shadow: 0 1px 2px rgba(0,0,0,0.02); }
+
+        /* Footer Input Bar matching Image 2 */
+        footer { position: fixed; bottom: 0; left: 0; right: 0; background: rgba(252, 251, 249, 0.95); backdrop-filter: blur(8px); padding: 12px 16px; border-top: 1px solid #e5e7eb; }
+        .chat-form { max-width: 680px; margin: 0 auto; display: flex; align-items: center; gap: 10px; background: white; border: 1px solid #d1d5db; border-radius: 16px; padding: 6px 12px; box-shadow: inset 0 2px 4px rgba(0,0,0,0.02); }
+        .chat-form:focus-within { border-color: #022c22; box-shadow: 0 0 0 2px rgba(2, 44, 34, 0.1); }
+        .attach-btn { background: none; border: none; font-size: 20px; cursor: pointer; color: #6b7280; transform: rotate(45deg); padding: 4px; }
+        .chat-input { flex: 1; border: none; background: transparent; padding: 10px 4px; font-size: 15px; outline: none; color: #111827; }
+        .send-btn { background: #022c22; color: white; border: none; padding: 10px 20px; border-radius: 12px; font-weight: 600; font-size: 14px; cursor: pointer; transition: background 0.2s; }
+        .send-btn:hover { background: #064e3b; }
+        .send-btn:disabled { opacity: 0.6; cursor: not-allowed; }
     </style>
 </head>
 <body>
 
-<div id="drawer">
-    <div style="padding:15px; font-weight:bold; border-bottom:1px solid #eee;">Menu <span onclick="closeDrawer()" style="float:right; cursor:pointer;">✕</span></div>
-    <a class="drawer-item" href="/profile">👤 Profile</a>
-    <a class="drawer-item" href="/library">📚 Library</a>
-    <a class="drawer-item" href="/saved">📜 Saved</a>
-    <a class="drawer-item" href="/about">❕️ About Us</a>
-    {% if current_user.is_authenticated and current_user.is_admin %}
-    <a class="drawer-item" href="/admin" style="color:red;">⚙️ Admin Login</a>
-    {% endif %}
-</div>
+    <!-- Sidebar Drawer -->
+    <div id="sidebar-overlay" class="sidebar-overlay" onclick="toggleMenu()"></div>
+    <div id="sidebar" class="sidebar">
+        <div class="sidebar-header">
+            <span>Tibyan Menu</span>
+            <button class="close-sidebar" onclick="toggleMenu()">✕</button>
+        </div>
+        <div class="sidebar-links">
+            <a href="/" class="sidebar-item">🏠 Home / New Chat</a>
+            <a href="/profile" class="sidebar-item">👤 Profile</a>
+            <a href="/library" class="sidebar-item">📚 Library</a>
+            <a href="/saved" class="sidebar-item">📜 Saved</a>
+            <a href="/about" class="sidebar-item">❕️ About Us</a>
+            {% if current_user.is_authenticated and current_user.is_admin %}
+            <a href="/admin" class="sidebar-item" style="color: #dc2626; font-weight: 600;">⚙️ Admin Login</a>
+            {% endif %}
+        </div>
+    </div>
 
-<div id="header">
-    <button class="menu-btn" onclick="openDrawer()">☰</button>
-    <div style="font-weight:bold;">Tibyan</div>
-    <span class="mirror-pencil">✏️</span>
-</div>
+    <!-- Header -->
+    <header>
+        <button onclick="toggleMenu()" class="menu-btn" title="Open Menu">☰</button>
+        <div class="logo-area">
+            <span class="arabic-badge">تيان</span> Tibyan
+        </div>
+        <a href="/" class="reset-btn" title="New Chat">
+            <span class="mirror-pencil">✏️</span>
+        </a>
+    </header>
 
-<div id="container">
-    <h2>Assalamu Alaikum, Jameel!</h2>
-    <button class="preset-btn" onclick="sendMsg('Tell me about Jumu\'ah prayer')">Jumu'ah Prayers</button>
-    <button class="preset-btn" onclick="sendMsg('Rules of Qirat in Namaz')">Rules of Qirat</button>
-    <div id="chat-output"></div>
-</div>
+    <!-- Chat Area -->
+    <main id="chat-container">
+        <!-- Welcome Screen -->
+        <div id="welcome-screen" class="welcome-screen">
+            <div class="welcome-logo-box">تيان</div>
+            <h1>Assalamu Alaikum, {{ current_user.name.title() if current_user and current_user.is_authenticated else 'Jameel' }}!</h1>
+            <p class="welcome-sub">How can I assist you in matters of Fiqh-e-Hanafi today?</p>
+            
+            <div class="presets-grid">
+                <div onclick="sendPreset('Tell me about the virtues and method of Jumu\'ah prayer.')" class="preset-card">
+                    <div class="preset-title">Jumu'ah Prayers</div>
+                    <div class="preset-desc">Explain the virtues, rules, and method of performing Jumu'ah prayer according to Hanafi Fiqh.</div>
+                </div>
+                <div onclick="sendPreset('What are the essential conditions (Sharaait) for Namaz?')" class="preset-card">
+                    <div class="preset-title">Rules of Qirat in Namaz</div>
+                    <div class="preset-desc">What are the guidelines for reciting Quran (Qirat) during prayers in Hanafi school?</div>
+                </div>
+            </div>
+        </div>
+        <!-- Dynamic Conversation Output container -->
+        <div id="conversation-stream"></div>
+    </main>
 
-<div id="input-area">
-    <input type="text" id="user-input" placeholder="Ask Tibyan...">
-    <button onclick="sendMsg()">Send</button>
-</div>
+    <!-- Footer Input Bar -->
+    <footer>
+        <form onsubmit="handleSendMessage(event)" class="chat-form">
+            <input type="hidden" id="csrf_token" value="{{ csrf_token() }}">
+            <button type="button" onclick="alert('Attachment feature ready!')" class="attach-btn" title="Attach file">📎</button>
+            <input type="text" id="user-prompt" class="chat-input" placeholder="Ask Tibyan... (e.g., Roza ke masail)" required autocomplete="off">
+            <button type="submit" id="send-btn" class="send-btn">Send</button>
+        </form>
+    </footer>
 
-<script>
-    function openDrawer() { document.getElementById('drawer').style.left = '0px'; }
-    function closeDrawer() { document.getElementById('drawer').style.left = '-250px'; }
-    
-    async function sendMsg(text) {
-        let input = document.getElementById('user-input');
-        let val = text || input.value;
-        if (!val) return;
-        
-        document.getElementById('chat-output').innerHTML += '<p><b>You:</b> ' + val + '</p>';
-        input.value = '';
-        
-        let res = await fetch('/generate', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({ prompt: val })
-        });
-        let data = await res.json();
-        document.getElementById('chat-output').innerHTML += '<p><b>Tibyan:</b> ' + (data.response || data.answer) + '</p>';
-    }
-</script>
+    <!-- Robust JavaScript Integration -->
+    <script>
+        const sidebar = document.getElementById('sidebar');
+        const sidebarOverlay = document.getElementById('sidebar-overlay');
+        const welcomeScreen = document.getElementById('welcome-screen');
+        const conversationStream = document.getElementById('conversation-stream');
+        const promptInput = document.getElementById('user-prompt');
+        const sendBtn = document.getElementById('send-btn');
+        const csrfTokenInput = document.getElementById('csrf_token');
+
+        function toggleMenu() {
+            sidebar.classList.toggle('active');
+            sidebarOverlay.classList.toggle('active');
+        }
+
+        function sendPreset(text) {
+            promptInput.value = text;
+            handleSendMessage(new Event('submit'));
+        }
+
+        async function handleSendMessage(event) {
+            event.preventDefault();
+            const message = promptInput.value.trim();
+            if (!message) return;
+
+            // Hide welcome screen on first message
+            if (welcomeScreen) {
+                welcomeScreen.style.display = 'none';
+            }
+
+            promptInput.value = '';
+            sendBtn.disabled = true;
+
+            // Append User Message
+            appendMessage('user', message);
+
+            try {
+                const response = await fetch('/generate', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': csrfTokenInput ? csrfTokenInput.value : ''
+                    },
+                    body: JSON.stringify({ prompt: message })
+                });
+
+                if (!response.ok) throw new Error('Server error');
+
+                const data = await response.json();
+                const aiReply = data.response || data.answer || "Ma'zirat, jawab nahi mil saka.";
+                appendMessage('ai', aiReply);
+
+            } catch (error) {
+                console.error(error);
+                appendMessage('ai', "Connection error. Kripya dobara koshish karein.");
+            } finally {
+                sendBtn.disabled = false;
+                promptInput.focus();
+            }
+        }
+
+        function appendMessage(sender, text) {
+            const row = document.createElement('div');
+            row.className = `message-row ${sender}`;
+            
+            const bubble = document.createElement('div');
+            bubble.className = 'bubble';
+            
+            if (sender === 'ai') {
+                bubble.innerHTML = marked.parse(text);
+            } else {
+                bubble.innerText = text;
+            }
+            
+            row.appendChild(bubble);
+            conversationStream.appendChild(row);
+            
+            const container = document.getElementById('chat-container');
+            container.scrollTop = container.scrollHeight;
+        }
+    </script>
 </body>
 </html>
